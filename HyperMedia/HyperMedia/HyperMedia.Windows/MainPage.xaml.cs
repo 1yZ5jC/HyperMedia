@@ -25,9 +25,9 @@ namespace HyperMedia
         private bool _isPlaying;
         private bool _isSeeking;
         private bool _isFullscreen;
-        private bool _controlsVisible;
         private double _duration;
         private StorageFile _tempFile;
+        private string _originalFileName;
 
         private Instance _vlcInstance;
         private MediaPlayer _vlcPlayer;
@@ -148,6 +148,9 @@ namespace HyperMedia
             WelcomeScreen.Visibility = Visibility.Collapsed;
             ShowOverlay("Loading " + file.Name + "...");
 
+            _originalFileName = file.Name;
+            PlayHistory.Add(file.Path, file.Name);
+
             try
             {
                 StatusText.Text = "Preparing...";
@@ -181,7 +184,7 @@ namespace HyperMedia
                 return;
             }
 
-            FileNameText.Text = tempFile.Name;
+            FileNameText.Text = _originalFileName ?? tempFile.Name;
 
             try
             {
@@ -219,7 +222,6 @@ namespace HyperMedia
             _isPlaying = true;
             _positionTimer.Start();
             UpdatePlayPauseIcon(true);
-            CenterPlayButton.Visibility = Visibility.Visible;
             StatusText.Text = "";
             HideOverlay();
             ResetAutoHide();
@@ -260,6 +262,31 @@ namespace HyperMedia
         private void OnVlcPlaying()
         {
             _isPlaying = true;
+
+            BeginInvokeOnUI(() =>
+            {
+                try
+                {
+                    if (_vlcMedia != null)
+                    {
+                        string title = _vlcMedia.meta(MediaMeta.Title);
+                        if (!string.IsNullOrEmpty(title))
+                        {
+                            FileNameText.Text = title;
+                        }
+                        else
+                        {
+                            string artist = _vlcMedia.meta(MediaMeta.Artist);
+                            string nowPlaying = _vlcMedia.meta(MediaMeta.NowPlaying);
+                            if (!string.IsNullOrEmpty(artist) && !string.IsNullOrEmpty(nowPlaying))
+                            {
+                                FileNameText.Text = artist + " - " + nowPlaying;
+                            }
+                        }
+                    }
+                }
+                catch { }
+            });
         }
 
         private void OnVlcPaused()
@@ -354,7 +381,6 @@ namespace HyperMedia
         {
             StopPlayback();
             WelcomeScreen.Visibility = Visibility.Visible;
-            CenterPlayButton.Visibility = Visibility.Collapsed;
             FileNameText.Text = "";
             StatusText.Text = "Ready";
         }
@@ -433,7 +459,6 @@ namespace HyperMedia
         {
             string glyph = playing ? "\u23F8" : "\u25B6";
             PlayPauseIcon.Text = glyph;
-            CenterPlayIcon.Text = glyph;
         }
 
         #endregion
@@ -677,14 +702,6 @@ namespace HyperMedia
             ShowControls();
         }
 
-        private void CenterPlayButton_Tapped(object sender, TappedRoutedEventArgs e)
-        {
-            if (!_isPlaying && _duration <= 0) return;
-            TogglePlayPause();
-            ShowControls();
-            e.Handled = true;
-        }
-
         private void Page_PointerMoved(object sender, PointerRoutedEventArgs e)
         {
             ShowControls();
@@ -698,7 +715,6 @@ namespace HyperMedia
         {
             TopBar.Visibility = Visibility.Visible;
             BottomBar.Visibility = Visibility.Visible;
-            _controlsVisible = true;
             ResetAutoHide();
         }
 
@@ -709,7 +725,6 @@ namespace HyperMedia
 
             TopBar.Visibility = Visibility.Collapsed;
             BottomBar.Visibility = Visibility.Collapsed;
-            _controlsVisible = false;
         }
 
         private void ResetAutoHide()

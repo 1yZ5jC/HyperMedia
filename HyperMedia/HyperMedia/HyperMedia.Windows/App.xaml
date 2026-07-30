@@ -62,7 +62,7 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="RootBorder"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="2"
+                                    CornerRadius="0"
                                     Padding="{TemplateBinding Padding}">
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
@@ -101,7 +101,7 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="RootBorder"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="2"
+                                    CornerRadius="0"
                                     Padding="{TemplateBinding Padding}">
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
@@ -140,7 +140,7 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="RootBorder"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="4"
+                                    CornerRadius="0"
                                     Padding="{TemplateBinding Padding}">
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">
@@ -179,7 +179,7 @@
                         <ControlTemplate TargetType="Button">
                             <Border x:Name="RootBorder"
                                     Background="{TemplateBinding Background}"
-                                    CornerRadius="3"
+                                    CornerRadius="0"
                                     Padding="{TemplateBinding Padding}">
                                 <VisualStateManager.VisualStateGroups>
                                     <VisualStateGroup x:Name="CommonStates">

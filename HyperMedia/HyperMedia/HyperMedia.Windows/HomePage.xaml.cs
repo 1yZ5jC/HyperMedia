@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
@@ -21,10 +22,37 @@ namespace HyperMedia
         private const string PHOTO_FILTER =
             ".jpg,.jpeg,.png,.bmp,.gif,.tiff,.tif,.webp";
 
+        private const string KEY_TILE_VIDEOS = "TileView_Videos";
+        private const string KEY_TILE_MUSIC = "TileView_Music";
+        private const string KEY_TILE_PHOTOS = "TileView_Photos";
+
+        private bool _videosTileView;
+        private bool _musicTileView;
+        private bool _photosTileView;
+
+        private const string ICON_LIST = "\u25A1";
+        private const string ICON_TILE = "\u25A3";
+
         public HomePage()
         {
             this.InitializeComponent();
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            var settings = ApplicationData.Current.LocalSettings;
+            if (settings.Values.ContainsKey(KEY_TILE_VIDEOS))
+                _videosTileView = (bool)settings.Values[KEY_TILE_VIDEOS];
+            if (settings.Values.ContainsKey(KEY_TILE_MUSIC))
+                _musicTileView = (bool)settings.Values[KEY_TILE_MUSIC];
+            if (settings.Values.ContainsKey(KEY_TILE_PHOTOS))
+                _photosTileView = (bool)settings.Values[KEY_TILE_PHOTOS];
+
+            ApplyToggleState();
+            LoadRecentItems();
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -38,22 +66,90 @@ namespace HyperMedia
             Focus(FocusState.Programmatic);
         }
 
+        #region Recent Items
+
+        private void LoadRecentItems()
+        {
+            LoadRecentForCategory("Videos", RecentVideosList, RecentVideosTiles);
+            LoadRecentForCategory("Music", RecentMusicList, RecentMusicTiles);
+            LoadRecentForCategory("Photos", RecentPhotosList, RecentPhotosTiles);
+        }
+
+        private void LoadRecentForCategory(string category, ItemsControl listControl, ItemsControl tileControl)
+        {
+            var items = PlayHistory.GetRecent(category);
+            var source = items.Count > 0 ? items : null;
+            listControl.ItemsSource = source;
+            tileControl.ItemsSource = source;
+        }
+
+        private void ApplyToggleState()
+        {
+            VideosToggleIcon.Text = _videosTileView ? ICON_TILE : ICON_LIST;
+            RecentVideosList.Visibility = _videosTileView ? Visibility.Collapsed : Visibility.Visible;
+            RecentVideosTiles.Visibility = _videosTileView ? Visibility.Visible : Visibility.Collapsed;
+
+            MusicToggleIcon.Text = _musicTileView ? ICON_TILE : ICON_LIST;
+            RecentMusicList.Visibility = _musicTileView ? Visibility.Collapsed : Visibility.Visible;
+            RecentMusicTiles.Visibility = _musicTileView ? Visibility.Visible : Visibility.Collapsed;
+
+            PhotosToggleIcon.Text = _photosTileView ? ICON_TILE : ICON_LIST;
+            RecentPhotosList.Visibility = _photosTileView ? Visibility.Collapsed : Visibility.Visible;
+            RecentPhotosTiles.Visibility = _photosTileView ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void SaveToggle(string key, bool value)
+        {
+            ApplicationData.Current.LocalSettings.Values[key] = value;
+        }
+
+        private void VideosToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _videosTileView = !_videosTileView;
+            SaveToggle(KEY_TILE_VIDEOS, _videosTileView);
+            ApplyToggleState();
+        }
+
+        private void MusicToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _musicTileView = !_musicTileView;
+            SaveToggle(KEY_TILE_MUSIC, _musicTileView);
+            ApplyToggleState();
+        }
+
+        private void PhotosToggle_Click(object sender, RoutedEventArgs e)
+        {
+            _photosTileView = !_photosTileView;
+            SaveToggle(KEY_TILE_PHOTOS, _photosTileView);
+            ApplyToggleState();
+        }
+
+        private async void RecentItem_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            var border = sender as Border;
+            if (border == null) return;
+
+            string filePath = border.Tag as string;
+            if (string.IsNullOrEmpty(filePath)) return;
+
+            try
+            {
+                var file = await StorageFile.GetFileFromPathAsync(filePath);
+                if (file != null)
+                {
+                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", file);
+                    Frame.Navigate(typeof(MainPage));
+                }
+            }
+            catch
+            {
+                // File may have been moved or deleted - clear invalid history
+            }
+        }
+
+        #endregion
+
         #region Navigation
-
-        private void NavVideoBtn_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFilesWithFilter(VIDEO_FILTER, PickerLocationId.VideosLibrary);
-        }
-
-        private void NavMusicBtn_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFilesWithFilter(MUSIC_FILTER, PickerLocationId.MusicLibrary);
-        }
-
-        private void NavPhotosBtn_Click(object sender, RoutedEventArgs e)
-        {
-            OpenFilesWithFilter(PHOTO_FILTER, PickerLocationId.PicturesLibrary);
-        }
 
         private void VideoTile_Tapped(object sender, TappedRoutedEventArgs e)
         {
@@ -75,15 +171,15 @@ namespace HyperMedia
             OpenButton_Click(null, null);
         }
 
-        private void Card_PointerEntered(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
         {
-            var fe = sender as Windows.UI.Xaml.FrameworkElement;
+            var fe = sender as FrameworkElement;
             if (fe != null) fe.Opacity = 0.85;
         }
 
-        private void Card_PointerExited(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        private void Card_PointerExited(object sender, PointerRoutedEventArgs e)
         {
-            var fe = sender as Windows.UI.Xaml.FrameworkElement;
+            var fe = sender as FrameworkElement;
             if (fe != null) fe.Opacity = 1.0;
         }
 
