@@ -13,12 +13,9 @@
     Drop="Page_Drop"
     Background="#FF0A0A0F">
 
-    <!-- Single layer: video + overlay controls (no resize jump) -->
     <Grid x:Name="RootGrid">
 
-        <!-- ═══════════════════════════════════════════════════════════ -->
-        <!-- VIDEO / CONTENT AREA (fills entire page)                    -->
-        <!-- ═══════════════════════════════════════════════════════════ -->
+        <!-- VIDEO AREA -->
         <Grid Background="Black" DoubleTapped="VideoArea_DoubleTapped"
               Tapped="VideoArea_Tapped"
               ManipulationStarted="VideoArea_ManipulationStarted"
@@ -29,25 +26,8 @@
                             HorizontalAlignment="Stretch"
                             VerticalAlignment="Stretch"
                             SizeChanged="VlcVideoPanel_SizeChanged"/>
-            <Image x:Name="VideoImage"
-                   Stretch="Uniform"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   Visibility="Collapsed"/>
-            <MediaElement x:Name="AudioPlayer"
-                          AutoPlay="False"
-                          IsMuted="False"
-                          Volume="1.0"
-                          Stretch="Uniform"
-                          HorizontalAlignment="Center"
-                          VerticalAlignment="Center"
-                          MediaFailed="MediaPlayer_MediaFailed"
-                          MediaEnded="MediaPlayer_MediaEnded"
-                          Visibility="Collapsed"/>
 
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- WELCOME SCREEN (Metro panoramic style)               -->
-            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- WELCOME SCREEN -->
             <Border x:Name="WelcomeScreen" Visibility="Visible">
                 <Grid>
                     <Grid.Background>
@@ -64,7 +44,6 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Top: App branding -->
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="32,24,0,0">
                         <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="12"
                                    Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
@@ -72,14 +51,12 @@
                                    Foreground="#66FFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
                     </StackPanel>
 
-                    <!-- Center: Welcome content -->
                     <Grid Grid.Row="1" Margin="32,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Left: Welcome message + CTA -->
                         <StackPanel Grid.Column="0" VerticalAlignment="Center" MaxWidth="480">
                             <TextBlock Text="Welcome" FontFamily="Segoe UI Light" FontSize="56"
                                        Foreground="#FFFFFFFF" Margin="0,0,0,8"/>
@@ -98,7 +75,6 @@
                                 </StackPanel>
                             </Button>
 
-                            <!-- Supported formats row -->
                             <StackPanel Orientation="Horizontal" Margin="0,32,0,0">
                                 <Border Background="#15FFFFFF" CornerRadius="0" Padding="10,4" Margin="0,0,6,0">
                                     <TextBlock Text="MP4" Foreground="#55FFFFFF" FontFamily="Segoe UI" FontSize="10"/>
@@ -120,7 +96,6 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <!-- Right: Keyboard shortcuts -->
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="64,0,32,0">
                             <TextBlock Text="Shortcuts" FontFamily="Segoe UI" FontSize="11"
                                        Foreground="#44FFFFFF" CharacterSpacing="60" Margin="0,0,0,16"/>
@@ -197,23 +172,22 @@
                         </StackPanel>
                     </Grid>
 
-                    <!-- Bottom: Version hint -->
                     <TextBlock Grid.Row="2" Text="HyperMedia — Your media, one player."
                                FontFamily="Segoe UI" FontSize="12" Foreground="#22FFFFFF"
                                HorizontalAlignment="Left" Margin="32,0,0,20"/>
                 </Grid>
             </Border>
 
-            <!-- Swipe Indicator -->
+            <!-- Swipe Indicator (fixed labels) -->
             <StackPanel x:Name="SwipeIndicator" Orientation="Horizontal"
                         VerticalAlignment="Center" HorizontalAlignment="Center"
                         Visibility="Collapsed" Margin="0,0,0,80">
                 <Border Background="#40E040FB" CornerRadius="0" Padding="20,10" Margin="0,0,8,0">
-                    <TextBlock Text="&#x2190; PREVIOUS" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                    <TextBlock Text="&#x2190; REWIND" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
                                CharacterSpacing="40"/>
                 </Border>
                 <Border Background="#4000BCD4" CornerRadius="0" Padding="20,10">
-                    <TextBlock Text="NEXT &#x2192;" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                    <TextBlock Text="FORWARD &#x2192;" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
                                CharacterSpacing="40"/>
                 </Border>
             </StackPanel>
@@ -226,9 +200,7 @@
                        Margin="0,0,0,120"
                        Visibility="Collapsed"/>
 
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- TOP BAR (overlays on video, no layout shift)         -->
-            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- TOP BAR -->
             <Border x:Name="TopBar" VerticalAlignment="Top"
                     Visibility="Collapsed" IsHitTestVisible="True">
                 <Border.Background>
@@ -244,7 +216,6 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
 
-                    <!-- Left: Back + File info -->
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="HomeButton" Click="HomeButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,20,0">
@@ -252,17 +223,27 @@
                                        Foreground="#FFFFFFFF"/>
                         </Button>
                         <StackPanel VerticalAlignment="Center">
-                            <TextBlock x:Name="FileNameText" Text=""
-                                       Foreground="#FFFFFFFF" FontFamily="Segoe UI Semibold" FontSize="15"
-                                       TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock x:Name="FileNameText" Text=""
+                                           Foreground="#FFFFFFFF" FontFamily="Segoe UI Semibold" FontSize="15"
+                                           TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+                                <TextBlock x:Name="PlaylistCounter" Text=""
+                                           Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="13"
+                                           VerticalAlignment="Center" Margin="10,0,0,0"/>
+                            </StackPanel>
                             <TextBlock x:Name="StatusText" Text="Ready"
                                        Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="12"
                                        Margin="0,2,0,0"/>
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Right: Fullscreen -->
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="SpeedButton" Click="SpeedButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,8,0">
+                            <TextBlock x:Name="SpeedIcon" Text="1x"
+                                       FontFamily="Segoe UI" FontSize="13" FontWeight="SemiBold"
+                                       Foreground="#FFFFFFFF"/>
+                        </Button>
                         <Button x:Name="FullscreenButton" Click="FullscreenButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}">
                             <TextBlock x:Name="FullscreenIcon" Text="&#x26F6;"
@@ -273,9 +254,7 @@
                 </Grid>
             </Border>
 
-            <!-- ═══════════════════════════════════════════════════ -->
-            <!-- BOTTOM BAR (overlays on video, no layout shift)      -->
-            <!-- ═══════════════════════════════════════════════════ -->
+            <!-- BOTTOM BAR -->
             <Border x:Name="BottomBar" VerticalAlignment="Bottom"
                     Visibility="Collapsed" IsHitTestVisible="True">
                 <Border.Background>
@@ -291,7 +270,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <!-- Row 1: Seek slider with time -->
+                    <!-- Row 1: Seek -->
                     <Grid Grid.Row="0" Margin="0,0,0,8">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
@@ -315,18 +294,29 @@
                                    VerticalAlignment="Center" Margin="20,0,0,0"/>
                     </Grid>
 
-                    <!-- Row 2: Transport controls -->
+                    <!-- Row 2: Transport -->
                     <Grid Grid.Row="1">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Left: Play/Pause + Stop -->
-                        <Button x:Name="PlayPauseButton" Grid.Column="0"
+                        <!-- Left: Prev + Play/Pause + Stop + Next -->
+                        <Button x:Name="PrevButton" Grid.Column="0"
+                                Style="{StaticResource ZunePrimaryStyle}"
+                                Click="PrevButton_Click">
+                            <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                       Foreground="#FFFFFFFF"/>
+                        </Button>
+
+                        <Button x:Name="PlayPauseButton" Grid.Column="1"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="PlayPauseButton_Click">
                             <TextBlock x:Name="PlayPauseIcon" Text="&#x25B6;"
@@ -334,17 +324,41 @@
                                        Foreground="#FFFFFFFF" Margin="2,0,0,0"/>
                         </Button>
 
-                        <Button x:Name="StopButton" Grid.Column="1"
+                        <Button x:Name="StopButton" Grid.Column="2"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="StopButton_Click">
                             <TextBlock Text="&#x25A0;" FontFamily="Segoe UI Symbol" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
 
-                        <Grid Grid.Column="2"/>
+                        <Button x:Name="NextButton" Grid.Column="3"
+                                Style="{StaticResource ZunePrimaryStyle}"
+                                Click="NextButton_Click">
+                            <TextBlock Text="&#x23ED;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                       Foreground="#FFFFFFFF"/>
+                        </Button>
 
-                        <!-- Right: Volume + Mute -->
-                        <Button x:Name="MuteButton" Grid.Column="3"
+                        <!-- Spacer -->
+                        <Grid Grid.Column="4"/>
+
+                        <!-- Right: Repeat + Shuffle + Mute + Volume -->
+                        <Button x:Name="RepeatButton" Grid.Column="5"
+                                Style="{StaticResource ZunePrimaryStyle}"
+                                Click="RepeatButton_Click">
+                            <TextBlock x:Name="RepeatIcon" Text="&#x1F501;"
+                                       FontFamily="Segoe UI Symbol" FontSize="16"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+
+                        <Button x:Name="ShuffleButton" Grid.Column="6"
+                                Style="{StaticResource ZunePrimaryStyle}"
+                                Click="ShuffleButton_Click">
+                            <TextBlock x:Name="ShuffleIcon" Text="&#x1F500;"
+                                       FontFamily="Segoe UI Symbol" FontSize="16"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+
+                        <Button x:Name="MuteButton" Grid.Column="7"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="MuteButton_Click">
                             <TextBlock x:Name="VolumeIcon" Text="&#x1F50A;"
@@ -352,10 +366,10 @@
                                        Foreground="#FFFFFFFF"/>
                         </Button>
 
-                        <Slider x:Name="VolumeSlider" Grid.Column="4"
+                        <Slider x:Name="VolumeSlider" Grid.Column="8"
                                 Width="140" Minimum="0" Maximum="100" Value="100"
                                 ValueChanged="VolumeSlider_ValueChanged"
-                                VerticalAlignment="Center" Height="36"/>
+                                VerticalAlignment="Center" Height="36" Margin="8,0,0,0"/>
                     </Grid>
                 </Grid>
             </Border>

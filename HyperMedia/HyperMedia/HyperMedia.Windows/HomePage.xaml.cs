@@ -194,10 +194,17 @@ namespace HyperMedia
             foreach (var ext in filterExtensions.Split(','))
                 picker.FileTypeFilter.Add(ext.Trim());
 
-            StorageFile file = await picker.PickSingleFileAsync();
-            if (file != null)
+            var files = await picker.PickMultipleFilesAsync();
+            if (files != null && files.Count > 0)
             {
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", file);
+                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                if (files.Count > 1)
+                {
+                    var extras = new List<string>();
+                    for (int i = 1; i < files.Count; i++)
+                        extras.Add(files[i].Path);
+                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                }
                 Frame.Navigate(typeof(MainPage));
             }
         }
@@ -215,10 +222,17 @@ namespace HyperMedia
             foreach (var ext in extensions)
                 picker.FileTypeFilter.Add(ext);
 
-            StorageFile file = await picker.PickSingleFileAsync();
-            if (file != null)
+            var files = await picker.PickMultipleFilesAsync();
+            if (files != null && files.Count > 0)
             {
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", file);
+                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                if (files.Count > 1)
+                {
+                    var extras = new List<string>();
+                    for (int i = 1; i < files.Count; i++)
+                        extras.Add(files[i].Path);
+                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                }
                 Frame.Navigate(typeof(MainPage));
             }
         }
