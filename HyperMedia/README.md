@@ -29,10 +29,10 @@ The project includes pre-built libVLC binaries for x86, ARM, and Win32 (x86 desk
 
 ```
 HyperMedia/
-  HyperMedia.Windows/            # C# UWP app (main player UI)
+  HyperMedia.Windows/            # C# Windows 8.1 Store app (main player UI)
     MainPage.xaml/.cs            # Player page with libVLC integration
     HomePage.xaml/.cs            # Welcome/landing screen
-  HyperMedia.WindowsPhone/       # C# UWP app (phone stub)
+  HyperMedia.WindowsPhone/       # C# Windows Phone 8.1 app (stub)
 HyperMedia.MediaCore/
   HyperMedia.MediaCore.Shared/   # C++/CX native components
     LibVlcInterop.h/.cpp         # LibVlcManager and LibVlcDecoder WinRT classes

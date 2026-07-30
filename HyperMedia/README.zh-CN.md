@@ -29,10 +29,10 @@
 
 ```
 HyperMedia/
-  HyperMedia.Windows/            # C# UWP 应用（主播放器界面）
+  HyperMedia.Windows/            # C# Windows 8.1 应用商店应用（主播放器界面）
     MainPage.xaml/.cs            # 播放器页面，集成 libVLC
     HomePage.xaml/.cs            # 欢迎/起始页面
-  HyperMedia.WindowsPhone/       # C# UWP 应用（手机端占位）
+  HyperMedia.WindowsPhone/       # C# Windows Phone 8.1 应用（手机端占位）
 HyperMedia.MediaCore/
   HyperMedia.MediaCore.Shared/   # C++/CX 原生组件
     LibVlcInterop.h/.cpp         # LibVlcManager 和 LibVlcDecoder WinRT 类
