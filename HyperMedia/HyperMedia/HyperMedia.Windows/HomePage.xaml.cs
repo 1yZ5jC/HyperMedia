@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
@@ -77,7 +78,14 @@ namespace HyperMedia
 
         private void LoadRecentForCategory(string category, ItemsControl listControl, ItemsControl tileControl)
         {
-            var items = PlayHistory.GetRecent(category);
+            var tuples = PlayHistory.GetRecent(category);
+            var items = new ObservableCollection<RecentItem>();
+            foreach (var t in tuples)
+            {
+                var item = new RecentItem { FilePath = t.Item1, FileName = t.Item2 };
+                item.LoadThumbnail();
+                items.Add(item);
+            }
             var source = items.Count > 0 ? items : null;
             listControl.ItemsSource = source;
             tileControl.ItemsSource = source;
@@ -185,6 +193,21 @@ namespace HyperMedia
 
         #endregion
 
+        #region Clear History
+
+        private void ClearHistory_Click(object sender, RoutedEventArgs e)
+        {
+            PlayHistory.ClearAll();
+            LoadRecentItems();
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            Frame.Navigate(typeof(SettingsPage));
+        }
+
+        #endregion
+
         #region File Open
 
         private async void OpenFilesWithFilter(string filterExtensions, PickerLocationId location)
@@ -272,12 +295,19 @@ namespace HyperMedia
                     var items = await view.GetStorageItemsAsync();
                     if (items.Count > 0)
                     {
-                        var file = items[0] as StorageFile;
-                        if (file != null)
+                        StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", items[0] as StorageFile);
+                        if (items.Count > 1)
                         {
-                            StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", file);
-                            Frame.Navigate(typeof(MainPage));
+                            var extras = new List<string>();
+                            for (int i = 1; i < items.Count; i++)
+                            {
+                                var f = items[i] as StorageFile;
+                                if (f != null) extras.Add(f.Path);
+                            }
+                            if (extras.Count > 0)
+                                ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
                         }
+                        Frame.Navigate(typeof(MainPage));
                     }
                 }
             }

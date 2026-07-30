@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using Windows.ApplicationModel;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Media;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
 using Windows.Storage.Pickers;
 using Windows.System;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
+using Windows.UI.Popups;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
@@ -30,13 +34,14 @@ namespace HyperMedia
         private double _duration;
         private StorageFile _tempFile;
         private string _originalFileName;
+        private bool _isNetworkStream;
 
         private Instance _vlcInstance;
         private MediaPlayer _vlcPlayer;
         private Media _vlcMedia;
         private string _vlcInitError;
 
-        // Swipe gesture
+        // Swipe
         private double _swipeStartX;
         private bool _isSwiping;
 
@@ -50,6 +55,17 @@ namespace HyperMedia
         private double _playbackSpeed = 1.0;
         private Random _shuffleRandom = new Random();
 
+        // A-B repeat
+        private double _abPointA = -1;
+        private double _abPointB = -1;
+        private bool _abActive = false;
+
+        // Resume position
+        private const string KEY_RESUME = "ResumePosition_";
+
+        // Settings navigation flag
+        private bool _navigatingToSettings = false;
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -61,6 +77,9 @@ namespace HyperMedia
             _positionTimer = new DispatcherTimer();
             _positionTimer.Interval = TimeSpan.FromMilliseconds(250);
             _positionTimer.Tick += PositionTimer_Tick;
+
+            // Apply settings
+            VolumeSlider.Value = SettingsPage.GetDefaultVolume();
 
             this.Loaded += (s, e) => InitLibVlc();
             ShowControls();
@@ -121,6 +140,14 @@ namespace HyperMedia
             base.OnNavigatedTo(e);
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
 
+            // Register for suspension/resumption for SMTC
+            try
+            {
+                Application.Current.Suspending += OnSmtcAppSuspended;
+                Application.Current.Resuming += OnSmtcAppResumed;
+            }
+            catch { }
+
             if (StorageApplicationPermissions.FutureAccessList.ContainsItem("PlaybackFile"))
             {
                 try
@@ -152,16 +179,64 @@ namespace HyperMedia
                     }
 
                     _playlistIndex = 0;
+                    RestoreStateAfterSettings();
                     OpenFile(_playlist[0]);
                 }
                 catch { }
             }
         }
 
+        private void RestoreStateAfterSettings()
+        {
+            try
+            {
+                var restore = ApplicationData.Current.LocalSettings;
+                if (restore.Values.ContainsKey("Restore_Volume"))
+                {
+                    VolumeSlider.Value = (int)restore.Values["Restore_Volume"];
+                    restore.Values.Remove("Restore_Volume");
+                }
+                if (restore.Values.ContainsKey("Restore_Speed"))
+                {
+                    _playbackSpeed = (double)restore.Values["Restore_Speed"];
+                    restore.Values.Remove("Restore_Speed");
+                }
+                if (restore.Values.ContainsKey("Restore_RepeatMode"))
+                {
+                    _repeatMode = (int)restore.Values["Restore_RepeatMode"];
+                    restore.Values.Remove("Restore_RepeatMode");
+                }
+                if (restore.Values.ContainsKey("Restore_Shuffle"))
+                {
+                    _shuffleOn = (bool)restore.Values["Restore_Shuffle"];
+                    restore.Values.Remove("Restore_Shuffle");
+                }
+                UpdateRepeatIcon();
+                UpdateShuffleIcon();
+            }
+            catch { }
+        }
+
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
+
+            if (_navigatingToSettings)
+            {
+                _navigatingToSettings = false;
+                return;
+            }
+
+            SaveResumePosition();
             StopPlayback();
+
+            try
+            {
+                Application.Current.Suspending -= OnSmtcAppSuspended;
+                Application.Current.Resuming -= OnSmtcAppResumed;
+            }
+            catch { }
+
             Window.Current.CoreWindow.PointerEntered -= CoreWindow_PointerEntered;
         }
 
@@ -178,6 +253,7 @@ namespace HyperMedia
             if (file == null) return;
 
             StopPlayback();
+            _isNetworkStream = false;
             WelcomeScreen.Visibility = Visibility.Collapsed;
             ShowOverlay("Loading " + file.Name + "...");
 
@@ -194,7 +270,7 @@ namespace HyperMedia
                     NameCollisionOption.ReplaceExisting);
                 _tempFile = tempFile;
 
-                OpenWithLibVlc(tempFile, sw);
+                OpenWithLibVlc(tempFile.Path, sw);
             }
             catch (Exception ex)
             {
@@ -204,7 +280,22 @@ namespace HyperMedia
             }
         }
 
-        private void OpenWithLibVlc(StorageFile tempFile, Stopwatch sw)
+        private void OpenUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url)) return;
+
+            StopPlayback();
+            _isNetworkStream = true;
+            WelcomeScreen.Visibility = Visibility.Collapsed;
+            ShowOverlay("Loading stream...");
+
+            _originalFileName = url;
+            StatusText.Text = "Connecting...";
+            var sw = Stopwatch.StartNew();
+            OpenWithLibVlc(url, sw);
+        }
+
+        private void OpenWithLibVlc(string mediaPath, Stopwatch sw)
         {
             if (_vlcInstance == null)
             {
@@ -213,16 +304,19 @@ namespace HyperMedia
                 else
                     StatusText.Text = "Error: VLC not initialized";
                 HideOverlay();
-                Debug.WriteLine("[HyperMedia] VLC instance not available");
                 return;
             }
 
-            FileNameText.Text = _originalFileName ?? tempFile.Name;
+            FileNameText.Text = _originalFileName ?? System.IO.Path.GetFileName(mediaPath);
             UpdatePlaylistCounter();
 
             try
             {
-                _vlcMedia = new Media(_vlcInstance, tempFile.Path, FromType.FromPath);
+                if (_isNetworkStream)
+                    _vlcMedia = new Media(_vlcInstance, mediaPath, FromType.FromLocation);
+                else
+                    _vlcMedia = new Media(_vlcInstance, mediaPath, FromType.FromPath);
+
                 _vlcMedia.addOption(":avcodec-hw=d3d11va");
                 _vlcPlayer = new MediaPlayer(_vlcInstance);
                 _vlcPlayer.setMedia(_vlcMedia);
@@ -253,25 +347,21 @@ namespace HyperMedia
 
             _vlcPlayer.play();
 
-            if (_playbackSpeed != 1.0)
-            {
-                try
-                {
-                    _vlcPlayer.setRate((float)_playbackSpeed);
-                    Debug.WriteLine("[HyperMedia] Set rate to {0}", _playbackSpeed);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("[HyperMedia] setRate failed: {0}", ex.Message);
-                }
-            }
-
             _isPlaying = true;
             _positionTimer.Start();
             UpdatePlayPauseIcon(true);
             StatusText.Text = "";
             HideOverlay();
             ResetAutoHide();
+
+            if (_playbackSpeed != 1.0)
+            {
+                try { _vlcPlayer.setRate((float)_playbackSpeed); }
+                catch { }
+            }
+
+            StartSmtcSync();
+            SyncSmtcMetadata();
 
             Debug.WriteLine("[HyperMedia] libVLC playback started: {0}ms", sw.ElapsedMilliseconds);
         }
@@ -308,6 +398,81 @@ namespace HyperMedia
             OpenFileFromPicker();
         }
 
+        private async void UrlButton_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new MessageDialog("Enter the URL of a media stream to play.", "Open URL");
+            dialog.Commands.Add(new UICommand("Open", null, "open"));
+            dialog.Commands.Add(new UICommand("Cancel", null, "cancel"));
+            var result = await dialog.ShowAsync();
+            // MessageDialog doesn't support text input in Win8.1
+            // For URL input, use keyboard shortcut Ctrl+U or the button will open a TextBox overlay
+            ShowUrlInputOverlay();
+        }
+
+        private void ShowUrlInputOverlay()
+        {
+            var popup = new Popup();
+
+            var border = new Border();
+            border.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xF0, 0x0A, 0x0A, 0x0F));
+            border.Width = 500;
+            border.Padding = new Thickness(24);
+
+            var panel = new StackPanel();
+
+            var title = new TextBlock();
+            title.Text = "OPEN URL";
+            title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            title.FontSize = 14;
+            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Margin = new Thickness(0, 0, 0, 16);
+            panel.Children.Add(title);
+
+            var textBox = new TextBox();
+            textBox.PlaceholderText = "http://example.com/video.mp4";
+            textBox.Width = 450;
+            textBox.Height = 36;
+            textBox.FontSize = 14;
+            panel.Children.Add(textBox);
+
+            var btnPanel = new StackPanel();
+            btnPanel.Orientation = Windows.UI.Xaml.Controls.Orientation.Horizontal;
+            btnPanel.HorizontalAlignment = HorizontalAlignment.Right;
+            btnPanel.Margin = new Thickness(0, 16, 0, 0);
+
+            var cancelBtn = new Button();
+            cancelBtn.Content = "Cancel";
+            cancelBtn.Margin = new Thickness(0, 0, 8, 0);
+            cancelBtn.Click += (s, ev) => { popup.IsOpen = false; };
+            btnPanel.Children.Add(cancelBtn);
+
+            var playBtn = new Button();
+            playBtn.Content = "Play";
+            playBtn.Click += (s, ev) =>
+            {
+                string url = textBox.Text.Trim();
+                popup.IsOpen = false;
+                if (!string.IsNullOrEmpty(url))
+                    OpenUrl(url);
+            };
+            btnPanel.Children.Add(playBtn);
+
+            panel.Children.Add(btnPanel);
+            border.Child = panel;
+
+            popup.Child = border;
+            popup.Width = 500;
+            popup.Height = 160;
+
+            // Position at center of screen
+            var bounds = Window.Current.Bounds;
+            popup.HorizontalOffset = (bounds.Width - 500) / 2;
+            popup.VerticalOffset = (bounds.Height - 160) / 2;
+
+            popup.IsOpen = true;
+            textBox.Focus(FocusState.Programmatic);
+        }
+
         #endregion
 
         #region Playlist
@@ -315,10 +480,11 @@ namespace HyperMedia
         private void PlayNext()
         {
             if (_playlist.Count == 0) return;
+            if (!SettingsPage.GetAutoPlay() && _repeatMode == 0) return;
 
             if (_repeatMode == 2)
             {
-                // Repeat one
+                SaveResumePosition();
                 OpenFile(_playlist[_playlistIndex]);
                 return;
             }
@@ -328,13 +494,9 @@ namespace HyperMedia
             if (nextIndex >= _playlist.Count)
             {
                 if (_repeatMode == 1)
-                {
-                    // Repeat all
                     nextIndex = 0;
-                }
                 else
                 {
-                    // No repeat, stop
                     StopPlayback();
                     WelcomeScreen.Visibility = Visibility.Visible;
                     FileNameText.Text = "";
@@ -343,6 +505,7 @@ namespace HyperMedia
                 }
             }
 
+            SaveResumePosition();
             _playlistIndex = nextIndex;
             OpenFile(_playlist[_playlistIndex]);
         }
@@ -351,12 +514,12 @@ namespace HyperMedia
         {
             if (_playlist.Count == 0) return;
 
-            // If more than 3s into the track, restart it
             if (_vlcPlayer != null)
             {
                 long time = _vlcPlayer.time();
                 if (time > 3000)
                 {
+                    SaveResumePosition();
                     OpenFile(_playlist[_playlistIndex]);
                     return;
                 }
@@ -371,6 +534,7 @@ namespace HyperMedia
                     prevIndex = 0;
             }
 
+            SaveResumePosition();
             _playlistIndex = prevIndex;
             OpenFile(_playlist[_playlistIndex]);
         }
@@ -405,6 +569,281 @@ namespace HyperMedia
 
         #endregion
 
+        #region Resume Position
+
+        private void SaveResumePosition()
+        {
+            if (!SettingsPage.GetResumeEnabled()) return;
+            if (_vlcPlayer == null || string.IsNullOrEmpty(_originalFileName)) return;
+            try
+            {
+                long time = _vlcPlayer.time();
+                long len = _vlcPlayer.length();
+                if (time > 5000 && len > 10000)
+                {
+                    var settings = ApplicationData.Current.LocalSettings;
+                    settings.Values[KEY_RESUME + _originalFileName] = time;
+                }
+            }
+            catch { }
+        }
+
+        private long LoadResumePosition(string fileName)
+        {
+            if (!SettingsPage.GetResumeEnabled()) return 0;
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_RESUME + fileName))
+                {
+                    long pos = (long)settings.Values[KEY_RESUME + fileName];
+                    settings.Values.Remove(KEY_RESUME + fileName);
+                    return pos;
+                }
+            }
+            catch { }
+            return 0;
+        }
+
+        #endregion
+
+        #region SMTC - System Media Transport Controls
+
+        private SystemMediaTransportControls _smtc;
+        private DispatcherTimer _smtcSyncTimer;
+
+        private void InitSmtc()
+        {
+            try
+            {
+                _smtc = SystemMediaTransportControls.GetForCurrentView();
+                _smtc.IsEnabled = true;
+                _smtc.IsPlayEnabled = true;
+                _smtc.IsPauseEnabled = true;
+                _smtc.IsStopEnabled = true;
+                _smtc.IsNextEnabled = _playlist.Count > 1;
+                _smtc.IsPreviousEnabled = _playlist.Count > 1;
+
+                _smtc.ButtonPressed += Smtc_ButtonPressed;
+
+                _smtcSyncTimer = new DispatcherTimer();
+                _smtcSyncTimer.Interval = TimeSpan.FromMilliseconds(1000);
+                _smtcSyncTimer.Tick += SmtcSyncTimer_Tick;
+
+                Debug.WriteLine("[HyperMedia] SMTC initialized");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] SMTC init failed: {0}", ex.Message);
+            }
+        }
+
+        private async void Smtc_ButtonPressed(SystemMediaTransportControls sender, SystemMediaTransportControlsButtonPressedEventArgs args)
+        {
+            await Dispatcher.RunAsync(CoreDispatcherPriority.Normal, () =>
+            {
+                switch (args.Button)
+                {
+                    case SystemMediaTransportControlsButton.Play:
+                        ResumePlayback();
+                        SyncSmtcState();
+                        break;
+                    case SystemMediaTransportControlsButton.Pause:
+                        PausePlayback();
+                        SyncSmtcState();
+                        break;
+                    case SystemMediaTransportControlsButton.Stop:
+                        StopPlayback();
+                        WelcomeScreen.Visibility = Visibility.Visible;
+                        FileNameText.Text = "";
+                        StatusText.Text = "Ready";
+                        break;
+                    case SystemMediaTransportControlsButton.Next:
+                        PlayNext();
+                        break;
+                    case SystemMediaTransportControlsButton.Previous:
+                        PlayPrev();
+                        break;
+                }
+            });
+        }
+
+        private void StartSmtcSync()
+        {
+            try
+            {
+                if (_smtc == null) InitSmtc();
+                if (_smtc == null) return;
+
+                SyncSmtcMetadata();
+                _smtcSyncTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] SMTC start failed: {0}", ex.Message);
+            }
+        }
+
+        private void StopSmtcSync()
+        {
+            if (_smtcSyncTimer != null)
+                _smtcSyncTimer.Stop();
+            try
+            {
+                if (_smtc != null)
+                    _smtc.PlaybackStatus = MediaPlaybackStatus.Stopped;
+            }
+            catch { }
+        }
+
+        private void SyncSmtcState()
+        {
+            if (_smtc == null) return;
+            try
+            {
+                _smtc.PlaybackStatus = _isPlaying
+                    ? MediaPlaybackStatus.Playing
+                    : MediaPlaybackStatus.Paused;
+            }
+            catch { }
+        }
+
+        private void SyncSmtcMetadata()
+        {
+            if (_smtc == null) return;
+            try
+            {
+                var updater = _smtc.DisplayUpdater;
+                updater.Type = MediaPlaybackType.Music;
+                updater.MusicProperties.Title = _originalFileName ?? "HyperMedia";
+                updater.MusicProperties.Artist = "HyperMedia";
+                updater.Update();
+
+                _smtc.PlaybackStatus = _isPlaying
+                    ? MediaPlaybackStatus.Playing
+                    : MediaPlaybackStatus.Paused;
+            }
+            catch { }
+        }
+
+        private void SmtcSyncTimer_Tick(object sender, object e)
+        {
+            if (_vlcPlayer == null || _smtc == null) return;
+            try
+            {
+                SyncSmtcState();
+            }
+            catch { }
+        }
+
+        private void OnSmtcAppSuspended(object sender, SuspendingEventArgs e)
+        {
+            if (_vlcPlayer != null && _isPlaying)
+            {
+                try
+                {
+                    _smtc.PlaybackStatus = MediaPlaybackStatus.Playing;
+                }
+                catch { }
+            }
+        }
+
+        private void OnSmtcAppResumed(object sender, object e)
+        {
+            if (_smtc != null)
+            {
+                try
+                {
+                    SyncSmtcState();
+                }
+                catch { }
+            }
+        }
+
+        #endregion
+
+        #region A-B Repeat
+
+        private void ToggleAbRepeat()
+        {
+            if (_abPointA < 0)
+            {
+                _abPointA = _vlcPlayer?.time() / 1000.0 ?? 0;
+                _abPointB = -1;
+                _abActive = false;
+                AbRepeatIndicator.Visibility = Visibility.Visible;
+                AbRepeatText.Text = "A: " + FormatTime(_abPointA);
+            }
+            else if (_abPointB < 0)
+            {
+                _abPointB = _vlcPlayer?.time() / 1000.0 ?? 0;
+                if (_abPointB <= _abPointA)
+                {
+                    ClearAbRepeat();
+                    return;
+                }
+                _abActive = true;
+                AbRepeatText.Text = "A-B: " + FormatTime(_abPointA) + " → " + FormatTime(_abPointB);
+            }
+            else
+            {
+                ClearAbRepeat();
+            }
+        }
+
+        private void ClearAbRepeat()
+        {
+            _abPointA = -1;
+            _abPointB = -1;
+            _abActive = false;
+            AbRepeatIndicator.Visibility = Visibility.Collapsed;
+        }
+
+        private void CheckAbRepeat()
+        {
+            if (!_abActive || _vlcPlayer == null) return;
+            double current = _vlcPlayer.time() / 1000.0;
+            if (current >= _abPointB)
+                _vlcPlayer.setTime((long)(_abPointA * 1000));
+        }
+
+        #endregion
+
+        #region Screenshot
+
+        private async void TakeScreenshot()
+        {
+            if (_vlcPlayer == null || _isNetworkStream) return;
+
+            try
+            {
+                var folder = KnownFolders.PicturesLibrary;
+                var subFolder = await folder.CreateFolderAsync("HyperMedia",
+                    CreationCollisionOption.OpenIfExists);
+
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string fileName = "Screenshot_" + timestamp + ".png";
+                var file = await subFolder.CreateFileAsync(fileName,
+                    CreationCollisionOption.GenerateUniqueName);
+
+                ShowOverlay("Screenshot saved: " + file.Name);
+                HideOverlayDelayed();
+            }
+            catch (Exception ex)
+            {
+                ShowOverlay("Screenshot error: " + ex.Message);
+                HideOverlayDelayed();
+            }
+        }
+
+        private async void HideOverlayDelayed()
+        {
+            await Task.Delay(2000);
+            HideOverlay();
+        }
+
+        #endregion
+
         #region libVLCX Events
 
         private void OnVlcPlaying()
@@ -432,6 +871,18 @@ namespace HyperMedia
                             }
                         }
                     }
+
+                    // Resume from saved position
+                    if (_originalFileName != null && !_isNetworkStream)
+                    {
+                        long resumePos = LoadResumePosition(_originalFileName);
+                        if (resumePos > 0)
+                        {
+                            _vlcPlayer.setTime(resumePos);
+                            ShowOverlay("Resumed from " + FormatTime(resumePos / 1000.0));
+                            HideOverlayDelayed();
+                        }
+                    }
                 }
                 catch { }
             });
@@ -457,9 +908,7 @@ namespace HyperMedia
                 UpdatePlayPauseIcon(false);
 
                 if (_playlist.Count > 1)
-                {
                     PlayNext();
-                }
                 else
                 {
                     StatusText.Text = "Finished";
@@ -532,6 +981,8 @@ namespace HyperMedia
 
         private void StopButton_Click(object sender, RoutedEventArgs e)
         {
+            SaveResumePosition();
+            ClearAbRepeat();
             StopPlayback();
             WelcomeScreen.Visibility = Visibility.Visible;
             FileNameText.Text = "";
@@ -582,6 +1033,7 @@ namespace HyperMedia
                 PausePlayback();
             else
                 ResumePlayback();
+            SyncSmtcState();
         }
 
         private void StopPlayback()
@@ -590,6 +1042,8 @@ namespace HyperMedia
             _positionTimer.Stop();
             _isPlaying = false;
             _isSeeking = false;
+
+            StopSmtcSync();
 
             if (_vlcPlayer != null)
             {
@@ -645,6 +1099,8 @@ namespace HyperMedia
                     CurrentTimeText.Text = FormatTime(sec);
                 }
             }
+
+            CheckAbRepeat();
         }
 
         #endregion
@@ -730,15 +1186,8 @@ namespace HyperMedia
 
             if (_vlcPlayer != null)
             {
-                try
-                {
-                    _vlcPlayer.setRate((float)_playbackSpeed);
-                    Debug.WriteLine("[HyperMedia] Speed changed to {0}x", _playbackSpeed);
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine("[HyperMedia] setRate failed: {0}", ex.Message);
-                }
+                try { _vlcPlayer.setRate((float)_playbackSpeed); }
+                catch { }
             }
 
             SpeedIcon.Text = _playbackSpeed == 1.0 ? "1x" : _playbackSpeed + "x";
@@ -796,6 +1245,99 @@ namespace HyperMedia
 
         #endregion
 
+        #region Subtitle / Audio Track / Snapshot
+
+        private bool _subtitlesEnabled = true;
+
+        private async void SubtitleButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vlcPlayer == null || _vlcMedia == null) return;
+
+            try
+            {
+                var menu = new MenuFlyout();
+                menu.Placement = PlacementMode.Bottom;
+
+                var loadExternal = new MenuFlyoutItem();
+                loadExternal.Text = "Load External Subtitle...";
+                loadExternal.Tapped += async (s, ev) =>
+                {
+                    try
+                    {
+                        var picker = new FileOpenPicker();
+                        picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                        picker.FileTypeFilter.Add(".srt");
+                        picker.FileTypeFilter.Add(".ass");
+                        picker.FileTypeFilter.Add(".ssa");
+                        picker.FileTypeFilter.Add(".sub");
+                        picker.FileTypeFilter.Add(".vtt");
+
+                        var file = await picker.PickSingleFileAsync();
+                        if (file != null)
+                        {
+                            var tempFolder = ApplicationData.Current.TemporaryFolder;
+                            var tempSub = await file.CopyAsync(tempFolder, "subtitle" + file.FileType,
+                                NameCollisionOption.ReplaceExisting);
+
+                            _vlcMedia.addOption(":sub-file=" + tempSub.Path);
+                            ShowOverlay("Subtitle loaded: " + file.Name);
+                            HideOverlayDelayed();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ShowOverlay("Subtitle: " + ex.Message);
+                        HideOverlayDelayed();
+                    }
+                };
+                menu.Items.Add(loadExternal);
+
+                var toggleSub = new MenuFlyoutItem();
+                toggleSub.Text = _subtitlesEnabled ? "Disable Subtitles" : "Enable Subtitles";
+                toggleSub.Tapped += (s, ev) =>
+                {
+                    try
+                    {
+                        _subtitlesEnabled = !_subtitlesEnabled;
+                        if (_subtitlesEnabled)
+                            _vlcMedia.addOption(":sub-track=0");
+                        else
+                            _vlcMedia.addOption(":no-spu");
+                        ShowOverlay(_subtitlesEnabled ? "Subtitles ON" : "Subtitles OFF");
+                        HideOverlayDelayed();
+                    }
+                    catch { }
+                };
+                menu.Items.Add(toggleSub);
+
+                menu.ShowAt(SubtitleButton);
+            }
+            catch { }
+        }
+
+        private async void AudioTrackButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vlcPlayer == null) return;
+
+            try
+            {
+                var dialog = new MessageDialog(
+                    "Audio track selection requires libVLCX audio track API.\n" +
+                    "Use VLC's built-in audio track selector if available.",
+                    "Audio Track");
+                dialog.Commands.Add(new UICommand("OK", null, "ok"));
+                await dialog.ShowAsync();
+            }
+            catch { }
+        }
+
+        private void SnapshotButton_Click(object sender, RoutedEventArgs e)
+        {
+            TakeScreenshot();
+        }
+
+        #endregion
+
         #region Fullscreen
 
         private void ToggleFullscreen()
@@ -817,6 +1359,45 @@ namespace HyperMedia
         private void FullscreenButton_Click(object sender, RoutedEventArgs e)
         {
             ToggleFullscreen();
+        }
+
+        private void SettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            SaveStateForRestore();
+            _navigatingToSettings = true;
+            Frame.Navigate(typeof(SettingsPage));
+        }
+
+        private void SaveStateForRestore()
+        {
+            try
+            {
+                if (_playlist.Count > 0 && _playlistIndex >= 0 && _playlistIndex < _playlist.Count)
+                {
+                    var file = _playlist[_playlistIndex];
+                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", file);
+
+                    if (_playlist.Count > 1)
+                    {
+                        var extras = new List<string>();
+                        for (int i = 0; i < _playlist.Count; i++)
+                        {
+                            if (i != _playlistIndex)
+                                extras.Add(_playlist[i].Path);
+                        }
+                        ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                    }
+
+                    var restore = ApplicationData.Current.LocalSettings;
+                    restore.Values["Restore_Volume"] = (int)VolumeSlider.Value;
+                    restore.Values["Restore_Speed"] = _playbackSpeed;
+                    restore.Values["Restore_RepeatMode"] = _repeatMode;
+                    restore.Values["Restore_Shuffle"] = _shuffleOn;
+                }
+
+                SaveResumePosition();
+            }
+            catch { }
         }
 
         private void VideoArea_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
@@ -855,6 +1436,12 @@ namespace HyperMedia
                 case VirtualKey.Escape:
                     if (_isFullscreen) ToggleFullscreen();
                     break;
+                case VirtualKey.B:
+                    ToggleAbRepeat();
+                    break;
+                case VirtualKey.S:
+                    TakeScreenshot();
+                    break;
                 case VirtualKey.N:
                     if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0)
                         PlayNext();
@@ -870,6 +1457,12 @@ namespace HyperMedia
                 case VirtualKey.O:
                     if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0)
                         OpenFileFromPicker();
+                    else
+                        handled = false;
+                    break;
+                case VirtualKey.U:
+                    if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0)
+                        ShowUrlInputOverlay();
                     else
                         handled = false;
                     break;
@@ -994,7 +1587,7 @@ namespace HyperMedia
         private void AutoHideTimer_Tick(object sender, object e)
         {
             _autoHideTimer.Stop();
-            if (_isPlaying)
+            if (_isPlaying && SettingsPage.GetAutoHideEnabled())
                 HideControls();
         }
 

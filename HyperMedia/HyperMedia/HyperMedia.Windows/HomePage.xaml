@@ -167,17 +167,22 @@
                         <ItemsControl x:Name="RecentVideosList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="14,8"
+                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="8"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="10"
-                                                       Foreground="#66E040FB" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Item2}"
+                                            <Border Grid.Column="0" Width="32" Height="32"
+                                                    Background="#18FFFFFF">
+                                                <Image Source="{Binding Thumbnail}"
+                                                       Width="32" Height="32"
+                                                       Stretch="UniformToFill"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="12" Foreground="#AAFFFFFF"
                                                        VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -196,7 +201,7 @@
                                 <DataTemplate>
                                     <Border Background="#20E040FB" CornerRadius="0" Width="110" Height="64"
                                             Margin="0,0,6,6" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid Margin="10,8">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
@@ -204,7 +209,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
                                                        Foreground="#88E040FB"/>
-                                            <TextBlock Grid.Row="1" Text="{Binding Item2}"
+                                            <TextBlock Grid.Row="1" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </Grid>
@@ -281,17 +286,22 @@
                         <ItemsControl x:Name="RecentMusicList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="14,8"
+                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="8"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="10"
-                                                       Foreground="#6600BCD4" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Item2}"
+                                            <Border Grid.Column="0" Width="32" Height="32"
+                                                    Background="#18FFFFFF">
+                                                <Image Source="{Binding Thumbnail}"
+                                                       Width="32" Height="32"
+                                                       Stretch="UniformToFill"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="12" Foreground="#AAFFFFFF"
                                                        VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -310,7 +320,7 @@
                                 <DataTemplate>
                                     <Border Background="#2000BCD4" CornerRadius="0" Width="110" Height="64"
                                             Margin="0,0,6,6" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid Margin="10,8">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
@@ -318,7 +328,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
                                                        Foreground="#8800BCD4"/>
-                                            <TextBlock Grid.Row="1" Text="{Binding Item2}"
+                                            <TextBlock Grid.Row="1" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </Grid>
@@ -395,17 +405,22 @@
                         <ItemsControl x:Name="RecentPhotosList">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="14,8"
+                                    <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="8"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="10"
-                                                       Foreground="#6676FF00" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding Item2}"
+                                            <Border Grid.Column="0" Width="32" Height="32"
+                                                    Background="#18FFFFFF">
+                                                <Image Source="{Binding Thumbnail}"
+                                                       Width="32" Height="32"
+                                                       Stretch="UniformToFill"/>
+                                            </Border>
+                                            <TextBlock Grid.Column="2" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="12" Foreground="#AAFFFFFF"
                                                        VerticalAlignment="Center"
                                                        TextTrimming="CharacterEllipsis"/>
@@ -424,7 +439,7 @@
                                 <DataTemplate>
                                     <Border Background="#2076FF00" CornerRadius="0" Width="110" Height="64"
                                             Margin="0,0,6,6" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding Item1}">
+                                            Tag="{Binding FilePath}">
                                         <Grid Margin="10,8">
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
@@ -432,7 +447,7 @@
                                             </Grid.RowDefinitions>
                                             <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="16"
                                                        Foreground="#8876FF00"/>
-                                            <TextBlock Grid.Row="1" Text="{Binding Item2}"
+                                            <TextBlock Grid.Row="1" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis"/>
                                         </Grid>
@@ -474,9 +489,21 @@
                                FontFamily="Segoe UI" FontSize="11" Foreground="#33FFFFFF"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
-                    <TextBlock Grid.Column="2" Text="Powered by libVLC"
-                               FontFamily="Segoe UI" FontSize="11" Foreground="#33FFFFFF"
-                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="2" Click="ClearHistory_Click"
+                            Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,8,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x1F5D1;" FontFamily="Segoe UI Symbol" FontSize="11"
+                                       Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="Clear History" FontFamily="Segoe UI" FontSize="10"
+                                       Foreground="#55FFFFFF" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Grid.Column="2" Click="SettingsButton_Click"
+                            Style="{StaticResource ZunePrimaryStyle}">
+                        <TextBlock Text="&#x2699;" FontFamily="Segoe UI Symbol" FontSize="12"
+                                   Foreground="#55FFFFFF"/>
+                    </Button>
                 </Grid>
             </Border>
         </Border>

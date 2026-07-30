@@ -51,7 +51,7 @@ namespace HyperMedia
                 }
 
                 // Remove duplicate if exists
-                list.RemoveAll(x => x.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+                list.RemoveAll(x => x.StartsWith(filePath + "::", StringComparison.OrdinalIgnoreCase));
 
                 // Add to front
                 list.Insert(0, filePath + "::" + fileName);

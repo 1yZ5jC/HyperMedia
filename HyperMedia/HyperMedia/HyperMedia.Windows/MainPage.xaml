@@ -57,25 +57,36 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <StackPanel Grid.Column="0" VerticalAlignment="Center" MaxWidth="480">
+                        <StackPanel Grid.Column="0" VerticalAlignment="Center" MaxWidth="520">
                             <TextBlock Text="Welcome" FontFamily="Segoe UI Light" FontSize="56"
                                        Foreground="#FFFFFFFF" Margin="0,0,0,8"/>
-                            <TextBlock Text="Drop a file here or press Ctrl+O to open"
+                            <TextBlock Text="Drop a file here, press Ctrl+O to open, or enter a URL"
                                        FontFamily="Segoe UI" FontSize="18"
-                                       Foreground="#66FFFFFF" Margin="0,0,0,40"
+                                       Foreground="#66FFFFFF" Margin="0,0,0,32"
                                        TextWrapping="Wrap"/>
 
-                            <Button x:Name="WelcomeOpenButton" Click="WelcomeOpenButton_Click"
-                                    Style="{StaticResource ZuneActionStyle}" HorizontalAlignment="Left">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                               Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBlock Text="OPEN FILE" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
-                                               FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
-                                </StackPanel>
-                            </Button>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,24">
+                                <Button x:Name="WelcomeOpenButton" Click="WelcomeOpenButton_Click"
+                                        Style="{StaticResource ZuneActionStyle}" Margin="0,0,12,0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                                   Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="OPEN FILE" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                                   FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
+                                    </StackPanel>
+                                </Button>
+                                <Button x:Name="WelcomeUrlButton" Click="UrlButton_Click"
+                                        Style="{StaticResource ZuneActionStyle}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="&#x1F310;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                                   Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                        <TextBlock Text="OPEN URL" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                                   FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
+                                    </StackPanel>
+                                </Button>
+                            </StackPanel>
 
-                            <StackPanel Orientation="Horizontal" Margin="0,32,0,0">
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
                                 <Border Background="#15FFFFFF" CornerRadius="0" Padding="10,4" Margin="0,0,6,0">
                                     <TextBlock Text="MP4" Foreground="#55FFFFFF" FontFamily="Segoe UI" FontSize="10"/>
                                 </Border>
@@ -91,7 +102,7 @@
                                 <Border Background="#15FFFFFF" CornerRadius="0" Padding="10,4" Margin="0,0,6,0">
                                     <TextBlock Text="FLAC" Foreground="#55FFFFFF" FontFamily="Segoe UI" FontSize="10"/>
                                 </Border>
-                                <TextBlock Text="and more..." FontFamily="Segoe UI" FontSize="10"
+                                <TextBlock Text="+ HTTP, RTSP, MMS..." FontFamily="Segoe UI" FontSize="10"
                                            Foreground="#33FFFFFF" VerticalAlignment="Center" Margin="6,0,0,0"/>
                             </StackPanel>
                         </StackPanel>
@@ -148,10 +159,10 @@
                                 </Grid.ColumnDefinitions>
                                 <Border Background="#18FFFFFF" CornerRadius="0" Padding="12,6"
                                         HorizontalAlignment="Left" VerticalAlignment="Center">
-                                    <TextBlock Text="ESC" FontFamily="Segoe UI Semibold" FontSize="11"
+                                    <TextBlock Text="A-B" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="Exit fullscreen"
+                                <TextBlock Grid.Column="1" Text="A-B repeat loop"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
@@ -178,7 +189,7 @@
                 </Grid>
             </Border>
 
-            <!-- Swipe Indicator (fixed labels) -->
+            <!-- Swipe Indicator -->
             <StackPanel x:Name="SwipeIndicator" Orientation="Horizontal"
                         VerticalAlignment="Center" HorizontalAlignment="Center"
                         Visibility="Collapsed" Margin="0,0,0,80">
@@ -199,6 +210,15 @@
                        TextWrapping="Wrap" TextAlignment="Center"
                        Margin="0,0,0,120"
                        Visibility="Collapsed"/>
+
+            <!-- A-B Repeat Indicator -->
+            <Border x:Name="AbRepeatIndicator" Visibility="Collapsed"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,80,32,0" Background="#40E040FB" Padding="12,6">
+                <TextBlock x:Name="AbRepeatText" Text="A-B"
+                           FontFamily="Segoe UI Semibold" FontSize="12"
+                           Foreground="#FFE040FB" CharacterSpacing="40"/>
+            </Border>
 
             <!-- TOP BAR -->
             <Border x:Name="TopBar" VerticalAlignment="Top"
@@ -226,7 +246,7 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock x:Name="FileNameText" Text=""
                                            Foreground="#FFFFFFFF" FontFamily="Segoe UI Semibold" FontSize="15"
-                                           TextTrimming="CharacterEllipsis" MaxWidth="400"/>
+                                           TextTrimming="CharacterEllipsis" MaxWidth="300"/>
                                 <TextBlock x:Name="PlaylistCounter" Text=""
                                            Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="13"
                                            VerticalAlignment="Center" Margin="10,0,0,0"/>
@@ -238,8 +258,28 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="SettingsButton" Click="SettingsButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <TextBlock Text="&#x2699;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="SubtitleButton" Click="SubtitleButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <TextBlock Text="CC" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="AudioTrackButton" Click="AudioTrackButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <TextBlock Text="&#x1F50A;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="SnapshotButton" Click="SnapshotButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
                         <Button x:Name="SpeedButton" Click="SpeedButton_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,8,0">
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                             <TextBlock x:Name="SpeedIcon" Text="1x"
                                        FontFamily="Segoe UI" FontSize="13" FontWeight="SemiBold"
                                        Foreground="#FFFFFFFF"/>
@@ -308,7 +348,6 @@
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <!-- Left: Prev + Play/Pause + Stop + Next -->
                         <Button x:Name="PrevButton" Grid.Column="0"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="PrevButton_Click">
@@ -338,10 +377,8 @@
                                        Foreground="#FFFFFFFF"/>
                         </Button>
 
-                        <!-- Spacer -->
                         <Grid Grid.Column="4"/>
 
-                        <!-- Right: Repeat + Shuffle + Mute + Volume -->
                         <Button x:Name="RepeatButton" Grid.Column="5"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="RepeatButton_Click">
