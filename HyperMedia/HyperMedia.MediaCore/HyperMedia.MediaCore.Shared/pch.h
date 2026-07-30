@@ -19,23 +19,7 @@ namespace Windows { namespace Storage { namespace Streams {
 }}}
 #endif
 
-#if defined(_M_ARM)
-#define HYPERMEDIA_HAS_FFMPEG 0
-#else
-#define HYPERMEDIA_HAS_FFMPEG 1
-#endif
-
 #define HYPERMEDIA_HAS_LIBVLC 1
-
-#if HYPERMEDIA_HAS_FFMPEG
-extern "C" {
-#include <libavformat/avformat.h>
-#include <libavcodec/avcodec.h>
-#include <libavutil/imgutils.h>
-#include <libswscale/swscale.h>
-#include <libswresample/swresample.h>
-}
-#endif
 
 #if HYPERMEDIA_HAS_LIBVLC
 #include <vlc/vlc.h>

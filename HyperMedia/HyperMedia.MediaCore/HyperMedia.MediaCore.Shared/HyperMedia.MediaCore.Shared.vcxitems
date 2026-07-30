@@ -10,21 +10,15 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory);$(MSBuildThisFileDirectory)..\..\libvlc\$(Platform)\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
     </ClCompile>
-    <Link>
-      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories);$(MSBuildThisFileDirectory)..\..\libvlc\$(Platform)\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>%(AdditionalDependencies);libvlc.lib</AdditionalDependencies>
-    </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)Class1.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)LibVlcInterop.h" Condition="'$(Platform)'!='ARM'" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Class1.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LibVlcInterop.cpp" Condition="'$(Platform)'!='ARM'" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
