@@ -10,83 +10,211 @@
     AllowDrop="True"
     DragOver="Page_DragOver"
     Drop="Page_Drop"
-    Background="Black">
+    Background="#FF0A0A0F">
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Center Content -->
-        <Grid Grid.Row="0">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+        <!-- Top Bar -->
+        <Border Grid.Row="0" Padding="32,20,32,0">
+            <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
 
-                <!-- App Icon -->
-                <Border Width="88" Height="88" CornerRadius="44"
-                        Background="#18FFFFFF" HorizontalAlignment="Center" Margin="0,0,0,24">
-                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="36"
-                               Foreground="#FFFFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="18"
+                           Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI Semilight" FontSize="16"
+                           Foreground="#FFFFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Button x:Name="NavVideoBtn" Content="VIDEOS" Click="NavVideoBtn_Click"
+                        Style="{StaticResource ZuneNavStyle}" Margin="0,0,32,0"/>
+                <Button x:Name="NavMusicBtn" Content="MUSIC" Click="NavMusicBtn_Click"
+                        Style="{StaticResource ZuneNavStyle}" Margin="0,0,32,0"/>
+                <Button x:Name="NavPhotosBtn" Content="PHOTOS" Click="NavPhotosBtn_Click"
+                        Style="{StaticResource ZuneNavStyle}"/>
+            </StackPanel>
+
+            <Button Grid.Column="2" x:Name="OpenButton" Click="OpenButton_Click"
+                    Style="{StaticResource ZuneOpenStyle}" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="+" FontFamily="Segoe UI Light" FontSize="18"
+                               Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock Text="OPEN" Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                               VerticalAlignment="Center" CharacterSpacing="60"/>
+                </StackPanel>
+            </Button>
+        </Grid>
+        </Border>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="0,0,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Hero Section -->
+            <Grid Grid.Row="0" Margin="32,16,32,0">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#18E040FB" Offset="0"/>
+                        <GradientStop Color="#0800BCD4" Offset="0.5"/>
+                        <GradientStop Color="#00000000" Offset="1"/>
+                    </LinearGradientBrush>
+                </Grid.Background>
+
+                <StackPanel VerticalAlignment="Center" Margin="0,32,0,32">
+                    <TextBlock Text="PLAY ANYTHING" FontFamily="Segoe UI Light" FontSize="48"
+                               Foreground="#FFFFFFFF" Margin="0,0,0,8"/>
+                    <TextBlock Text="Video, audio, photos — one player for all your media."
+                               FontFamily="Segoe UI" FontSize="16" Foreground="#88FFFFFF"
+                               Margin="0,0,0,28"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Click="OpenButton_Click" Style="{StaticResource ZuneActionStyle}" Margin="0,0,16,0">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                           Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                <TextBlock Text="PLAY FILE" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Text="or drag a file anywhere"
+                                   FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
+                                   VerticalAlignment="Center" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Category Grid -->
+            <Grid Grid.Row="1" Margin="32,24,32,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Video Card -->
+                <Border Grid.Column="0" Background="#15E040FB" Margin="0,0,12,0"
+                        CornerRadius="3" Tapped="VideoTile_Tapped"
+                        PointerEntered="Card_PointerEntered" PointerExited="Card_PointerExited">
+                    <Grid Margin="24,28">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="&#x1F3AC;" FontFamily="Segoe UI Symbol" FontSize="40"
+                                   Foreground="#FFE040FB"/>
+                        <TextBlock Grid.Row="2" Text="VIDEOS" FontFamily="Segoe UI Semibold" FontSize="18"
+                                   Foreground="#FFFFFFFF" CharacterSpacing="60"/>
+                        <TextBlock Grid.Row="4" Text="MP4  AVI  MKV  WEBM  MOV"
+                                   FontFamily="Segoe UI" FontSize="11" Foreground="#66FFFFFF"/>
+                    </Grid>
                 </Border>
 
-                <!-- App Name -->
-                <TextBlock Text="HyperMedia"
-                           FontFamily="Segoe UI Light"
-                           FontSize="40"
-                           Foreground="#FFFFFFFF" HorizontalAlignment="Center"
-                           Margin="0,0,0,6"/>
-                <TextBlock Text="Media Player"
-                           FontFamily="Segoe UI"
-                           FontSize="15" Foreground="#99FFFFFF"
-                           HorizontalAlignment="Center" Margin="0,0,0,40"/>
+                <!-- Music Card -->
+                <Border Grid.Column="1" Background="#1500BCD4" Margin="6,0,6,0"
+                        CornerRadius="3" Tapped="MusicTile_Tapped"
+                        PointerEntered="Card_PointerEntered" PointerExited="Card_PointerExited">
+                    <Grid Margin="24,28">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="40"
+                                   Foreground="#FF00BCD4"/>
+                        <TextBlock Grid.Row="2" Text="MUSIC" FontFamily="Segoe UI Semibold" FontSize="18"
+                                   Foreground="#FFFFFFFF" CharacterSpacing="60"/>
+                        <TextBlock Grid.Row="4" Text="MP3  FLAC  WAV  AAC  OGG"
+                                   FontFamily="Segoe UI" FontSize="11" Foreground="#66FFFFFF"/>
+                    </Grid>
+                </Border>
 
-                <!-- Open File Button -->
-                <Button x:Name="OpenButton" Click="OpenButton_Click"
-                        HorizontalAlignment="Center"
-                        Padding="36,14" Margin="0,0,0,20">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="&#x25A0;" FontFamily="Segoe UI Symbol" FontSize="12"
-                                   Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                        <TextBlock Text="Open File" Foreground="#FFFFFFFF" FontSize="14"
-                                   VerticalAlignment="Center"/>
+                <!-- Photos Card -->
+                <Border Grid.Column="2" Background="#1576FF00" Margin="6,0,6,0"
+                        CornerRadius="3" Tapped="PhotosTile_Tapped"
+                        PointerEntered="Card_PointerEntered" PointerExited="Card_PointerExited">
+                    <Grid Margin="24,28">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="40"
+                                   Foreground="#FF76FF00"/>
+                        <TextBlock Grid.Row="2" Text="PHOTOS" FontFamily="Segoe UI Semibold" FontSize="18"
+                                   Foreground="#FFFFFFFF" CharacterSpacing="60"/>
+                        <TextBlock Grid.Row="4" Text="JPG  PNG  BMP  GIF  TIFF"
+                                   FontFamily="Segoe UI" FontSize="11" Foreground="#66FFFFFF"/>
+                    </Grid>
+                </Border>
+
+                <!-- Recent Card -->
+                <Border Grid.Column="3" Background="#15FF6D00" Margin="12,0,0,0"
+                        CornerRadius="3" Tapped="RecentTile_Tapped"
+                        PointerEntered="Card_PointerEntered" PointerExited="Card_PointerExited">
+                    <Grid Margin="24,28">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="16"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock Text="&#x1F552;" FontFamily="Segoe UI Symbol" FontSize="40"
+                                   Foreground="#FF6D00"/>
+                        <TextBlock Grid.Row="2" Text="RECENT" FontFamily="Segoe UI Semibold" FontSize="18"
+                                   Foreground="#FFFFFFFF" CharacterSpacing="60"/>
+                        <TextBlock Grid.Row="4" Text="Quick access"
+                                   FontFamily="Segoe UI" FontSize="11" Foreground="#66FFFFFF"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Drag & Drop Overlay -->
+            <Border x:Name="DropOverlay" Grid.Row="0" Grid.RowSpan="2"
+                    Background="#EE0A0A0F" Visibility="Collapsed"
+                    AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop">
+                <Grid>
+                    <Grid.Background>
+                        <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                            <GradientStop Color="#30E040FB" Offset="0"/>
+                            <GradientStop Color="#1000BCD4" Offset="1"/>
+                        </LinearGradientBrush>
+                    </Grid.Background>
+                    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                        <Border Width="96" Height="96" CornerRadius="48"
+                                BorderThickness="2" BorderBrush="#FFE040FB"
+                                HorizontalAlignment="Center" Margin="0,0,0,24">
+                            <TextBlock Text="&#x2B07;" FontFamily="Segoe UI Symbol" FontSize="40"
+                                       Foreground="#FFE040FB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <TextBlock Text="DROP TO PLAY" FontFamily="Segoe UI Light" FontSize="28"
+                                   Foreground="#FFFFFFFF" HorizontalAlignment="Center" CharacterSpacing="60"/>
+                        <TextBlock Text="Release to start playback"
+                                   FontFamily="Segoe UI" FontSize="14" Foreground="#66FFFFFF"
+                                   HorizontalAlignment="Center" Margin="0,12,0,0"/>
                     </StackPanel>
-                </Button>
-
-                <!-- Drag & Drop Hint -->
-                <TextBlock Text="or drag and drop a file here"
-                           FontFamily="Segoe UI"
-                           FontSize="12" Foreground="#66FFFFFF"
-                           HorizontalAlignment="Center" Margin="0,0,0,48"/>
-
-                <!-- Keyboard Shortcuts -->
-                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-                    <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#44FFFFFF">
-                        <Run Text="Ctrl+O"/>
-                        <Run Text=" Open" Foreground="#66FFFFFF"/>
-                    </TextBlock>
-                    <TextBlock Text="  |  " FontFamily="Segoe UI" FontSize="12" Foreground="#33FFFFFF"/>
-                    <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#44FFFFFF">
-                        <Run Text="Space"/>
-                        <Run Text=" Play/Pause" Foreground="#66FFFFFF"/>
-                    </TextBlock>
-                    <TextBlock Text="  |  " FontFamily="Segoe UI" FontSize="12" Foreground="#33FFFFFF"/>
-                    <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#44FFFFFF">
-                        <Run Text="Left/Right"/>
-                        <Run Text=" Seek" Foreground="#66FFFFFF"/>
-                    </TextBlock>
-                    <TextBlock Text="  |  " FontFamily="Segoe UI" FontSize="12" Foreground="#33FFFFFF"/>
-                    <TextBlock FontFamily="Segoe UI" FontSize="12" Foreground="#44FFFFFF">
-                        <Run Text="Up/Down"/>
-                        <Run Text=" Volume" Foreground="#66FFFFFF"/>
-                    </TextBlock>
-                </StackPanel>
-            </StackPanel>
+                </Grid>
+            </Border>
         </Grid>
-
-        <!-- Bottom Bar -->
-        <Border Grid.Row="1" Background="Transparent" Padding="0,0,0,12">
-            <TextBlock Text="v1.0" Foreground="#33FFFFFF" FontFamily="Segoe UI" FontSize="11"
-                       HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,16,0"/>
-        </Border>
     </Grid>
 </Page>

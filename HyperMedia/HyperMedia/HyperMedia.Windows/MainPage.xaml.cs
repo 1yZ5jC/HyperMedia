@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
 using Windows.Storage.Pickers;
@@ -12,7 +12,6 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
-using Windows.UI.Xaml.Media.Imaging;
 using libVLCX;
 
 namespace HyperMedia
@@ -23,7 +22,6 @@ namespace HyperMedia
 
         private DispatcherTimer _autoHideTimer;
         private DispatcherTimer _positionTimer;
-        private bool _isLibVlc;
         private bool _isPlaying;
         private bool _isSeeking;
         private bool _isFullscreen;
@@ -36,34 +34,9 @@ namespace HyperMedia
         private Media _vlcMedia;
         private string _vlcInitError;
 
-        private static List<string> MakeVlcArgs()
-        {
-            var args = new List<string>
-            {
-                "-I", "dummy",
-                "--no-plugins-cache",
-                "--no-osd",
-                "--no-stats",
-                "--no-loop",
-                "--no-video-title-show",
-                "--drop-late-frames",
-                "--avcodec-hw=any",
-                "--aout=winstore",
-                "--no-keyboard-events",
-                "--no-mouse-events"
-            };
-            try
-            {
-                var pkg = Windows.ApplicationModel.Package.Current;
-                if (pkg != null)
-                {
-                    string pluginPath = pkg.InstalledLocation.Path + "\\plugins";
-                    args.Add("--plugin-path=" + pluginPath);
-                }
-            }
-            catch { }
-            return args;
-        }
+        // Swipe gesture tracking
+        private double _swipeStartX;
+        private bool _isSwiping;
 
         public MainPage()
         {
@@ -104,6 +77,35 @@ namespace HyperMedia
                 StatusText.Text = _vlcInitError;
                 Debug.WriteLine("[HyperMedia] libVLCX init failed: {0}", ex);
             }
+        }
+
+        private static List<string> MakeVlcArgs()
+        {
+            var args = new List<string>
+            {
+                "-I", "dummy",
+                "--no-plugins-cache",
+                "--no-osd",
+                "--no-stats",
+                "--no-loop",
+                "--no-video-title-show",
+                "--drop-late-frames",
+                "--avcodec-hw=any",
+                "--aout=winstore",
+                "--no-keyboard-events",
+                "--no-mouse-events"
+            };
+            try
+            {
+                var pkg = Windows.ApplicationModel.Package.Current;
+                if (pkg != null)
+                {
+                    string pluginPath = pkg.InstalledLocation.Path + "\\plugins";
+                    args.Add("--plugin-path=" + pluginPath);
+                }
+            }
+            catch { }
+            return args;
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -179,7 +181,6 @@ namespace HyperMedia
                 return;
             }
 
-            _isLibVlc = true;
             FileNameText.Text = tempFile.Name;
 
             try
@@ -226,7 +227,7 @@ namespace HyperMedia
             Debug.WriteLine("[HyperMedia] libVLC playback started: {0}ms", sw.ElapsedMilliseconds);
         }
 
-        private async void OpenButton_Click(object sender, RoutedEventArgs e)
+        private async void OpenFileFromPicker()
         {
             var picker = new FileOpenPicker();
             picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
@@ -240,6 +241,16 @@ namespace HyperMedia
 
             StorageFile file = await picker.PickSingleFileAsync();
             OpenFile(file);
+        }
+
+        private void WelcomeOpenButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileFromPicker();
+        }
+
+        private void OpenButton_Click(object sender, RoutedEventArgs e)
+        {
+            OpenFileFromPicker();
         }
 
         #endregion
@@ -485,10 +496,7 @@ namespace HyperMedia
         {
             if (_duration <= 0) return;
 
-            bool wasPlaying = _isPlaying;
-
             _vlcPlayer?.setTime((long)(seconds * 1000));
-
             CurrentTimeText.Text = FormatTime(seconds);
         }
 
@@ -496,11 +504,38 @@ namespace HyperMedia
         {
             int vol = (int)e.NewValue;
             _vlcPlayer?.setVolume(vol);
+            UpdateVolumeIcon(vol);
+        }
 
-            if (VolumeIcon != null)
+        private void MuteButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (_vlcPlayer == null) return;
+
+            if (VolumeSlider.Value > 0)
             {
-                VolumeIcon.Text = vol == 0 ? "\u2716" : "\u1F50A";
+                VolumeSlider.Tag = VolumeSlider.Value;
+                VolumeSlider.Value = 0;
             }
+            else
+            {
+                double prev = 100;
+                if (VolumeSlider.Tag is double)
+                    prev = (double)VolumeSlider.Tag;
+                VolumeSlider.Value = prev;
+            }
+        }
+
+        private void UpdateVolumeIcon(int vol)
+        {
+            if (VolumeIcon == null) return;
+            if (vol == 0)
+                VolumeIcon.Text = "\u2716";
+            else if (vol < 33)
+                VolumeIcon.Text = "\u1F507";
+            else if (vol < 66)
+                VolumeIcon.Text = "\u1F509";
+            else
+                VolumeIcon.Text = "\u1F50A";
         }
 
         #endregion
@@ -536,7 +571,7 @@ namespace HyperMedia
                     break;
                 case VirtualKey.O:
                     if ((Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0)
-                        OpenButton_Click(null, null);
+                        OpenFileFromPicker();
                     break;
                 default:
                     handled = false;
@@ -550,8 +585,7 @@ namespace HyperMedia
         {
             if (_duration <= 0) return;
 
-            double current = 0;
-            current = _vlcPlayer?.time() / 1000.0 ?? 0;
+            double current = _vlcPlayer?.time() / 1000.0 ?? 0;
 
             double target = current + seconds;
             if (target < 0) target = 0;
@@ -574,11 +608,62 @@ namespace HyperMedia
 
         private void ToggleFullscreen()
         {
+            _isFullscreen = !_isFullscreen;
+            FullscreenIcon.Text = _isFullscreen ? "\u2716" : "\u26F6";
+        }
+
+        private void FullscreenButton_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleFullscreen();
         }
 
         private void VideoArea_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
             ToggleFullscreen();
+        }
+
+        #endregion
+
+        #region Swipe Gestures
+
+        private void VideoArea_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
+        {
+            _swipeStartX = e.Position.X;
+            _isSwiping = false;
+        }
+
+        private void VideoArea_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
+        {
+            double deltaX = e.Cumulative.Translation.X;
+
+            if (Math.Abs(deltaX) > 50)
+            {
+                _isSwiping = true;
+                SwipeIndicator.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void VideoArea_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
+        {
+            SwipeIndicator.Visibility = Visibility.Collapsed;
+
+            if (_isSwiping)
+            {
+                double deltaX = e.Cumulative.Translation.X;
+
+                if (deltaX > 100)
+                {
+                    // Swipe right - previous (seek back 30s)
+                    SeekRelative(-30);
+                }
+                else if (deltaX < -100)
+                {
+                    // Swipe left - next (seek forward 30s)
+                    SeekRelative(30);
+                }
+            }
+
+            _isSwiping = false;
         }
 
         #endregion
@@ -649,8 +734,25 @@ namespace HyperMedia
         {
         }
 
-        private void Page_Drop(object sender, DragEventArgs e)
+        private async void Page_Drop(object sender, DragEventArgs e)
         {
+            try
+            {
+                var view = e.Data.GetView();
+                if (view.Contains(StandardDataFormats.StorageItems))
+                {
+                    var items = await view.GetStorageItemsAsync();
+                    if (items.Count > 0)
+                    {
+                        var file = items[0] as StorageFile;
+                        if (file != null)
+                        {
+                            OpenFile(file);
+                        }
+                    }
+                }
+            }
+            catch { }
         }
 
         #endregion
