@@ -212,7 +212,7 @@ namespace HyperMedia
                     restore.Values.Remove("Restore_Shuffle");
                 }
                 UpdateRepeatIcon();
-                UpdateShuffleIcon();
+                //UpdateShuffleIcon();
             }
             catch { }
         }
@@ -1256,7 +1256,7 @@ namespace HyperMedia
             try
             {
                 var menu = new MenuFlyout();
-                menu.Placement = PlacementMode.Bottom;
+                menu.Placement = FlyoutPlacementMode.Bottom;
 
                 var loadExternal = new MenuFlyoutItem();
                 loadExternal.Text = "Load External Subtitle...";
