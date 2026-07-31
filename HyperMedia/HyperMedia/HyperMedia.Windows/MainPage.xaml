@@ -8,15 +8,20 @@
     IsTabStop="True"
     KeyDown="Page_KeyDown"
     PointerMoved="Page_PointerMoved"
+    PointerWheelChanged="Page_PointerWheelChanged"
     AllowDrop="True"
     DragOver="Page_DragOver"
     Drop="Page_Drop"
     Background="#FF0A0A0F">
 
     <Grid x:Name="RootGrid">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
 
         <!-- VIDEO AREA -->
-        <Grid Background="Black" DoubleTapped="VideoArea_DoubleTapped"
+        <Grid Grid.Column="0" Background="Black" DoubleTapped="VideoArea_DoubleTapped"
               Tapped="VideoArea_Tapped"
               ManipulationStarted="VideoArea_ManipulationStarted"
               ManipulationDelta="VideoArea_ManipulationDelta"
@@ -180,6 +185,48 @@
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
+                            <Grid Margin="0,0,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="#18FFFFFF" CornerRadius="0" Padding="12,6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="L" FontFamily="Segoe UI Semibold" FontSize="11"
+                                               Foreground="#AAFFFFFF"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="播放列表"
+                                           FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
+                                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="#18FFFFFF" CornerRadius="0" Padding="12,6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="Ctrl+O" FontFamily="Segoe UI Semibold" FontSize="11"
+                                               Foreground="#AAFFFFFF"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="打开文件"
+                                           FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
+                                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="72"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Border Background="#18FFFFFF" CornerRadius="0" Padding="12,6"
+                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <TextBlock Text="Ctrl+U" FontFamily="Segoe UI Semibold" FontSize="11"
+                                               Foreground="#AAFFFFFF"/>
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="打开网址"
+                                           FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
+                                           VerticalAlignment="Center" Margin="16,0,0,0"/>
+                            </Grid>
                         </StackPanel>
                     </Grid>
 
@@ -290,6 +337,146 @@
                 </Border>
             </Grid>
 
+            <!-- PHOTO VIEWER OVERLAY -->
+            <Border x:Name="PhotoViewerOverlay" Visibility="Collapsed" Background="#FF0A0A0F">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- Photo Top Bar -->
+                    <Border Grid.Row="0" VerticalAlignment="Top">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#DD0A0A0F" Offset="0"/>
+                                <GradientStop Color="#000A0A0F" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid Margin="32,16,32,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="PhotoFileName" Text=""
+                                       FontFamily="Segoe UI Semibold" FontSize="15"
+                                       Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" MaxWidth="500"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <Button x:Name="PhotoZoomInBtn" Click="PhotoZoomInBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="放大"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x2795;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <TextBlock x:Name="PhotoZoomText" Text="100%"
+                                           FontFamily="Segoe UI" FontSize="12"
+                                           Foreground="#66FFFFFF" VerticalAlignment="Center"
+                                           Width="44" TextAlignment="Center"/>
+                                <Button x:Name="PhotoZoomOutBtn" Click="PhotoZoomOutBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="4,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="缩小"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x2796;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoZoomResetBtn" Click="PhotoZoomResetBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="重置缩放"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x21BA;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoRotateBtn" Click="PhotoRotateBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="旋转"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x21BB;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoSlideshowBtn" Click="PhotoSlideshowBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="幻灯片"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock x:Name="PhotoSlideshowIcon" Text="&#x25B6;"
+                                               FontFamily="Segoe UI Symbol" FontSize="14"
+                                               Foreground="#66FFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoCloseBtn" Click="PhotoCloseBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="关闭"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="14"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- Photo Image -->
+                    <ScrollViewer Grid.Row="1" x:Name="PhotoScrollViewer"
+                                  HorizontalScrollBarVisibility="Auto"
+                                  VerticalScrollBarVisibility="Auto"
+                                  ZoomMode="Enabled"
+                                  DoubleTapped="PhotoScrollViewer_DoubleTapped">
+                        <Image x:Name="PhotoImage"
+                               Stretch="Uniform"
+                               RenderTransformOrigin="0.5,0.5">
+                            <Image.RenderTransform>
+                                <CompositeTransform x:Name="PhotoTransform"/>
+                            </Image.RenderTransform>
+                        </Image>
+                    </ScrollViewer>
+
+                    <!-- Photo Bottom Bar -->
+                    <Border Grid.Row="2" VerticalAlignment="Bottom">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#000A0A0F" Offset="0"/>
+                                <GradientStop Color="#EE0A0A0F" Offset="0.3"/>
+                                <GradientStop Color="#FF0A0A0F" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <Grid Margin="32,12,32,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="PhotoPrevBtn" Click="PhotoPrevBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="上一张"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <TextBlock x:Name="PhotoCounter" Text=""
+                                       Grid.Column="1" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#66FFFFFF" HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"/>
+                            <Button x:Name="PhotoNextBtn" Click="PhotoNextBtn_Click"
+                                    Grid.Column="2"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="下一张"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x23ED;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
+                        </Grid>
+                    </Border>
+                </Grid>
+            </Border>
+
             <!-- Overlay Notification Bar -->
             <Border x:Name="OverlayNotification"
                     VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
@@ -341,6 +528,181 @@
                 <TextBlock x:Name="AbRepeatText" Text="A-B"
                            FontFamily="Segoe UI Semibold" FontSize="12"
                            Foreground="#FFE040FB" CharacterSpacing="40"/>
+            </Border>
+
+            <!-- EQUALIZER OVERLAY -->
+            <Border x:Name="EqualizerOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Width="380" Background="#FF0D0D16" BorderThickness="1,0,0,0" Margin="0,0,0,0">
+                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                <Grid Margin="20,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="均衡器" FontFamily="Segoe UI" FontSize="14" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,12"/>
+                    <ComboBox x:Name="EqPresetCombo" Grid.Row="1" Margin="0,0,0,12" SelectionChanged="EqPresetCombo_SelectionChanged"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                        <StackPanel x:Name="EqBandsPanel"/>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button Click="EqualizerOverlay_Close" Style="{StaticResource ZuneActionStyle}">
+                            <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold" FontSize="11"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- VIDEO FILTER OVERLAY -->
+            <Border x:Name="VideoFilterOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Width="360" Background="#FF0D0D16" BorderThickness="1,0,0,0">
+                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                <Grid Margin="20,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="视频滤镜" FontFamily="Segoe UI" FontSize="14" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,12"/>
+                    <StackPanel Grid.Row="1">
+                        <TextBlock Text="亮度" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                        <Slider x:Name="BrightnessSlider" Minimum="0" Maximum="2" Value="1" StepFrequency="0.05" ValueChanged="BrightnessSlider_ValueChanged"/>
+                        <TextBlock Text="对比度" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                        <Slider x:Name="ContrastSlider" Minimum="0" Maximum="2" Value="1" StepFrequency="0.05" ValueChanged="ContrastSlider_ValueChanged"/>
+                        <TextBlock Text="色调" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                        <Slider x:Name="HueSlider" Minimum="-180" Maximum="180" Value="0" StepFrequency="5" ValueChanged="HueSlider_ValueChanged"/>
+                        <TextBlock Text="饱和度" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                        <Slider x:Name="SaturationSlider" Minimum="0" Maximum="3" Value="1" StepFrequency="0.05" ValueChanged="SaturationSlider_ValueChanged"/>
+                        <TextBlock Text="伽马" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
+                        <Slider x:Name="GammaSlider" Minimum="0.1" Maximum="10" Value="1" StepFrequency="0.1" ValueChanged="GammaSlider_ValueChanged"/>
+                    </StackPanel>
+                    <Button Grid.Row="2" Click="VideoFilterOverlay_Close" HorizontalAlignment="Right" Margin="0,12,0,0" Style="{StaticResource ZuneActionStyle}">
+                        <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold" FontSize="11"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- STATS OSD -->
+            <Border x:Name="StatsOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Left" VerticalAlignment="Top"
+                    Margin="32,80,0,0" Background="#CC0D0D16" Padding="16,12" BorderThickness="1,0,0,0">
+                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                <StackPanel>
+                    <TextBlock Text="播放统计" FontFamily="Segoe UI" FontSize="12" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,8"/>
+                    <TextBlock x:Name="StatsText" Text="" FontFamily="Consolas" FontSize="11" Foreground="#AAFFFFFF" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <!-- KEYBOARD SHORTCUTS OVERLAY -->
+            <Border x:Name="ShortcutsOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="500" Background="#FF0D0D16" BorderThickness="1,0,0,0" Padding="28,24">
+                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="键盘快捷键" FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,16"/>
+                    <ScrollViewer Grid.Row="1" MaxHeight="480" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="播放控制" Foreground="#44FFFFFF" FontSize="11" CharacterSpacing="60" Margin="0,0,0,8"/>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="SPACE" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="播放 / 暂停" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text=". / ," Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="下一帧 / 上一帧" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="← →" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="快进 / 快退 10s" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="↑ ↓" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="音量 +5% / -5%" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="F" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="切换全屏" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <TextBlock Text="同步调节" Foreground="#44FFFFFF" FontSize="11" CharacterSpacing="60" Margin="0,12,0,8"/>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+←→" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="音频延迟 ±50ms" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+↑↓" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="字幕延迟 ±50ms" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <TextBlock Text="功能" Foreground="#44FFFFFF" FontSize="11" CharacterSpacing="60" Margin="0,12,0,8"/>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+O" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="打开文件" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+U" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="打开网址" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+N/P" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="下一个 / 上一个" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+E" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="打开文件所在目录" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="Ctrl+I" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="播放统计" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="S" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="截图" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="B" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="A-B 循环" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="L" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="播放列表" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                            <Grid Margin="0,0,0,6"><Grid.ColumnDefinitions><ColumnDefinition Width="100"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Border Background="#18FFFFFF" Padding="10,4" HorizontalAlignment="Left"><TextBlock Text="?" Foreground="#AAFFFFFF" FontSize="11"/></Border><TextBlock Grid.Column="1" Text="显示此帮助" Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="12,0,0,0"/></Grid>
+                        </StackPanel>
+                    </ScrollViewer>
+                    <Button Grid.Row="2" Click="ShortcutsOverlay_Close" HorizontalAlignment="Right" Margin="0,12,0,0" Style="{StaticResource ZuneActionStyle}">
+                        <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold" FontSize="11"/>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- MEDIA INFO OVERLAY -->
+            <Border x:Name="MediaInfoOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="480" MaxWidth="600" Background="#FF0D0D16"
+                    BorderThickness="1,0,0,0" Margin="0,0,0,60">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#FFE040FB"/>
+                </Border.BorderBrush>
+                <Grid Margin="28,24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="媒体信息"
+                               FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB"
+                               CharacterSpacing="60" Margin="0,0,0,16"/>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="420">
+                        <StackPanel x:Name="MediaInfoPanel">
+                            <TextBlock x:Name="MediaInfoFileName"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#FFFFFFFF" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                            <TextBlock x:Name="MediaInfoFileSize"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoDuration"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoVideoTrack"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoAudioTrack"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoSubCount"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoMetaTitle"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoMetaArtist"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoMetaAlbum"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                            <TextBlock x:Name="MediaInfoMetaDate"
+                                       Text="" FontFamily="Segoe UI" FontSize="13"
+                                       Foreground="#AAFFFFFF" TextWrapping="Wrap" Margin="0,0,0,4"/>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Button Grid.Row="2" Click="MediaInfoOverlay_Close"
+                            HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Style="{StaticResource ZuneActionStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="11"
+                                       Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                       FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
             </Border>
 
             <!-- TOP BAR -->
@@ -408,6 +770,14 @@
                             <TextBlock Text="&#x1F50A;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
+                        <Button x:Name="MediaInfoButton" Click="MediaInfoButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="媒体信息"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x2139;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
                         <Button x:Name="SnapshotButton" Click="SnapshotButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                             <ToolTipService.ToolTip>
@@ -416,14 +786,71 @@
                             <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
-                        <Button x:Name="SpeedButton" Click="SpeedButton_Click"
+                        <Button x:Name="AspectRatioButton" Click="AspectRatioButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="画面比例"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x2B1A;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="AudioSyncBtn" Click="AudioSyncBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="音画同步"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x23F3;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="EqualizerBtn" Click="EqualizerBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="均衡器"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="VideoFilterBtn" Click="VideoFilterBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="视频滤镜"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F3A8;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="ChapterBtn" Click="ChapterBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0"
+                                Visibility="Collapsed">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="章节"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F4D6;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="StatsBtn" Click="StatsBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="播放统计 (Ctrl+I)"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F4CA;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="OpenFolderBtn" Click="OpenFolderBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="打开文件所在目录 (Ctrl+E)"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button x:Name="SpeedButton" Click="SpeedButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0" MinWidth="40">
                             <ToolTipService.ToolTip>
                                 <ToolTip Content="播放速度"/>
                             </ToolTipService.ToolTip>
                             <TextBlock x:Name="SpeedIcon" Text="1x"
                                        FontFamily="Segoe UI" FontSize="13" FontWeight="SemiBold"
-                                       Foreground="#FFFFFFFF"/>
+                                       Foreground="#FFFFFFFF" HorizontalAlignment="Center" Width="32"/>
                         </Button>
                         <Button x:Name="FullscreenButton" Click="FullscreenButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}">
@@ -486,6 +913,7 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
@@ -572,10 +1000,128 @@
                                 Width="140" Minimum="0" Maximum="100" Value="100"
                                 ValueChanged="VolumeSlider_ValueChanged"
                                 VerticalAlignment="Center" Height="36" Margin="8,0,0,0"/>
+
+                        <Button x:Name="PlaylistToggleButton" Grid.Column="9"
+                                Style="{StaticResource ZunePrimaryStyle}"
+                                Click="PlaylistToggleButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="播放列表"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x2630;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                       Foreground="#FFFFFFFF"/>
+                        </Button>
                     </Grid>
                 </Grid>
             </Border>
 
         </Grid>
+
+        <!-- PLAYLIST SIDEBAR -->
+        <Border x:Name="PlaylistSidebar" Grid.Column="1"
+                Width="360" Visibility="Collapsed"
+                Background="#FF0D0D16"
+                BorderThickness="1,0,0,0">
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#22E040FB"/>
+            </Border.BorderBrush>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Header -->
+                <Grid Grid.Row="0" Margin="20,16,16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="播放列表" FontFamily="Segoe UI" FontSize="14"
+                               Foreground="#FFE040FB" CharacterSpacing="60"
+                               VerticalAlignment="Center"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Click="PlaylistImportM3u_Click"
+                                Style="{StaticResource ZunePrimaryStyle}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="导入 M3U 播放列表"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F4E5;" FontFamily="Segoe UI Symbol" FontSize="11"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button Click="PlaylistExportM3u_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="4,0,0,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="导出 M3U 播放列表"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x1F4E4;" FontFamily="Segoe UI Symbol" FontSize="11"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                        <Button Click="PlaylistClearButton_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="4,0,0,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="清空播放列表"/>
+                            </ToolTipService.ToolTip>
+                            <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="11"
+                                       Foreground="#66FFFFFF"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Items -->
+                <ListBox x:Name="PlaylistListBox" Grid.Row="1"
+                         SelectionChanged="PlaylistListBox_SelectionChanged"
+                         Margin="0,0,0,0">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="0"/>
+                            <Setter Property="Margin" Value="0"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="16,10,12,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Grid.Column="0" Text="{Binding Index}"
+                                           FontFamily="Segoe UI" FontSize="12"
+                                           Foreground="#55FFFFFF" VerticalAlignment="Center"
+                                           Width="28" TextAlignment="Right" Margin="0,0,12,0"/>
+
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding FileName}"
+                                               FontFamily="Segoe UI" FontSize="13"
+                                               Foreground="#FFFFFFFF"
+                                               TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding DurationText}"
+                                               FontFamily="Segoe UI" FontSize="11"
+                                               Foreground="#44FFFFFF" Margin="0,2,0,0"/>
+                                </StackPanel>
+
+                                <Button Grid.Column="2"
+                                        Click="PlaylistItemDelete_Click"
+                                        Tag="{Binding Index}"
+                                        Style="{StaticResource ZunePrimaryStyle}"
+                                        Padding="6,4" Margin="4,0,0,0">
+                                    <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="10"
+                                               Foreground="#44FFFFFF"/>
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <!-- Empty state -->
+                <TextBlock x:Name="PlaylistEmptyText" Grid.Row="1"
+                           Text="暂无播放项目" FontFamily="Segoe UI" FontSize="14"
+                           Foreground="#33FFFFFF" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Visibility="Visible"/>
+            </Grid>
+        </Border>
     </Grid>
 </Page>

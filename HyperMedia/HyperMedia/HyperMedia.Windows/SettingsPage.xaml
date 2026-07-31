@@ -115,10 +115,116 @@
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
-                    <TextBlock x:Name="AutoHideDelayText" Grid.Column="1"
-                               Text="3s" FontFamily="Segoe UI" FontSize="15"
-                               Foreground="#FFFFFFFF" VerticalAlignment="Center"
-                               Margin="16,0,0,0"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Slider x:Name="AutoHideDelaySlider" Width="120"
+                                Minimum="1" Maximum="10" Value="3"
+                                ValueChanged="AutoHideDelaySlider_ValueChanged"
+                                VerticalAlignment="Center" Height="36"/>
+                        <TextBlock x:Name="AutoHideDelayText" Text="3s"
+                                   FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                                   Width="36" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Subtitle -->
+                <TextBlock Text="字幕" FontFamily="Segoe UI" FontSize="11"
+                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="字幕字号" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="调整外挂字幕的显示大小"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="SubtitleSizeCombo" Grid.Column="1"
+                              Width="100" VerticalAlignment="Center"
+                              SelectionChanged="SubtitleSizeCombo_SelectionChanged">
+                        <ComboBoxItem Content="小" Tag="16"/>
+                        <ComboBoxItem Content="中" Tag="24" IsSelected="True"/>
+                        <ComboBoxItem Content="大" Tag="32"/>
+                        <ComboBoxItem Content="特大" Tag="40"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="字幕颜色" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="调整字幕文字颜色"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="SubtitleColorCombo" Grid.Column="1"
+                              Width="100" VerticalAlignment="Center"
+                              SelectionChanged="SubtitleColorCombo_SelectionChanged">
+                        <ComboBoxItem Content="白色" Tag="#FFFFFFFF"/>
+                        <ComboBoxItem Content="黄色" Tag="#FFFFFF00"/>
+                        <ComboBoxItem Content="青色" Tag="#FF00FFFF"/>
+                        <ComboBoxItem Content="绿色" Tag="#FF00FF00"/>
+                        <ComboBoxItem Content="粉色" Tag="#FFFF69B4" IsSelected="True"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="字幕位置偏移" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="上下移动字幕显示位置"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Slider x:Name="SubtitleMarginSlider" Width="120"
+                                Minimum="-100" Maximum="100" Value="0"
+                                ValueChanged="SubtitleMarginSlider_ValueChanged"
+                                VerticalAlignment="Center" Height="36"/>
+                        <TextBlock x:Name="SubtitleMarginText" Text="0px"
+                                   FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                                   Width="44" Margin="8,0,0,0"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Video -->
+                <TextBlock Text="视频" FontFamily="Segoe UI" FontSize="11"
+                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="去隔行模式" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="处理隔行扫描视频（DVD、旧录像等）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="DeinterlaceCombo" Grid.Column="1"
+                              Width="120" VerticalAlignment="Center"
+                              SelectionChanged="DeinterlaceCombo_SelectionChanged">
+                        <ComboBoxItem Content="自动" Tag="auto" IsSelected="True"/>
+                        <ComboBoxItem Content="开启" Tag="on"/>
+                        <ComboBoxItem Content="关闭" Tag="off"/>
+                        <ComboBoxItem Content="Bob" Tag="bob"/>
+                        <ComboBoxItem Content="Yadif" Tag="yadif"/>
+                    </ComboBox>
                 </Grid>
 
                 <!-- Library -->
