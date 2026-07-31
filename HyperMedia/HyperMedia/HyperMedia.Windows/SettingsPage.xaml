@@ -20,7 +20,7 @@
                     <TextBlock Text="&#x2190;" FontFamily="Segoe UI" FontSize="18"
                                Foreground="#FFFFFFFF"/>
                 </Button>
-                <TextBlock Text="SETTINGS" FontFamily="Segoe UI Light" FontSize="36"
+                <TextBlock Text="设置" FontFamily="Segoe UI Light" FontSize="36"
                            Foreground="#FFFFFFFF" VerticalAlignment="Center"
                            CharacterSpacing="80"/>
             </StackPanel>
@@ -31,7 +31,7 @@
             <StackPanel MaxWidth="600">
 
                 <!-- Playback -->
-                <TextBlock Text="PLAYBACK" FontFamily="Segoe UI" FontSize="11"
+                <TextBlock Text="播放" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,0,0,16"/>
 
                 <Grid Margin="0,0,0,20">
@@ -40,9 +40,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Default Volume" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="默认音量" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Volume level when opening a new file"
+                        <TextBlock Text="打开新文件时的音量级别"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -57,9 +57,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Auto Play Next" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="自动播放下一个" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Automatically play next file in playlist"
+                        <TextBlock Text="自动播放播放列表中的下一个文件"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -73,9 +73,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Resume Playback" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="断点续播" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Remember position and resume from last spot"
+                        <TextBlock Text="记住上次播放位置并从断点继续"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -84,7 +84,7 @@
                 </Grid>
 
                 <!-- Controls -->
-                <TextBlock Text="CONTROLS" FontFamily="Segoe UI" FontSize="11"
+                <TextBlock Text="控制" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
@@ -93,9 +93,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Auto Hide Controls" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="自动隐藏控制栏" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Hide transport controls during playback"
+                        <TextBlock Text="播放时自动隐藏控制按钮"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -109,9 +109,9 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Auto Hide Delay" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="自动隐藏延迟" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Seconds before controls auto-hide"
+                        <TextBlock Text="控制栏自动隐藏前的等待时间"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -122,7 +122,7 @@
                 </Grid>
 
                 <!-- Library -->
-                <TextBlock Text="LIBRARY" FontFamily="Segoe UI" FontSize="11"
+                <TextBlock Text="媒体库" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
@@ -131,16 +131,16 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Clear Play History" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="清除播放历史" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Remove all recently played items"
+                        <TextBlock Text="删除所有最近播放记录"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Button x:Name="ClearHistoryBtn" Grid.Column="1"
                             Click="ClearHistory_Click"
                             Style="{StaticResource ZuneActionStyle}">
-                        <TextBlock Text="CLEAR" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                        <TextBlock Text="清除" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
                                    FontSize="12" CharacterSpacing="40"/>
                     </Button>
                 </Grid>
@@ -151,22 +151,22 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
-                        <TextBlock Text="Clear Resume Positions" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="清除续播位置" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="Forget all saved playback positions"
+                        <TextBlock Text="清除所有已保存的播放进度"
                                    FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Button x:Name="ClearResumeBtn" Grid.Column="1"
                             Click="ClearResume_Click"
                             Style="{StaticResource ZuneActionStyle}">
-                        <TextBlock Text="CLEAR" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                        <TextBlock Text="清除" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
                                    FontSize="12" CharacterSpacing="40"/>
                     </Button>
                 </Grid>
 
                 <!-- About -->
-                <TextBlock Text="ABOUT" FontFamily="Segoe UI" FontSize="11"
+                <TextBlock Text="关于" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Border Background="#08FFFFFF" Padding="20,16">
@@ -177,11 +177,11 @@
                             <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="12"
                                        Foreground="#FFFFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
                         </StackPanel>
-                        <TextBlock Text="Version 1.0.0" FontFamily="Segoe UI" FontSize="12"
+                        <TextBlock Text="版本 1.0.0" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#55FFFFFF"/>
-                        <TextBlock Text="Powered by libVLC" FontFamily="Segoe UI" FontSize="12"
+                        <TextBlock Text="基于 libVLC 驱动" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#55FFFFFF" Margin="0,4,0,0"/>
-                        <TextBlock Text="Licensed under GPL v2" FontFamily="Segoe UI" FontSize="12"
+                        <TextBlock Text="采用 GPL v2 许可证" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#55FFFFFF" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>

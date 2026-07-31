@@ -255,14 +255,14 @@ namespace HyperMedia
             StopPlayback();
             _isNetworkStream = false;
             WelcomeScreen.Visibility = Visibility.Collapsed;
-            ShowOverlay("Loading " + file.Name + "...");
+            ShowOverlay("正在加载 " + file.Name + "...");
 
             _originalFileName = file.Name;
             PlayHistory.Add(file.Path, file.Name);
 
             try
             {
-                StatusText.Text = "Preparing...";
+                StatusText.Text = "正在准备...";
                 var sw = Stopwatch.StartNew();
 
                 var tempFolder = ApplicationData.Current.TemporaryFolder;
@@ -287,10 +287,10 @@ namespace HyperMedia
             StopPlayback();
             _isNetworkStream = true;
             WelcomeScreen.Visibility = Visibility.Collapsed;
-            ShowOverlay("Loading stream...");
+            ShowOverlay("正在加载流媒体...");
 
             _originalFileName = url;
-            StatusText.Text = "Connecting...";
+            StatusText.Text = "正在连接...";
             var sw = Stopwatch.StartNew();
             OpenWithLibVlc(url, sw);
         }
@@ -302,7 +302,7 @@ namespace HyperMedia
                 if (_vlcInitError != null)
                     StatusText.Text = _vlcInitError;
                 else
-                    StatusText.Text = "Error: VLC not initialized";
+                    StatusText.Text = "错误: VLC 未初始化";
                 HideOverlay();
                 return;
             }
@@ -323,7 +323,7 @@ namespace HyperMedia
             }
             catch (Exception ex)
             {
-                StatusText.Text = "Error: " + ex.Message;
+                StatusText.Text = "错误: " + ex.Message;
                 HideOverlay();
                 Debug.WriteLine("[HyperMedia] VLC media/player create failed: {0}", ex.Message);
                 return;
@@ -421,7 +421,7 @@ namespace HyperMedia
             var panel = new StackPanel();
 
             var title = new TextBlock();
-            title.Text = "OPEN URL";
+            title.Text = "打开网址";
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 14;
             title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
@@ -441,13 +441,13 @@ namespace HyperMedia
             btnPanel.Margin = new Thickness(0, 16, 0, 0);
 
             var cancelBtn = new Button();
-            cancelBtn.Content = "Cancel";
+            cancelBtn.Content = "取消";
             cancelBtn.Margin = new Thickness(0, 0, 8, 0);
             cancelBtn.Click += (s, ev) => { popup.IsOpen = false; };
             btnPanel.Children.Add(cancelBtn);
 
             var playBtn = new Button();
-            playBtn.Content = "Play";
+            playBtn.Content = "播放";
             playBtn.Click += (s, ev) =>
             {
                 string url = textBox.Text.Trim();
@@ -500,7 +500,7 @@ namespace HyperMedia
                     StopPlayback();
                     WelcomeScreen.Visibility = Visibility.Visible;
                     FileNameText.Text = "";
-                    StatusText.Text = "Finished";
+                    StatusText.Text = "播放完毕";
                     return;
                 }
             }
@@ -656,7 +656,7 @@ namespace HyperMedia
                         StopPlayback();
                         WelcomeScreen.Visibility = Visibility.Visible;
                         FileNameText.Text = "";
-                        StatusText.Text = "Ready";
+                        StatusText.Text = "就绪";
                         break;
                     case SystemMediaTransportControlsButton.Next:
                         PlayNext();
@@ -817,8 +817,8 @@ namespace HyperMedia
 
             try
             {
-                var folder = KnownFolders.PicturesLibrary;
-                var subFolder = await folder.CreateFolderAsync("HyperMedia",
+                var folder = ApplicationData.Current.LocalFolder;
+                var subFolder = await folder.CreateFolderAsync("Screenshots",
                     CreationCollisionOption.OpenIfExists);
 
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
@@ -826,12 +826,13 @@ namespace HyperMedia
                 var file = await subFolder.CreateFileAsync(fileName,
                     CreationCollisionOption.GenerateUniqueName);
 
-                ShowOverlay("Screenshot saved: " + file.Name);
+                _vlcPlayer.takeSnapshot(0, file.Path, 0, 0);
+                ShowOverlay("截图已保存: " + file.Name);
                 HideOverlayDelayed();
             }
             catch (Exception ex)
             {
-                ShowOverlay("Screenshot error: " + ex.Message);
+                ShowOverlay("截图失败: " + ex.Message);
                 HideOverlayDelayed();
             }
         }
@@ -879,7 +880,7 @@ namespace HyperMedia
                         if (resumePos > 0)
                         {
                             _vlcPlayer.setTime(resumePos);
-                            ShowOverlay("Resumed from " + FormatTime(resumePos / 1000.0));
+                            ShowOverlay("已恢复播放 " + FormatTime(resumePos / 1000.0));
                             HideOverlayDelayed();
                         }
                     }
@@ -911,7 +912,7 @@ namespace HyperMedia
                     PlayNext();
                 else
                 {
-                    StatusText.Text = "Finished";
+                    StatusText.Text = "播放完毕";
                     ShowControls();
                 }
             });
@@ -923,7 +924,7 @@ namespace HyperMedia
             BeginInvokeOnUI(() =>
             {
                 _positionTimer.Stop();
-                StatusText.Text = "Playback error";
+                StatusText.Text = "播放错误";
                 ShowControls();
             });
         }
@@ -986,7 +987,7 @@ namespace HyperMedia
             StopPlayback();
             WelcomeScreen.Visibility = Visibility.Visible;
             FileNameText.Text = "";
-            StatusText.Text = "Ready";
+            StatusText.Text = "就绪";
         }
 
         private void HomeButton_Click(object sender, RoutedEventArgs e)
@@ -1247,19 +1248,69 @@ namespace HyperMedia
 
         #region Subtitle / Audio Track / Snapshot
 
-        private bool _subtitlesEnabled = true;
+        private int _currentSpu = -1;
 
-        private async void SubtitleButton_Click(object sender, RoutedEventArgs e)
+        private void SubtitleButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_vlcPlayer == null || _vlcMedia == null) return;
+            if (_vlcPlayer == null) return;
 
             try
             {
                 var menu = new MenuFlyout();
                 menu.Placement = FlyoutPlacementMode.Bottom;
 
+                // Disable subtitles
+                var disableItem = new MenuFlyoutItem();
+                disableItem.Text = "关闭字幕";
+                disableItem.Tapped += (s, ev) =>
+                {
+                    try
+                    {
+                        _vlcPlayer.setSpu(-1);
+                        _currentSpu = -1;
+                        ShowOverlay("字幕已关闭");
+                        HideOverlayDelayed();
+                    }
+                    catch { }
+                };
+                menu.Items.Add(disableItem);
+
+                // Enumerate embedded subtitle tracks
+                try
+                {
+                    int spuCount = _vlcPlayer.spuCount();
+                    if (spuCount > 0)
+                    {
+                        var descriptions = _vlcPlayer.spuDescription();
+                        if (descriptions != null)
+                        {
+                            foreach (var desc in descriptions)
+                            {
+                                var trackItem = new MenuFlyoutItem();
+                                int tid = desc.id();
+                                string trackName = desc.name() ?? ("字幕轨道 " + tid);
+                                trackItem.Text = trackName;
+                                trackItem.Tapped += (s, ev) =>
+                                {
+                                    try
+                                    {
+                                        _vlcPlayer.setSpu(tid);
+                                        _currentSpu = tid;
+                                        ShowOverlay("已切换: " + trackName);
+                                        HideOverlayDelayed();
+                                    }
+                                    catch { }
+                                };
+                                menu.Items.Add(trackItem);
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                // Load external subtitle
                 var loadExternal = new MenuFlyoutItem();
-                loadExternal.Text = "Load External Subtitle...";
+                loadExternal.Text = "加载外部字幕...";
                 loadExternal.Tapped += async (s, ev) =>
                 {
                     try
@@ -1280,53 +1331,73 @@ namespace HyperMedia
                                 NameCollisionOption.ReplaceExisting);
 
                             _vlcMedia.addOption(":sub-file=" + tempSub.Path);
-                            ShowOverlay("Subtitle loaded: " + file.Name);
+                            ShowOverlay("字幕已加载: " + file.Name);
                             HideOverlayDelayed();
                         }
                     }
                     catch (Exception ex)
                     {
-                        ShowOverlay("Subtitle: " + ex.Message);
+                        ShowOverlay("字幕错误: " + ex.Message);
                         HideOverlayDelayed();
                     }
                 };
                 menu.Items.Add(loadExternal);
-
-                var toggleSub = new MenuFlyoutItem();
-                toggleSub.Text = _subtitlesEnabled ? "Disable Subtitles" : "Enable Subtitles";
-                toggleSub.Tapped += (s, ev) =>
-                {
-                    try
-                    {
-                        _subtitlesEnabled = !_subtitlesEnabled;
-                        if (_subtitlesEnabled)
-                            _vlcMedia.addOption(":sub-track=0");
-                        else
-                            _vlcMedia.addOption(":no-spu");
-                        ShowOverlay(_subtitlesEnabled ? "Subtitles ON" : "Subtitles OFF");
-                        HideOverlayDelayed();
-                    }
-                    catch { }
-                };
-                menu.Items.Add(toggleSub);
 
                 menu.ShowAt(SubtitleButton);
             }
             catch { }
         }
 
-        private async void AudioTrackButton_Click(object sender, RoutedEventArgs e)
+        private void AudioTrackButton_Click(object sender, RoutedEventArgs e)
         {
             if (_vlcPlayer == null) return;
 
             try
             {
-                var dialog = new MessageDialog(
-                    "Audio track selection requires libVLCX audio track API.\n" +
-                    "Use VLC's built-in audio track selector if available.",
-                    "Audio Track");
-                dialog.Commands.Add(new UICommand("OK", null, "ok"));
-                await dialog.ShowAsync();
+                var menu = new MenuFlyout();
+                menu.Placement = FlyoutPlacementMode.Bottom;
+
+                // Enumerate audio tracks
+                try
+                {
+                    int trackCount = _vlcPlayer.audioTrackCount();
+                    if (trackCount > 0)
+                    {
+                        var descriptions = _vlcPlayer.audioTrackDescription();
+                        if (descriptions != null)
+                        {
+                            foreach (var desc in descriptions)
+                            {
+                                var trackItem = new MenuFlyoutItem();
+                                int tid = desc.id();
+                                string trackName = desc.name() ?? ("音轨 " + tid);
+                                trackItem.Text = trackName;
+                                trackItem.Tapped += (s, ev) =>
+                                {
+                                    try
+                                    {
+                                        _vlcPlayer.setAudioTrack(tid);
+                                        ShowOverlay("已切换: " + trackName);
+                                        HideOverlayDelayed();
+                                    }
+                                    catch { }
+                                };
+                                menu.Items.Add(trackItem);
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                if (menu.Items.Count == 0)
+                {
+                    var noTrack = new MenuFlyoutItem();
+                    noTrack.Text = "无可用音轨";
+                    noTrack.IsEnabled = false;
+                    menu.Items.Add(noTrack);
+                }
+
+                menu.ShowAt(AudioTrackButton);
             }
             catch { }
         }

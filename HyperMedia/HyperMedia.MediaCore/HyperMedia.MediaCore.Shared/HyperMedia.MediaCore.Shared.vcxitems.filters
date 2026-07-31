@@ -3,17 +3,11 @@
   <ItemGroup>
     <ClInclude Include="$(MSBuildThisFileDirectory)Class1.h" />
     <ClInclude Include="$(MSBuildThisFileDirectory)pch.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegInterop.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)FFmpegMediaStreamSource.h" />
-    <ClInclude Include="$(MSBuildThisFileDirectory)LibVlcInterop.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(MSBuildThisFileDirectory)Class1.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegInterop.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)FFmpegMediaStreamSource.cpp" />
-    <ClCompile Include="$(MSBuildThisFileDirectory)LibVlcInterop.cpp" />
   </ItemGroup>
 </Project>

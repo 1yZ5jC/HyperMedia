@@ -60,18 +60,18 @@
                             <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="+" FontFamily="Segoe UI Light" FontSize="18"
                                            Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="OPEN" Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                                <TextBlock Text="打开" Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="12"
                                            VerticalAlignment="Center" CharacterSpacing="60"/>
                             </StackPanel>
                         </Button>
                     </Grid>
 
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="40,0,40,0">
-                        <TextBlock Text="PLAY" FontFamily="Segoe UI Light" FontSize="72"
+                        <TextBlock Text="全部播放" FontFamily="Segoe UI Light" FontSize="72"
                                    Foreground="#FFFFFFFF" LineHeight="72"/>
-                        <TextBlock Text="ANYTHING" FontFamily="Segoe UI Light" FontSize="72"
+                        <TextBlock Text="随心所欲" FontFamily="Segoe UI Light" FontSize="72"
                                    Foreground="#FFE040FB" LineHeight="72" Margin="0,0,0,12"/>
-                        <TextBlock Text="Video, audio, photos — one player for all your media."
+                        <TextBlock Text="视频、音频、图片 — 一个播放器搞定所有媒体。"
                                    FontFamily="Segoe UI" FontSize="16" Foreground="#88FFFFFF"
                                    Margin="0,0,0,36" TextWrapping="Wrap"/>
                         <StackPanel Orientation="Horizontal">
@@ -79,8 +79,8 @@
                                 <StackPanel Orientation="Horizontal">
                                     <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="14"
                                                Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                    <TextBlock Text="OPEN FILE" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
-                                               FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
+                        <TextBlock Text="打开文件" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                                   FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
                                 </StackPanel>
                             </Button>
                             <TextBlock Text="or drag a file anywhere"
@@ -91,7 +91,7 @@
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                                 Margin="0,0,40,32">
-                        <TextBlock Text="Scroll" FontFamily="Segoe UI" FontSize="12"
+                        <TextBlock Text="滚动浏览" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="&#x203A;" FontFamily="Segoe UI" FontSize="28"
                                    Foreground="#44FFFFFF" VerticalAlignment="Center"/>
@@ -110,7 +110,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="VIDEOS" FontFamily="Segoe UI Light" FontSize="42"
+                    <TextBlock Grid.Row="0" Text="视频" FontFamily="Segoe UI Light" FontSize="42"
                                Foreground="#FFFFFFFF" Margin="24,100,24,0"
                                CharacterSpacing="80"/>
 
@@ -144,7 +144,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="&#x1F3AC;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="Open Video  &#x25B6;  PLAY"
+                        <TextBlock Grid.Column="1" Text="打开视频  &#x25B6;  播放"
                                    FontFamily="Segoe UI Semibold" FontSize="13" Foreground="#99E040FB"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
@@ -152,7 +152,7 @@
                     <!-- Recent Videos (fills bottom half) -->
                     <StackPanel x:Name="RecentVideosPanel" Grid.Row="3" Margin="24,0,24,8">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="RECENT" FontFamily="Segoe UI" FontSize="11"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="11"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -169,6 +169,8 @@
                                 <DataTemplate>
                                     <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
+                                            PointerEntered="Card_PointerEntered"
+                                            PointerExited="Card_PointerExited"
                                             Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -191,32 +193,41 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <ItemsControl x:Name="RecentVideosTiles" Visibility="Collapsed">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapGrid Orientation="Horizontal" HorizontalChildrenAlignment="Left"/>
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="#20E040FB" CornerRadius="0" Width="110" Height="64"
-                                            Margin="0,0,6,6" Tapped="RecentItem_Tapped"
-                                            Tag="{Binding FilePath}">
-                                        <Grid Margin="10,8">
-                                            <Grid.RowDefinitions>
-                                                <RowDefinition Height="*"/>
-                                                <RowDefinition Height="Auto"/>
-                                            </Grid.RowDefinitions>
-                                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
-                                                       Foreground="#88E040FB"/>
-                                            <TextBlock Grid.Row="1" Text="{Binding FileName}"
-                                                       FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
-                                                       TextTrimming="CharacterEllipsis"/>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
+                            <ItemsControl x:Name="RecentVideosTiles" Visibility="Collapsed">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapGrid Orientation="Horizontal" HorizontalChildrenAlignment="Left"/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Border Background="#20E040FB" CornerRadius="0" Width="110" Height="80"
+                                                Margin="0,0,6,6" Tapped="RecentItem_Tapped"
+                                                PointerEntered="Card_PointerEntered"
+                                                PointerExited="Card_PointerExited"
+                                                Tag="{Binding FilePath}">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="*"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Border Grid.Row="0" Background="#18FFFFFF">
+                                                    <Grid>
+                                                        <Image Source="{Binding Thumbnail}"
+                                                               Stretch="UniformToFill"/>
+                                                        <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                                                   Foreground="#AAE040FB" HorizontalAlignment="Center"
+                                                                   VerticalAlignment="Center"/>
+                                                    </Grid>
+                                                </Border>
+                                                <TextBlock Grid.Row="1" Text="{Binding FileName}"
+                                                           FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
+                                                           TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
                     </StackPanel>
                 </Grid>
 
@@ -231,7 +242,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="MUSIC" FontFamily="Segoe UI Light" FontSize="42"
+                    <TextBlock Grid.Row="0" Text="音乐" FontFamily="Segoe UI Light" FontSize="42"
                                Foreground="#FFFFFFFF" Margin="24,100,24,0"
                                CharacterSpacing="80"/>
 
@@ -264,14 +275,14 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FF00BCD4" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="Open Music  &#x25B6;  PLAY"
+                        <TextBlock Grid.Column="1" Text="打开音乐  &#x25B6;  播放"
                                    FontFamily="Segoe UI Semibold" FontSize="13" Foreground="#9900BCD4"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
 
                     <StackPanel x:Name="RecentMusicPanel" Grid.Row="3" Margin="24,0,24,8">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="RECENT" FontFamily="Segoe UI" FontSize="11"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="11"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -288,6 +299,8 @@
                                 <DataTemplate>
                                     <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
+                                            PointerEntered="Card_PointerEntered"
+                                            PointerExited="Card_PointerExited"
                                             Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -318,19 +331,28 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#2000BCD4" CornerRadius="0" Width="110" Height="64"
+                                    <Border Background="#2000BCD4" CornerRadius="0" Width="110" Height="80"
                                             Margin="0,0,6,6" Tapped="RecentItem_Tapped"
+                                            PointerEntered="Card_PointerEntered"
+                                            PointerExited="Card_PointerExited"
                                             Tag="{Binding FilePath}">
-                                        <Grid Margin="10,8">
+                                        <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
-                                                       Foreground="#8800BCD4"/>
+                                            <Border Grid.Row="0" Background="#18FFFFFF">
+                                                <Grid>
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"/>
+                                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                                               Foreground="#AA00BCD4" HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
                                             <TextBlock Grid.Row="1" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                                       TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -350,7 +372,7 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="PHOTOS" FontFamily="Segoe UI Light" FontSize="42"
+                    <TextBlock Grid.Row="0" Text="图片" FontFamily="Segoe UI Light" FontSize="42"
                                Foreground="#FFFFFFFF" Margin="24,100,24,0"
                                CharacterSpacing="80"/>
 
@@ -383,14 +405,14 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FF76FF00" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <TextBlock Grid.Column="1" Text="Open Photos  &#x25B6;  VIEW"
+                        <TextBlock Grid.Column="1" Text="打开图片  &#x25B6;  查看"
                                    FontFamily="Segoe UI Semibold" FontSize="13" Foreground="#9976FF00"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
 
                     <StackPanel x:Name="RecentPhotosPanel" Grid.Row="3" Margin="24,0,24,8">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="RECENT" FontFamily="Segoe UI" FontSize="11"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="11"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -407,6 +429,8 @@
                                 <DataTemplate>
                                     <Border Background="#12FFFFFF" CornerRadius="0" Padding="10,6"
                                             Margin="0,0,0,4" Tapped="RecentItem_Tapped"
+                                            PointerEntered="Card_PointerEntered"
+                                            PointerExited="Card_PointerExited"
                                             Tag="{Binding FilePath}">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
@@ -437,19 +461,28 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Border Background="#2076FF00" CornerRadius="0" Width="110" Height="64"
+                                    <Border Background="#2076FF00" CornerRadius="0" Width="110" Height="80"
                                             Margin="0,0,6,6" Tapped="RecentItem_Tapped"
+                                            PointerEntered="Card_PointerEntered"
+                                            PointerExited="Card_PointerExited"
                                             Tag="{Binding FilePath}">
-                                        <Grid Margin="10,8">
+                                        <Grid>
                                             <Grid.RowDefinitions>
                                                 <RowDefinition Height="*"/>
                                                 <RowDefinition Height="Auto"/>
                                             </Grid.RowDefinitions>
-                                            <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="16"
-                                                       Foreground="#8876FF00"/>
+                                            <Border Grid.Row="0" Background="#18FFFFFF">
+                                                <Grid>
+                                                    <Image Source="{Binding Thumbnail}"
+                                                           Stretch="UniformToFill"/>
+                                                    <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                                               Foreground="#AA76FF00" HorizontalAlignment="Center"
+                                                               VerticalAlignment="Center"/>
+                                                </Grid>
+                                            </Border>
                                             <TextBlock Grid.Row="1" Text="{Binding FileName}"
                                                        FontFamily="Segoe UI" FontSize="10" Foreground="#CCFFFFFF"
-                                                       TextTrimming="CharacterEllipsis"/>
+                                                       TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -485,7 +518,7 @@
                                    Foreground="#55FFFFFF" VerticalAlignment="Center" CharacterSpacing="60"/>
                     </StackPanel>
 
-                    <TextBlock Grid.Column="1" Text="Supports virtually all media formats"
+                    <TextBlock Grid.Column="1" Text="支持几乎所有媒体格式"
                                FontFamily="Segoe UI" FontSize="11" Foreground="#33FFFFFF"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
@@ -494,7 +527,7 @@
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="&#x1F5D1;" FontFamily="Segoe UI Symbol" FontSize="11"
                                        Foreground="#55FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <TextBlock Text="Clear History" FontFamily="Segoe UI" FontSize="10"
+                            <TextBlock Text="清除历史" FontFamily="Segoe UI" FontSize="10"
                                        Foreground="#55FFFFFF" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -526,9 +559,9 @@
                                    Foreground="#FFE040FB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
-                <TextBlock Text="DROP TO PLAY" FontFamily="Segoe UI Light" FontSize="36"
+                <TextBlock Text="拖放播放" FontFamily="Segoe UI Light" FontSize="36"
                            Foreground="#FFFFFFFF" HorizontalAlignment="Center" CharacterSpacing="80"/>
-                <TextBlock Text="Release to start playback"
+                <TextBlock Text="释放以开始播放"
                            FontFamily="Segoe UI" FontSize="16" Foreground="#66FFFFFF"
                            HorizontalAlignment="Center" Margin="0,16,0,0"/>
             </StackPanel>

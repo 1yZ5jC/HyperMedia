@@ -82,7 +82,7 @@ namespace HyperMedia
             var items = new ObservableCollection<RecentItem>();
             foreach (var t in tuples)
             {
-                var item = new RecentItem { FilePath = t.Item1, FileName = t.Item2 };
+                var item = new RecentItem { FilePath = t.Item1, FileName = t.Item2, Category = category };
                 item.LoadThumbnail();
                 items.Add(item);
             }
@@ -151,7 +151,29 @@ namespace HyperMedia
             }
             catch
             {
-                // File may have been moved or deleted - clear invalid history
+                // File may have been moved or deleted - clear invalid history entry
+                try
+                {
+                    string category = PlayHistory.GetCategory(filePath);
+                    if (category != null)
+                    {
+                        var settings = ApplicationData.Current.LocalSettings;
+                        string key = "RecentPlay_" + category;
+                        if (settings.Values.ContainsKey(key))
+                        {
+                            string serialized = settings.Values[key] as string;
+                            if (!string.IsNullOrEmpty(serialized))
+                            {
+                                var list = new System.Collections.Generic.List<string>(
+                                    serialized.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries));
+                                list.RemoveAll(x => x.StartsWith(filePath + "::", StringComparison.OrdinalIgnoreCase));
+                                settings.Values[key] = string.Join("|", list);
+                                LoadRecentItems();
+                            }
+                        }
+                    }
+                }
+                catch { }
             }
         }
 

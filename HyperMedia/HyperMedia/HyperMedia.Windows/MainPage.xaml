@@ -58,9 +58,9 @@
                         </Grid.ColumnDefinitions>
 
                         <StackPanel Grid.Column="0" VerticalAlignment="Center" MaxWidth="520">
-                            <TextBlock Text="Welcome" FontFamily="Segoe UI Light" FontSize="56"
+                            <TextBlock Text="欢迎" FontFamily="Segoe UI Light" FontSize="56"
                                        Foreground="#FFFFFFFF" Margin="0,0,0,8"/>
-                            <TextBlock Text="Drop a file here, press Ctrl+O to open, or enter a URL"
+                            <TextBlock Text="拖放文件到这里，按 Ctrl+O 打开，或输入网络地址"
                                        FontFamily="Segoe UI" FontSize="18"
                                        Foreground="#66FFFFFF" Margin="0,0,0,32"
                                        TextWrapping="Wrap"/>
@@ -71,7 +71,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
                                                    Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="OPEN FILE" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                        <TextBlock Text="打开文件" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
                                                    FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
                                     </StackPanel>
                                 </Button>
@@ -80,7 +80,7 @@
                                     <StackPanel Orientation="Horizontal">
                                         <TextBlock Text="&#x1F310;" FontFamily="Segoe UI Symbol" FontSize="14"
                                                    Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                                        <TextBlock Text="OPEN URL" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                        <TextBlock Text="打开网址" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
                                                    FontSize="12" VerticalAlignment="Center" CharacterSpacing="40"/>
                                     </StackPanel>
                                 </Button>
@@ -108,7 +108,7 @@
                         </StackPanel>
 
                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="64,0,32,0">
-                            <TextBlock Text="Shortcuts" FontFamily="Segoe UI" FontSize="11"
+                            <TextBlock Text="快捷键" FontFamily="Segoe UI" FontSize="11"
                                        Foreground="#44FFFFFF" CharacterSpacing="60" Margin="0,0,0,16"/>
                             <Grid Margin="0,0,0,10">
                                 <Grid.ColumnDefinitions>
@@ -120,7 +120,7 @@
                                     <TextBlock Text="SPACE" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="Play / Pause"
+                                <TextBlock Grid.Column="1" Text="播放 / 暂停"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
@@ -134,7 +134,7 @@
                                     <TextBlock Text="&#x2190; &#x2192;" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="Seek forward / back"
+                                <TextBlock Grid.Column="1" Text="快进 / 快退"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
@@ -148,7 +148,7 @@
                                     <TextBlock Text="F" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="Toggle fullscreen"
+                                <TextBlock Grid.Column="1" Text="切换全屏"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
@@ -162,7 +162,7 @@
                                     <TextBlock Text="A-B" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="A-B repeat loop"
+                                <TextBlock Grid.Column="1" Text="A-B 循环播放"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
@@ -176,14 +176,14 @@
                                     <TextBlock Text="&#x2191; &#x2193;" FontFamily="Segoe UI Semibold" FontSize="11"
                                                Foreground="#AAFFFFFF"/>
                                 </Border>
-                                <TextBlock Grid.Column="1" Text="Volume up / down"
+                                <TextBlock Grid.Column="1" Text="音量增大 / 减小"
                                            FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                            VerticalAlignment="Center" Margin="16,0,0,0"/>
                             </Grid>
                         </StackPanel>
                     </Grid>
 
-                    <TextBlock Grid.Row="2" Text="HyperMedia — Your media, one player."
+                    <TextBlock Grid.Row="2" Text="HyperMedia — 您的全能媒体播放器"
                                FontFamily="Segoe UI" FontSize="12" Foreground="#22FFFFFF"
                                HorizontalAlignment="Left" Margin="32,0,0,20"/>
                 </Grid>
@@ -194,11 +194,11 @@
                         VerticalAlignment="Center" HorizontalAlignment="Center"
                         Visibility="Collapsed" Margin="0,0,0,80">
                 <Border Background="#40E040FB" CornerRadius="0" Padding="20,10" Margin="0,0,8,0">
-                    <TextBlock Text="&#x2190; REWIND" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                    <TextBlock Text="&#x2190; 后退" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
                                CharacterSpacing="40"/>
                 </Border>
                 <Border Background="#4000BCD4" CornerRadius="0" Padding="20,10">
-                    <TextBlock Text="FORWARD &#x2192;" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
+                    <TextBlock Text="快进 &#x2192;" Foreground="#CCFFFFFF" FontFamily="Segoe UI" FontSize="12"
                                CharacterSpacing="40"/>
                 </Border>
             </StackPanel>
@@ -239,6 +239,9 @@
                     <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="HomeButton" Click="HomeButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,20,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="返回主页"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x2190;" FontFamily="Segoe UI" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
@@ -251,7 +254,7 @@
                                            Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="13"
                                            VerticalAlignment="Center" Margin="10,0,0,0"/>
                             </StackPanel>
-                            <TextBlock x:Name="StatusText" Text="Ready"
+                            <TextBlock x:Name="StatusText" Text="就绪"
                                        Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="12"
                                        Margin="0,2,0,0"/>
                         </StackPanel>
@@ -260,32 +263,50 @@
                     <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                         <Button x:Name="SettingsButton" Click="SettingsButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="设置"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x2699;" FontFamily="Segoe UI Symbol" FontSize="16"
                                        Foreground="#66FFFFFF"/>
                         </Button>
                         <Button x:Name="SubtitleButton" Click="SubtitleButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="字幕"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="CC" FontFamily="Segoe UI" FontSize="11" FontWeight="SemiBold"
                                        Foreground="#66FFFFFF"/>
                         </Button>
                         <Button x:Name="AudioTrackButton" Click="AudioTrackButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="音轨"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x1F50A;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
                         <Button x:Name="SnapshotButton" Click="SnapshotButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="截图"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
                         <Button x:Name="SpeedButton" Click="SpeedButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="播放速度"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="SpeedIcon" Text="1x"
                                        FontFamily="Segoe UI" FontSize="13" FontWeight="SemiBold"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
                         <Button x:Name="FullscreenButton" Click="FullscreenButton_Click"
                                 Style="{StaticResource ZunePrimaryStyle}">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="全屏 (F)"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="FullscreenIcon" Text="&#x26F6;"
                                        FontFamily="Segoe UI Symbol" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
@@ -351,6 +372,9 @@
                         <Button x:Name="PrevButton" Grid.Column="0"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="PrevButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="上一个"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
@@ -358,6 +382,9 @@
                         <Button x:Name="PlayPauseButton" Grid.Column="1"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="PlayPauseButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="播放 / 暂停 (空格)"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="PlayPauseIcon" Text="&#x25B6;"
                                        FontFamily="Segoe UI Symbol" FontSize="24"
                                        Foreground="#FFFFFFFF" Margin="2,0,0,0"/>
@@ -366,6 +393,9 @@
                         <Button x:Name="StopButton" Grid.Column="2"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="StopButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="停止"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x25A0;" FontFamily="Segoe UI Symbol" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
@@ -373,6 +403,9 @@
                         <Button x:Name="NextButton" Grid.Column="3"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="NextButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="下一个"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock Text="&#x23ED;" FontFamily="Segoe UI Symbol" FontSize="18"
                                        Foreground="#FFFFFFFF"/>
                         </Button>
@@ -382,6 +415,9 @@
                         <Button x:Name="RepeatButton" Grid.Column="5"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="RepeatButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="循环 (关 / 全部 / 单曲)"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="RepeatIcon" Text="&#x1F501;"
                                        FontFamily="Segoe UI Symbol" FontSize="16"
                                        Foreground="#66FFFFFF"/>
@@ -390,6 +426,9 @@
                         <Button x:Name="ShuffleButton" Grid.Column="6"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="ShuffleButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="随机播放"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="ShuffleIcon" Text="&#x1F500;"
                                        FontFamily="Segoe UI Symbol" FontSize="16"
                                        Foreground="#66FFFFFF"/>
@@ -398,6 +437,9 @@
                         <Button x:Name="MuteButton" Grid.Column="7"
                                 Style="{StaticResource ZunePrimaryStyle}"
                                 Click="MuteButton_Click">
+                            <ToolTipService.ToolTip>
+                                <ToolTip Content="静音 / 取消静音"/>
+                            </ToolTipService.ToolTip>
                             <TextBlock x:Name="VolumeIcon" Text="&#x1F50A;"
                                        FontFamily="Segoe UI Symbol" FontSize="16"
                                        Foreground="#FFFFFFFF"/>
