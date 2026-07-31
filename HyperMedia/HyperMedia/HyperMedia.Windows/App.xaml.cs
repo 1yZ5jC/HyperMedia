@@ -25,6 +25,8 @@ namespace HyperMedia
             }
 #endif
 
+            RegisterSettingsCharm();
+
             Frame rootFrame = Window.Current.Content as Frame;
 
             if (rootFrame == null)
@@ -41,13 +43,67 @@ namespace HyperMedia
 
             if (rootFrame.Content == null)
             {
-                if (!rootFrame.Navigate(typeof(HomePage), e.Arguments))
+                // Secondary tile activation: playlist:<name> goes straight to playback
+                if (e.Arguments != null && e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase))
                 {
-                    throw new Exception("Failed to create initial page");
+                    if (!rootFrame.Navigate(typeof(MainPage), e.Arguments))
+                        throw new Exception("Failed to create playback page");
                 }
+                else
+                {
+                    if (!rootFrame.Navigate(typeof(HomePage), e.Arguments))
+                        throw new Exception("Failed to create initial page");
+                }
+            }
+            else if (e.Arguments != null && e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase))
+            {
+                // App already running — jump to playback
+                rootFrame.Navigate(typeof(MainPage), e.Arguments);
             }
 
             Window.Current.Activate();
+        }
+
+        private bool _settingsCharmRegistered = false;
+
+        private void RegisterSettingsCharm()
+        {
+            try
+            {
+                if (_settingsCharmRegistered) return;
+                _settingsCharmRegistered = true;
+
+                var settingsPane = Windows.UI.ApplicationSettings.SettingsPane.GetForCurrentView();
+                settingsPane.CommandsRequested += (s, args) =>
+                {
+                    try
+                    {
+                        var about = new Windows.UI.ApplicationSettings.SettingsCommand(
+                            "about", "关于 HyperMedia",
+                            (cmd) =>
+                            {
+                                Frame rootFrame = Window.Current.Content as Frame;
+                                if (rootFrame == null)
+                                {
+                                    rootFrame = new Frame();
+                                    rootFrame.CacheSize = 1;
+                                    Window.Current.Content = rootFrame;
+                                }
+                                rootFrame.Navigate(typeof(SettingsPage));
+                                Window.Current.Activate();
+                            });
+                        args.Request.ApplicationCommands.Add(about);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[HyperMedia] SettingsCharm failed: {0}", ex.Message);
+                    }
+                };
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] RegisterSettingsCharm failed: {0}", ex.Message);
+            }
         }
 
         private void OnSuspending(object sender, SuspendingEventArgs e)
@@ -59,6 +115,8 @@ namespace HyperMedia
         protected override void OnActivated(IActivatedEventArgs args)
         {
             base.OnActivated(args);
+
+            RegisterSettingsCharm();
 
             if (args.Kind == ActivationKind.File)
             {
@@ -79,6 +137,62 @@ namespace HyperMedia
                         rootFrame.Navigate(typeof(MainPage), file);
                         Window.Current.Activate();
                     }
+                }
+            }
+            else if (args.Kind == ActivationKind.Protocol)
+            {
+                var protocolArgs = args as ProtocolActivatedEventArgs;
+                if (protocolArgs != null)
+                {
+                    Frame rootFrame = Window.Current.Content as Frame;
+                    if (rootFrame == null)
+                    {
+                        rootFrame = new Frame();
+                        rootFrame.CacheSize = 1;
+                        Window.Current.Content = rootFrame;
+                    }
+
+                    string target = null;
+                    try
+                    {
+                        var uri = protocolArgs.Uri;
+                        string full = uri.ToString();
+                        // Strip scheme prefix: hypermedia://
+                        int idx = full.IndexOf("://");
+                        if (idx >= 0)
+                            full = full.Substring(idx + 3);
+                        else if (full.StartsWith("hypermedia:", StringComparison.OrdinalIgnoreCase))
+                            full = full.Substring("hypermedia:".Length);
+
+                        full = full.TrimStart('/');
+
+                        if (!string.IsNullOrEmpty(full))
+                        {
+                            if (full.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                                full.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                                full.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase) ||
+                                full.StartsWith("mms://", StringComparison.OrdinalIgnoreCase))
+                            {
+                                target = full;
+                            }
+                            else if (full.StartsWith("play/", StringComparison.OrdinalIgnoreCase))
+                            {
+                                target = full.Substring(5);
+                            }
+                            else
+                            {
+                                // Assume a local file path
+                                target = full.Replace('/', '\\');
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine("[HyperMedia] Protocol parse failed: {0}", ex.Message);
+                    }
+
+                    rootFrame.Navigate(typeof(MainPage), target);
+                    Window.Current.Activate();
                 }
             }
         }

@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -18,6 +19,8 @@ namespace HyperMedia
         private const string KEY_SUBTITLE_COLOR = "Settings_SubtitleColor";
         private const string KEY_SUBTITLE_MARGIN = "Settings_SubtitleMargin";
         private const string KEY_DEINTERLACE = "Settings_Deinterlace";
+        private const string KEY_SLEEP_TIMER = "Settings_SleepTimer";
+        private const string KEY_SUBTITLE_OUTLINE = "Settings_SubtitleOutline";
 
         public SettingsPage()
         {
@@ -58,6 +61,13 @@ namespace HyperMedia
                     SelectComboBoxItem(SubtitleColorCombo, color);
             }
 
+            if (settings.Values.ContainsKey(KEY_SUBTITLE_OUTLINE))
+            {
+                string outline = settings.Values[KEY_SUBTITLE_OUTLINE] as string;
+                if (!string.IsNullOrEmpty(outline))
+                    SelectComboBoxItem(SubtitleOutlineCombo, outline);
+            }
+
             if (settings.Values.ContainsKey(KEY_SUBTITLE_MARGIN))
                 SubtitleMarginSlider.Value = (int)settings.Values[KEY_SUBTITLE_MARGIN];
 
@@ -66,6 +76,12 @@ namespace HyperMedia
                 string mode = settings.Values[KEY_DEINTERLACE] as string;
                 if (!string.IsNullOrEmpty(mode))
                     SelectComboBoxItem(DeinterlaceCombo, mode);
+            }
+
+            if (settings.Values.ContainsKey(KEY_SLEEP_TIMER))
+            {
+                SleepTimerSlider.Value = (int)settings.Values[KEY_SLEEP_TIMER];
+                SleepTimerText.Text = ((int)settings.Values[KEY_SLEEP_TIMER]) + " 分钟";
             }
 
             DefaultVolumeSlider.ValueChanged += DefaultVolumeSlider_ValueChanged;
@@ -84,7 +100,7 @@ namespace HyperMedia
             {
                 ApplicationData.Current.LocalSettings.Values[key] = value;
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
         }
 
         private void DefaultVolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
@@ -126,7 +142,7 @@ namespace HyperMedia
                 if (item != null && item.Tag != null)
                     SaveSetting(KEY_SUBTITLE_SIZE, int.Parse(item.Tag.ToString()));
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
         }
 
         private void SubtitleColorCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -139,7 +155,36 @@ namespace HyperMedia
                 if (item != null && item.Tag != null)
                     SaveSetting(KEY_SUBTITLE_COLOR, item.Tag.ToString());
             }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+        }
+
+        private void SubtitleOutlineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                if (SubtitleOutlineCombo.SelectedItem == null) return;
+                var item = SubtitleOutlineCombo.SelectedItem as ComboBoxItem;
+                if (item != null && item.Tag != null)
+                    SaveSetting(KEY_SUBTITLE_OUTLINE, item.Tag.ToString());
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] SubtitleOutline failed: {0}", ex.Message); }
+        }
+
+        public static int GetSubtitleOutline()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_SUBTITLE_OUTLINE))
+                {
+                    string v = settings.Values[KEY_SUBTITLE_OUTLINE] as string;
+                    int r;
+                    if (int.TryParse(v, out r)) return r;
+                }
+            }
             catch { }
+            return 0;
         }
 
         private void SubtitleMarginSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
@@ -151,7 +196,7 @@ namespace HyperMedia
                     SubtitleMarginText.Text = ((int)e.NewValue) + "px";
                 SaveSetting(KEY_SUBTITLE_MARGIN, (int)e.NewValue);
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
         }
 
         private void DeinterlaceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -164,7 +209,31 @@ namespace HyperMedia
                 if (item != null && item.Tag != null)
                     SaveSetting(KEY_DEINTERLACE, item.Tag.ToString());
             }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+        }
+
+        private void SleepTimerSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                if (SleepTimerText != null)
+                    SleepTimerText.Text = ((int)e.NewValue) + " 分钟";
+                SaveSetting(KEY_SLEEP_TIMER, (int)e.NewValue);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] SleepTimerSlider failed: {0}", ex.Message); }
+        }
+
+        public static int GetSleepTimer()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_SLEEP_TIMER))
+                    return (int)settings.Values[KEY_SLEEP_TIMER];
+            }
             catch { }
+            return 0;
         }
 
         private void SelectComboBoxItem(ComboBox combo, string tagValue)
@@ -186,26 +255,40 @@ namespace HyperMedia
                 Frame.GoBack();
         }
 
-        private void ClearHistory_Click(object sender, RoutedEventArgs e)
+        private async void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
-            PlayHistory.ClearAll();
+            var dialog = new Windows.UI.Popups.MessageDialog("确定要清除所有播放历史吗？此操作不可撤销。", "清除播放历史");
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand("清除", (cmd) => { PlayHistory.ClearAll(); }));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand("取消"));
+            dialog.DefaultCommandIndex = 1;
+            dialog.CancelCommandIndex = 1;
+            await dialog.ShowAsync();
         }
 
-        private void ClearResume_Click(object sender, RoutedEventArgs e)
+        private async void ClearResume_Click(object sender, RoutedEventArgs e)
         {
-            try
+            var dialog = new Windows.UI.Popups.MessageDialog("确定要清除所有续播位置吗？", "清除续播位置");
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand("清除", (cmd) =>
             {
-                var settings = ApplicationData.Current.LocalSettings;
-                var keys = new System.Collections.Generic.List<string>();
-                foreach (var key in settings.Values.Keys)
+                try
                 {
-                    if (key != null && key.ToString().StartsWith("ResumePosition_"))
-                        keys.Add(key.ToString());
+                    var settings = ApplicationData.Current.LocalSettings;
+                    var keys = new System.Collections.Generic.List<string>();
+                    foreach (var key in settings.Values.Keys)
+                    {
+                        string k = key != null ? key.ToString() : "";
+                        if (k.StartsWith("ResumePosition_") || k.StartsWith("ResumePercent_"))
+                            keys.Add(k);
+                    }
+                    foreach (var key in keys)
+                        settings.Values.Remove(key);
                 }
-                foreach (var key in keys)
-                    settings.Values.Remove(key);
-            }
-            catch { }
+                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+            }));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand("取消"));
+            dialog.DefaultCommandIndex = 1;
+            dialog.CancelCommandIndex = 1;
+            await dialog.ShowAsync();
         }
 
         public static int GetDefaultVolume()
@@ -216,7 +299,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_DEFAULT_VOLUME))
                     return (int)settings.Values[KEY_DEFAULT_VOLUME];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return 100;
         }
 
@@ -228,7 +311,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_AUTO_PLAY))
                     return (bool)settings.Values[KEY_AUTO_PLAY];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return true;
         }
 
@@ -240,7 +323,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_RESUME))
                     return (bool)settings.Values[KEY_RESUME];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return true;
         }
 
@@ -252,7 +335,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_AUTO_HIDE))
                     return (bool)settings.Values[KEY_AUTO_HIDE];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return true;
         }
 
@@ -264,7 +347,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_AUTO_HIDE_DELAY))
                     return (int)settings.Values[KEY_AUTO_HIDE_DELAY];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return 3;
         }
 
@@ -276,7 +359,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_SUBTITLE_SIZE))
                     return (int)settings.Values[KEY_SUBTITLE_SIZE];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return 24;
         }
 
@@ -288,7 +371,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_SUBTITLE_COLOR))
                     return settings.Values[KEY_SUBTITLE_COLOR] as string;
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return "#FFFF69B4";
         }
 
@@ -300,7 +383,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_SUBTITLE_MARGIN))
                     return (int)settings.Values[KEY_SUBTITLE_MARGIN];
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return 0;
         }
 
@@ -312,7 +395,7 @@ namespace HyperMedia
                 if (settings.Values.ContainsKey(KEY_DEINTERLACE))
                     return settings.Values[KEY_DEINTERLACE] as string;
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return "auto";
         }
     }

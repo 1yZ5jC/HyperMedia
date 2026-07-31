@@ -27,6 +27,34 @@ namespace HyperMedia
             }
         }
 
+        private string _resumeText;
+        public string ResumeText
+        {
+            get { return _resumeText; }
+            set
+            {
+                if (_resumeText != value)
+                {
+                    _resumeText = value;
+                    OnPropertyChanged("ResumeText");
+                }
+            }
+        }
+
+        private double _resumePercent = -1;
+        public double ResumePercent
+        {
+            get { return _resumePercent; }
+            set
+            {
+                if (_resumePercent != value)
+                {
+                    _resumePercent = value;
+                    OnPropertyChanged("ResumePercent");
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged(string name)
@@ -60,7 +88,7 @@ namespace HyperMedia
                         return;
                     }
                 }
-                catch { }
+                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
 
                 // Fallback to SingleItem
                 try
@@ -74,7 +102,7 @@ namespace HyperMedia
                         return;
                     }
                 }
-                catch { }
+                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
 
                 // Final fallback: try to get icon
                 try
@@ -87,7 +115,7 @@ namespace HyperMedia
                         Thumbnail = image;
                     }
                 }
-                catch { }
+                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             }
             catch (Exception ex)
             {

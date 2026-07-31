@@ -182,6 +182,28 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
+                        <TextBlock Text="字幕描边" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="为字幕添加黑色描边以提高对比度"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="SubtitleOutlineCombo" Grid.Column="1"
+                              Width="100" VerticalAlignment="Center"
+                              SelectionChanged="SubtitleOutlineCombo_SelectionChanged">
+                        <ComboBoxItem Content="无" Tag="0" IsSelected="True"/>
+                        <ComboBoxItem Content="细" Tag="1"/>
+                        <ComboBoxItem Content="中" Tag="2"/>
+                        <ComboBoxItem Content="粗" Tag="3"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
                         <TextBlock Text="字幕位置偏移" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
                         <TextBlock Text="上下移动字幕显示位置"
@@ -249,6 +271,32 @@
                         <TextBlock Text="清除" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
                                    FontSize="12" CharacterSpacing="40"/>
                     </Button>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="睡眠定时器" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="播放指定时长后自动停止（0 = 关闭）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <Grid Grid.Column="1" VerticalAlignment="Center">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="SleepTimerSlider" Grid.Column="0"
+                                Minimum="0" Maximum="180" StepFrequency="5" Width="140"
+                                ValueChanged="SleepTimerSlider_ValueChanged"/>
+                        <TextBlock x:Name="SleepTimerText" Grid.Column="1" Text="0 分钟"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#99FFFFFF"
+                                   VerticalAlignment="Center" Margin="12,0,0,0" Width="60"/>
+                    </Grid>
                 </Grid>
 
                 <Grid Margin="0,0,0,20">
