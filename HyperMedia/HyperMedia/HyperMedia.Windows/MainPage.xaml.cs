@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.DataTransfer;
@@ -10,6 +12,7 @@ using Windows.Storage;
 using Windows.Storage.AccessCache;
 using Windows.Storage.Pickers;
 using Windows.System;
+using Windows.UI;
 using Windows.UI.Core;
 using Windows.UI.Xaml;
 using Windows.UI.Popups;
@@ -28,6 +31,7 @@ namespace HyperMedia
 
         private DispatcherTimer _autoHideTimer;
         private DispatcherTimer _positionTimer;
+        private DispatcherTimer _overlayNotifyTimer;
         private bool _isPlaying;
         private bool _isSeeking;
         private bool _isFullscreen;
@@ -62,9 +66,36 @@ namespace HyperMedia
 
         // Resume position
         private const string KEY_RESUME = "ResumePosition_";
+        private const string KEY_LAST_FILE_PATH = "Resume_LastFilePath";
+        private const string KEY_LAST_PLAYLIST = "Resume_LastPlaylist";
+        private const string KEY_LAST_INDEX = "Resume_LastIndex";
 
         // Settings navigation flag
         private bool _navigatingToSettings = false;
+
+        // Screenshot
+        private string _lastScreenshotPath;
+        private string _lastScreenshotFileName;
+
+        // Music mode
+        private bool _isMusicMode = false;
+        private string _currentMusicFilePath = "";
+        private string _currentMusicOriginalDir = "";
+        private StorageFile _currentOriginalFile = null;
+
+        // Lyric sync
+        private List<LyricLine> _lyricLines = new List<LyricLine>();
+        private int _currentLyricIndex = -1;
+        private DispatcherTimer _lyricTimer;
+
+        private class LyricLine
+        {
+            public double TimeMs;
+            public string Text;
+            public Border Container;
+            public TextBlock UiElement;
+            public TextBlock TimeIndicator;
+        }
 
         public MainPage()
         {
@@ -77,6 +108,18 @@ namespace HyperMedia
             _positionTimer = new DispatcherTimer();
             _positionTimer.Interval = TimeSpan.FromMilliseconds(250);
             _positionTimer.Tick += PositionTimer_Tick;
+
+            _overlayNotifyTimer = new DispatcherTimer();
+            _overlayNotifyTimer.Interval = TimeSpan.FromSeconds(4);
+            _overlayNotifyTimer.Tick += (s, ev) =>
+            {
+                _overlayNotifyTimer.Stop();
+                OverlayNotification.Visibility = Visibility.Collapsed;
+            };
+
+            _lyricTimer = new DispatcherTimer();
+            _lyricTimer.Interval = TimeSpan.FromMilliseconds(100);
+            _lyricTimer.Tick += LyricTimer_Tick;
 
             // Apply settings
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
@@ -148,6 +191,7 @@ namespace HyperMedia
             }
             catch { }
 
+            // Try FutureAccessList first (in-session navigation)
             if (StorageApplicationPermissions.FutureAccessList.ContainsItem("PlaybackFile"))
             {
                 try
@@ -181,8 +225,57 @@ namespace HyperMedia
                     _playlistIndex = 0;
                     RestoreStateAfterSettings();
                     OpenFile(_playlist[0]);
+                    return;
                 }
                 catch { }
+            }
+
+            // Fallback: restore from LocalSettings (survives app restart)
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_LAST_PLAYLIST))
+                {
+                    string playlistStr = settings.Values[KEY_LAST_PLAYLIST] as string;
+                    int savedIndex = settings.Values.ContainsKey(KEY_LAST_INDEX)
+                        ? (int)settings.Values[KEY_LAST_INDEX] : 0;
+
+                    if (!string.IsNullOrEmpty(playlistStr))
+                    {
+                        string[] paths = playlistStr.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                        _playlist.Clear();
+                        foreach (string path in paths)
+                        {
+                            try
+                            {
+                                var file = await StorageFile.GetFileFromPathAsync(path);
+                                _playlist.Add(file);
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine("[HyperMedia] Restore file failed ({0}): {1}", path, ex.Message);
+                            }
+                        }
+
+                        if (_playlist.Count > 0)
+                        {
+                            _playlistIndex = savedIndex < _playlist.Count ? savedIndex : 0;
+                            Debug.WriteLine("[HyperMedia] Restored from LocalSettings: {0} files, index={1}", _playlist.Count, _playlistIndex);
+
+                            settings.Values.Remove(KEY_LAST_PLAYLIST);
+                            settings.Values.Remove(KEY_LAST_INDEX);
+                            settings.Values.Remove(KEY_LAST_FILE_PATH);
+
+                            RestoreStateAfterSettings();
+                            OpenFile(_playlist[_playlistIndex]);
+                            return;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] Restore from LocalSettings FAILED: {0}", ex.Message);
             }
         }
 
@@ -223,10 +316,12 @@ namespace HyperMedia
 
             if (_navigatingToSettings)
             {
+                Debug.WriteLine("[HyperMedia] OnNavigatedFrom: navigating to settings, skipping save");
                 _navigatingToSettings = false;
                 return;
             }
 
+            Debug.WriteLine("[HyperMedia] OnNavigatedFrom: saving resume position");
             SaveResumePosition();
             StopPlayback();
 
@@ -258,6 +353,9 @@ namespace HyperMedia
             ShowOverlay("正在加载 " + file.Name + "...");
 
             _originalFileName = file.Name;
+            _currentMusicFilePath = file.Path;
+            _currentMusicOriginalDir = System.IO.Path.GetDirectoryName(file.Path);
+            _currentOriginalFile = file;
             PlayHistory.Add(file.Path, file.Name);
 
             try
@@ -344,6 +442,7 @@ namespace HyperMedia
             _vlcPlayer.eventManager().OnEndReached += OnVlcEndReached;
             _vlcPlayer.eventManager().OnEncounteredError += OnVlcEncounteredError;
             _vlcPlayer.eventManager().OnLengthChanged += OnVlcLengthChanged;
+            _vlcPlayer.eventManager().OnSnapshotTaken += OnSnapshotTaken;
 
             _vlcPlayer.play();
 
@@ -571,6 +670,8 @@ namespace HyperMedia
 
         #region Resume Position
 
+        private long _pendingResumePos = 0;
+
         private void SaveResumePosition()
         {
             if (!SettingsPage.GetResumeEnabled()) return;
@@ -579,30 +680,116 @@ namespace HyperMedia
             {
                 long time = _vlcPlayer.time();
                 long len = _vlcPlayer.length();
+                Debug.WriteLine("[HyperMedia] SaveResumePosition: time={0}ms len={1}ms file={2}", time, len, _originalFileName);
                 if (time > 5000 && len > 10000)
                 {
                     var settings = ApplicationData.Current.LocalSettings;
                     settings.Values[KEY_RESUME + _originalFileName] = time;
+                    Debug.WriteLine("[HyperMedia] Resume position SAVED: {0}ms for {1}", time, _originalFileName);
+                }
+                else
+                {
+                    Debug.WriteLine("[HyperMedia] Resume position NOT saved (time={0} len={1})", time, len);
+                }
+
+                // Persist file paths for restart recovery
+                SaveFilePersistence();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] SaveResumePosition FAILED: {0}", ex.Message);
+            }
+        }
+
+        private void SaveFilePersistence()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (_playlist.Count > 0 && _playlistIndex >= 0 && _playlistIndex < _playlist.Count)
+                {
+                    // Save current file path
+                    settings.Values[KEY_LAST_FILE_PATH] = _playlist[_playlistIndex].Path;
+                    settings.Values[KEY_LAST_INDEX] = _playlistIndex;
+
+                    // Save all playlist paths
+                    var paths = new System.Collections.Generic.List<string>();
+                    for (int i = 0; i < _playlist.Count; i++)
+                        paths.Add(_playlist[i].Path);
+                    settings.Values[KEY_LAST_PLAYLIST] = string.Join("|", paths);
+                    Debug.WriteLine("[HyperMedia] File persistence saved: {0} files, index={1}", paths.Count, _playlistIndex);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] SaveFilePersistence FAILED: {0}", ex.Message);
+            }
+        }
+
+        private long LoadResumePosition(string fileName)
+        {
+            if (!SettingsPage.GetResumeEnabled())
+            {
+                Debug.WriteLine("[HyperMedia] LoadResumePosition: resume disabled in settings");
+                return 0;
+            }
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_RESUME + fileName;
+                Debug.WriteLine("[HyperMedia] LoadResumePosition: looking for key={0}, exists={1}", key, settings.Values.ContainsKey(key));
+                if (settings.Values.ContainsKey(key))
+                {
+                    long pos = (long)settings.Values[key];
+                    Debug.WriteLine("[HyperMedia] Resume position FOUND: {0}ms for {1}", pos, fileName);
+                    return pos;
+                }
+                else
+                {
+                    Debug.WriteLine("[HyperMedia] Resume position NOT FOUND for {0}", fileName);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] LoadResumePosition FAILED: {0}", ex.Message);
+            }
+            return 0;
+        }
+
+        private void RemoveResumePosition(string fileName)
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_RESUME + fileName;
+                if (settings.Values.ContainsKey(key))
+                {
+                    settings.Values.Remove(key);
+                    Debug.WriteLine("[HyperMedia] Resume position REMOVED for {0}", fileName);
                 }
             }
             catch { }
         }
 
-        private long LoadResumePosition(string fileName)
+        private void ClearResumePosition()
         {
-            if (!SettingsPage.GetResumeEnabled()) return 0;
             try
             {
                 var settings = ApplicationData.Current.LocalSettings;
-                if (settings.Values.ContainsKey(KEY_RESUME + fileName))
+                var keys = new System.Collections.Generic.List<string>();
+                foreach (var key in settings.Values.Keys)
                 {
-                    long pos = (long)settings.Values[KEY_RESUME + fileName];
-                    settings.Values.Remove(KEY_RESUME + fileName);
-                    return pos;
+                    if (key != null && key.ToString().StartsWith("ResumePosition_"))
+                        keys.Add(key.ToString());
                 }
+                foreach (var key in keys)
+                    settings.Values.Remove(key);
+                Debug.WriteLine("[HyperMedia] All resume positions CLEARED ({0} entries)", keys.Count);
             }
-            catch { }
-            return 0;
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ClearResumePosition FAILED: {0}", ex.Message);
+            }
         }
 
         #endregion
@@ -813,29 +1000,647 @@ namespace HyperMedia
 
         private async void TakeScreenshot()
         {
-            if (_vlcPlayer == null || _isNetworkStream) return;
+            if (_vlcPlayer == null)
+            {
+                Debug.WriteLine("[HyperMedia] Screenshot FAILED: _vlcPlayer is null");
+                ShowOverlay("截图失败: 播放器未就绪");
+                HideOverlayDelayed();
+                return;
+            }
+            if (_isNetworkStream)
+            {
+                Debug.WriteLine("[HyperMedia] Screenshot FAILED: network stream");
+                ShowOverlay("截图失败: 网络流不支持截图");
+                HideOverlayDelayed();
+                return;
+            }
 
             try
             {
-                var folder = ApplicationData.Current.LocalFolder;
-                var subFolder = await folder.CreateFolderAsync("Screenshots",
-                    CreationCollisionOption.OpenIfExists);
-
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string fileName = "Screenshot_" + timestamp + ".png";
-                var file = await subFolder.CreateFileAsync(fileName,
-                    CreationCollisionOption.GenerateUniqueName);
+                string fileName = "Screenshot_" + timestamp + ".jpg";
 
-                _vlcPlayer.takeSnapshot(0, file.Path, 0, 0);
-                ShowOverlay("截图已保存: " + file.Name);
-                HideOverlayDelayed();
+                // Use TemporaryFolder — VLC native code CAN write here (same as playback temp)
+                var tempFolder = ApplicationData.Current.TemporaryFolder;
+                string filePath = tempFolder.Path + "\\" + fileName;
+                Debug.WriteLine("[HyperMedia] Screenshot target: {0}", filePath);
+
+                // Delete existing file if any (VLC can't overwrite)
+                try
+                {
+                    var existing = await tempFolder.GetFileAsync(fileName);
+                    if (existing != null) await existing.DeleteAsync();
+                }
+                catch { }
+
+                _lastScreenshotPath = filePath;
+                _lastScreenshotFileName = fileName;
+                ShowOverlay("正在截图...");
+                Debug.WriteLine("[HyperMedia] Calling takeSnapshot...");
+                _vlcPlayer.takeSnapshot(0, filePath, 0, 0);
+                Debug.WriteLine("[HyperMedia] takeSnapshot called, waiting for OnSnapshotTaken callback");
             }
             catch (Exception ex)
             {
+                Debug.WriteLine("[HyperMedia] Screenshot FAILED: {0}", ex);
                 ShowOverlay("截图失败: " + ex.Message);
                 HideOverlayDelayed();
             }
         }
+
+        #endregion
+
+        #region Music Mode (Album Art + Lyrics)
+
+        private static readonly System.Collections.Generic.HashSet<string> MUSIC_EXTENSIONS =
+            new System.Collections.Generic.HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a", ".opus", ".ape", ".alac", ".aiff"
+            };
+
+        private async void DetectMusicMode()
+        {
+            try
+            {
+                string ext = System.IO.Path.GetExtension(_originalFileName ?? "");
+                bool isAudio = MUSIC_EXTENSIONS.Contains(ext);
+                Debug.WriteLine("[HyperMedia] DetectMusicMode: ext={0}, isAudio={1}", ext, isAudio);
+
+                _isMusicMode = isAudio;
+                MusicOverlay.Visibility = isAudio ? Visibility.Visible : Visibility.Collapsed;
+
+                if (isAudio)
+                {
+                    // Use ORIGINAL file for metadata, lyrics, album art — not the temp copy
+                    string artist = _vlcMedia != null ? _vlcMedia.meta(MediaMeta.Artist) ?? "" : "";
+                    string nowPlaying = _vlcMedia != null ? _vlcMedia.meta(MediaMeta.NowPlaying) ?? "" : "";
+                    string album = _vlcMedia != null ? _vlcMedia.meta(MediaMeta.Album) ?? "" : "";
+
+                    Debug.WriteLine("[HyperMedia] Music metadata: artist={0}, nowPlaying={1}, album={2}", artist, nowPlaying, album);
+
+                    string metaText = "";
+                    if (!string.IsNullOrEmpty(artist)) metaText += artist;
+                    if (!string.IsNullOrEmpty(album))
+                    {
+                        if (metaText.Length > 0) metaText += " · ";
+                        metaText += album;
+                    }
+                    AlbumArtMetaText.Text = metaText;
+
+                    await LoadAlbumArtAsync();
+                    LoadLyrics();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] DetectMusicMode FAILED: {0}", ex.Message);
+            }
+        }
+
+        private async System.Threading.Tasks.Task LoadAlbumArtAsync()
+        {
+            try
+            {
+                var file = _currentOriginalFile;
+                if (file == null) return;
+
+                var thumb = await file.GetThumbnailAsync(Windows.Storage.FileProperties.ThumbnailMode.MusicView, 640);
+                if (thumb != null)
+                {
+                    var bitmap = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
+                    await bitmap.SetSourceAsync(thumb);
+                    AlbumArtImage.Source = bitmap;
+                    AlbumArtPlaceholder.Visibility = Visibility.Collapsed;
+                    Debug.WriteLine("[HyperMedia] Album art loaded from thumbnail");
+                }
+                else
+                {
+                    Debug.WriteLine("[HyperMedia] No album art thumbnail available");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] LoadAlbumArtAsync FAILED: {0}", ex.Message);
+            }
+        }
+
+        private async void LoadLyrics()
+        {
+            try
+            {
+                if (_currentOriginalFile == null) return;
+
+                string baseName = System.IO.Path.GetFileNameWithoutExtension(_currentOriginalFile.Name);
+
+                // 1. Try embedded lyrics from audio container (m4a, mp4, etc.)
+                string embedded = await ExtractEmbeddedLyrics();
+                if (!string.IsNullOrEmpty(embedded))
+                {
+                    Debug.WriteLine("[HyperMedia] Embedded lyrics extracted ({0} chars)", embedded.Length);
+                    DisplayLyrics(embedded);
+                    return;
+                }
+
+                // 2. Try external lyrics files next to the ORIGINAL file
+                string dir = System.IO.Path.GetDirectoryName(_currentOriginalFile.Path);
+                if (string.IsNullOrEmpty(dir)) return;
+
+                string[] lyricsExtensions = { ".lrc", ".txt", ".srt" };
+                foreach (string ext in lyricsExtensions)
+                {
+                    string lyricsPath = System.IO.Path.Combine(dir, baseName + ext);
+                    Debug.WriteLine("[HyperMedia] Looking for lyrics: {0}", lyricsPath);
+                    try
+                    {
+                        var lyricsFile = await StorageFile.GetFileFromPathAsync(lyricsPath);
+                        if (lyricsFile != null)
+                        {
+                            string content = await Windows.Storage.FileIO.ReadTextAsync(lyricsFile);
+                            if (!string.IsNullOrEmpty(content))
+                            {
+                                Debug.WriteLine("[HyperMedia] Lyrics loaded from {0} ({1} chars)", lyricsPath, content.Length);
+                                DisplayLyrics(content);
+                                return;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                Debug.WriteLine("[HyperMedia] No lyrics file found for {0} in {1}", baseName, dir);
+                ShowNoLyrics();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] LoadLyrics FAILED: {0}", ex.Message);
+                ShowNoLyrics();
+            }
+        }
+
+        private void DisplayLyrics(string rawText)
+        {
+            _lyricLines.Clear();
+            LyricsLines.Children.Clear();
+            _currentLyricIndex = -1;
+
+            var parsed = ParseLrc(rawText);
+            if (parsed.Count == 0)
+            {
+                var tb = new TextBlock
+                {
+                    Text = rawText,
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 15,
+                    Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF)),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 4, 0, 4)
+                };
+                LyricsLines.Children.Add(tb);
+                return;
+            }
+
+            foreach (var line in parsed)
+            {
+                var tb = new TextBlock
+                {
+                    Text = line.Text,
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 15,
+                    Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                    TextWrapping = TextWrapping.Wrap,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                var accentBar = new Border
+                {
+                    Width = 3,
+                    Height = 24,
+                    Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 12, 0)
+                };
+
+                var timeTb = new TextBlock
+                {
+                    Text = FormatTime(line.TimeMs / 1000.0),
+                    FontFamily = new FontFamily("Segoe UI"),
+                    FontSize = 11,
+                    Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Thickness(0, 0, 10, 0),
+                    MinWidth = 40
+                };
+
+                var row = new StackPanel
+                {
+                    Orientation = Windows.UI.Xaml.Controls.Orientation.Horizontal,
+                    Margin = new Thickness(0, 5, 0, 5)
+                };
+                row.Children.Add(accentBar);
+                row.Children.Add(timeTb);
+                row.Children.Add(tb);
+
+                var container = new Border
+                {
+                    Child = row,
+                    Padding = new Thickness(8, 2, 8, 2),
+                    CornerRadius = new Windows.UI.Xaml.CornerRadius(0),
+                    Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E))
+                };
+
+                LyricsLines.Children.Add(container);
+
+                var lyricLine = new LyricLine
+                {
+                    TimeMs = line.TimeMs,
+                    Text = line.Text,
+                    Container = container,
+                    UiElement = tb,
+                    TimeIndicator = timeTb
+                };
+                _lyricLines.Add(lyricLine);
+            }
+
+            Debug.WriteLine("[HyperMedia] Lyrics parsed: {0} lines with timestamps", _lyricLines.Count);
+            if (_lyricLines.Count > 0 && _isPlaying)
+                _lyricTimer.Start();
+        }
+
+        private void ShowNoLyrics()
+        {
+            _lyricLines.Clear();
+            LyricsLines.Children.Clear();
+            _currentLyricIndex = -1;
+            var tb = new TextBlock
+            {
+                Text = "暂无歌词",
+                FontFamily = new FontFamily("Segoe UI"),
+                FontSize = 15,
+                Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                Margin = new Thickness(0, 4, 0, 4)
+            };
+            LyricsLines.Children.Add(tb);
+        }
+
+        private List<LyricLine> ParseLrc(string text)
+        {
+            var result = new List<LyricLine>();
+
+            // Collect all [timestamp] pairs with their following text
+            int pos = 0;
+            while (pos < text.Length)
+            {
+                int openBracket = text.IndexOf('[', pos);
+                if (openBracket < 0) break;
+
+                int closeBracket = text.IndexOf(']', openBracket + 1);
+                if (closeBracket < 0) break;
+
+                string segment = text.Substring(openBracket + 1, closeBracket - openBracket - 1);
+                double ms = ParseLrcTimestamp(segment);
+
+                // Find text until next timestamp or end
+                int textStart = closeBracket + 1;
+                int textEnd = text.Length;
+                int nextOpen = text.IndexOf('[', textStart);
+                if (nextOpen >= 0) textEnd = nextOpen;
+
+                string lineText = text.Substring(textStart, textEnd - textStart).Trim();
+                // Strip trailing " / " separator
+                if (lineText.EndsWith("/")) lineText = lineText.Substring(0, lineText.Length - 1).Trim();
+                if (lineText.EndsWith("\\")) lineText = lineText.Substring(0, lineText.Length - 1).Trim();
+
+                if (ms >= 0 && !string.IsNullOrEmpty(lineText))
+                {
+                    result.Add(new LyricLine { TimeMs = ms, Text = lineText });
+                }
+
+                pos = closeBracket + 1;
+            }
+
+            result.Sort((a, b) => a.TimeMs.CompareTo(b.TimeMs));
+            return result;
+        }
+
+        private double ParseLrcTimestamp(string s)
+        {
+            // Format: MM:SS.xx or MM:SS.xxx or MM:SS
+            var parts = s.Split(':');
+            if (parts.Length != 2) return -1;
+
+            int min;
+            if (!int.TryParse(parts[0], out min)) return -1;
+
+            double sec;
+            if (!double.TryParse(parts[1], System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out sec))
+                return -1;
+
+            return min * 60000 + sec * 1000;
+        }
+
+        private void LyricTimer_Tick(object sender, object e)
+        {
+            if (_vlcPlayer == null || _lyricLines.Count == 0) return;
+
+            double posMs = 0;
+            try { posMs = _vlcPlayer.time(); }
+            catch { return; }
+
+            int idx = -1;
+            for (int i = _lyricLines.Count - 1; i >= 0; i--)
+            {
+                if (posMs >= _lyricLines[i].TimeMs - 100)
+                {
+                    idx = i;
+                    break;
+                }
+            }
+
+            if (idx == _currentLyricIndex) return;
+            _currentLyricIndex = idx;
+
+            for (int i = 0; i < _lyricLines.Count; i++)
+            {
+                var line = _lyricLines[i];
+                if (i == idx)
+                {
+                    line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+                    line.UiElement.FontSize = 17;
+                    line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
+                    line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
+                    line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
+                    // Pink accent bar
+                    var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
+                    if (accent != null)
+                        accent.Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                    line.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, 0xE0, 0x40, 0xFB));
+                }
+                else
+                {
+                    line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                    line.UiElement.FontSize = 15;
+                    line.UiElement.FontWeight = Windows.UI.Text.FontWeights.Normal;
+                    line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
+                    line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
+                    var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
+                    if (accent != null)
+                        accent.Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB));
+                    line.Container.Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E));
+                }
+            }
+
+            if (idx >= 0 && idx < _lyricLines.Count)
+            {
+                try
+                {
+                    var el = _lyricLines[idx].Container as FrameworkElement;
+                    if (el != null)
+                    {
+                        var transform = el.TransformToVisual(LyricsScrollViewer);
+                        var point = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
+                        LyricsScrollViewer.ChangeView(null, LyricsScrollViewer.VerticalOffset + point.Y - 80, null);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private async System.Threading.Tasks.Task<string> ExtractEmbeddedLyrics()
+        {
+            try
+            {
+                var file = _currentOriginalFile;
+                if (file == null) return null;
+
+                var fileBytes = await ReadFileBytesAsync(file);
+                if (fileBytes == null || fileBytes.Length < 8) return null;
+
+                return ParseMp4Lyrics(fileBytes);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ExtractEmbeddedLyrics FAILED: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        private async System.Threading.Tasks.Task<byte[]> ReadFileBytesAsync(StorageFile file)
+        {
+            try
+            {
+                using (var stream = await file.OpenReadAsync())
+                using (var netStream = stream.AsStreamForRead())
+                {
+                    long fileSize = (long)stream.Size;
+                    long firstChunk = Math.Min(fileSize, 4 * 1024 * 1024);
+                    long lastChunk = Math.Min(fileSize, 8 * 1024 * 1024);
+                    if (firstChunk + lastChunk > fileSize)
+                        lastChunk = fileSize - firstChunk;
+
+                    var bytes = new byte[firstChunk + lastChunk];
+
+                    int totalRead = 0;
+                    while (totalRead < firstChunk)
+                    {
+                        int read = netStream.Read(bytes, totalRead, (int)(firstChunk - totalRead));
+                        if (read == 0) break;
+                        totalRead += read;
+                    }
+
+                    if (lastChunk > 0)
+                    {
+                        netStream.Seek(fileSize - lastChunk, SeekOrigin.Begin);
+                        while (totalRead < bytes.Length)
+                        {
+                            int read = netStream.Read(bytes, totalRead, bytes.Length - totalRead);
+                            if (read == 0) break;
+                            totalRead += read;
+                        }
+                    }
+
+                    Debug.WriteLine("[HyperMedia] ReadFileBytesAsync: read {0} bytes from {1} byte file", totalRead, fileSize);
+                    return bytes;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ReadFileBytesAsync FAILED: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        private string ParseMp4Lyrics(byte[] data)
+        {
+            try
+            {
+                int pos = 0;
+                Debug.WriteLine("[HyperMedia] MP4 parse: searching for moov→udta→meta→ilst in {0} bytes", data.Length);
+                string result = FindAtomRecursive(data, ref pos, data.Length, new[] { "moov", "udta", "meta", "ilst" }, 0);
+                if (string.IsNullOrEmpty(result))
+                    Debug.WriteLine("[HyperMedia] MP4 parse: no lyrics found in ilst");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ParseMp4Lyrics FAILED: {0}", ex.Message);
+                return null;
+            }
+        }
+
+        private string FindAtomRecursive(byte[] data, ref int pos, int end, string[] path, int depth)
+        {
+            if (depth >= path.Length) return null;
+            string targetType = path[depth];
+
+            while (pos + 8 <= end)
+            {
+                int atomSize = ReadInt32BigEndian(data, pos);
+                if (atomSize == 1 && pos + 16 <= end)
+                    atomSize = (int)ReadInt64BigEndian(data, pos + 8);
+                if (atomSize < 8 || pos + atomSize > end)
+                    break;
+
+                byte[] typeBytes = new byte[] { data[pos + 4], data[pos + 5], data[pos + 6], data[pos + 7] };
+                string atomType = DecodeAtomType(typeBytes);
+                int contentStart = pos + 8;
+                int contentEnd = pos + atomSize;
+
+                if (depth == 0)
+                    Debug.WriteLine("[HyperMedia] Top-level atom: {0} at {1}, size={2}", atomType, pos, atomSize);
+
+                if (atomType == targetType)
+                {
+                    if (depth == path.Length - 1)
+                    {
+                        Debug.WriteLine("[HyperMedia] Found {0} at {1}, size={2}", atomType, pos, atomSize);
+                        string result = SearchLyricsInIlst(data, contentStart, contentEnd);
+                        if (!string.IsNullOrEmpty(result)) return result;
+                    }
+                    else
+                    {
+                        Debug.WriteLine("[HyperMedia] Found {0} at {1}, size={2}, recursing...", atomType, pos, atomSize);
+                        int childPos = contentStart;
+                        // 'meta' atom has 4-byte version/flags header before children
+                        if (atomType == "meta")
+                            childPos += 4;
+                        string result = FindAtomRecursive(data, ref childPos, contentEnd, path, depth + 1);
+                        if (!string.IsNullOrEmpty(result)) return result;
+                    }
+                }
+
+                pos += atomSize;
+            }
+            return null;
+        }
+
+        private string SearchLyricsInIlst(byte[] data, int start, int end)
+        {
+            Debug.WriteLine("[HyperMedia] ilst contents: scanning {0} to {1}", start, end);
+            int pos = start;
+            while (pos + 8 <= end)
+            {
+                int atomSize = ReadInt32BigEndian(data, pos);
+                if (atomSize == 1 && pos + 16 <= end)
+                    atomSize = (int)ReadInt64BigEndian(data, pos + 8);
+                if (atomSize < 8 || pos + atomSize > end)
+                {
+                    Debug.WriteLine("[HyperMedia] ilst: bad atom at {0}, size={1}", pos, atomSize);
+                    break;
+                }
+
+                string typeName = string.Format("{0}{1}{2}{3}",
+                    (char)data[pos + 4], (char)data[pos + 5], (char)data[pos + 6], (char)data[pos + 7]);
+                Debug.WriteLine("[HyperMedia] ilst item: '{0}' at {1}, size={2}", typeName, pos, atomSize);
+
+                if (data[pos + 4] == 0xA9 && data[pos + 5] == 0x6C && data[pos + 6] == 0x79 && data[pos + 7] == 0x72)
+                {
+                    Debug.WriteLine("[HyperMedia] >>> Found ©lyr atom!");
+                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize);
+                    if (!string.IsNullOrEmpty(result)) return result;
+                }
+
+                if (data[pos + 4] == 0x6C && data[pos + 5] == 0x79 && data[pos + 6] == 0x72 && data[pos + 7] == 0x63)
+                {
+                    Debug.WriteLine("[HyperMedia] >>> Found lyrc atom!");
+                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize);
+                    if (!string.IsNullOrEmpty(result)) return result;
+                }
+
+                pos += atomSize;
+            }
+            return null;
+        }
+
+        private string ExtractDataAtomText(byte[] data, int contentStart, int atomEnd)
+        {
+            // Content of ©lyr is typically a 'data' sub-atom:
+            // [4B size]['data'][4B type_flag][4B locale][text...]
+            int pos = contentStart;
+            while (pos + 8 <= atomEnd)
+            {
+                int subSize = ReadInt32BigEndian(data, pos);
+                if (subSize == 1 && pos + 16 <= atomEnd)
+                    subSize = (int)ReadInt64BigEndian(data, pos + 8);
+                if (subSize < 8 || pos + subSize > atomEnd)
+                    break;
+
+                // Check for 'data' sub-atom
+                if (data[pos + 4] == 0x64 && data[pos + 5] == 0x61 && data[pos + 6] == 0x74 && data[pos + 7] == 0x61)
+                {
+                    int payloadStart = pos + 8;
+                    if (payloadStart + 8 > atomEnd) break;
+
+                    int typeFlag = ReadInt32BigEndian(data, payloadStart);
+                    Debug.WriteLine("[HyperMedia] data atom: type_flag={0}", typeFlag);
+
+                    // type_flag 1 = UTF-8 text, 0 = binary
+                    int textStart = payloadStart + 8; // skip type_flag(4) + locale(4)
+                    if (textStart >= pos + subSize) break;
+                    int textLen = pos + subSize - textStart;
+                    if (textLen > 0)
+                    {
+                        string text = Encoding.UTF8.GetString(data, textStart, textLen).TrimEnd('\0');
+                        if (!string.IsNullOrEmpty(text))
+                        {
+                            Debug.WriteLine("[HyperMedia] Extracted lyrics: {0} chars", text.Length);
+                            return text;
+                        }
+                    }
+                }
+
+                pos += subSize;
+            }
+            return null;
+        }
+
+        private string DecodeAtomType(byte[] b)
+        {
+            // Decode 4 bytes as raw ASCII (handles bytes > 0x7F correctly, unlike UTF-8)
+            char[] chars = new char[4];
+            for (int i = 0; i < 4; i++)
+                chars[i] = (char)b[i];
+            return new string(chars);
+        }
+
+        private static long ReadInt64BigEndian(byte[] data, int offset)
+        {
+            if (offset + 8 > data.Length) return 0;
+            return ((long)data[offset] << 56) | ((long)data[offset + 1] << 48) |
+                   ((long)data[offset + 2] << 40) | ((long)data[offset + 3] << 32) |
+                   ((long)data[offset + 4] << 24) | ((long)data[offset + 5] << 16) |
+                   ((long)data[offset + 6] << 8) | data[offset + 7];
+        }
+
+        private static int ReadInt32BigEndian(byte[] data, int offset)
+        {
+            if (offset + 4 > data.Length) return 0;
+            return (data[offset] << 24) | (data[offset + 1] << 16) | (data[offset + 2] << 8) | data[offset + 3];
+        }
+
+        #endregion
+
+        #region Overlay
 
         private async void HideOverlayDelayed()
         {
@@ -858,7 +1663,10 @@ namespace HyperMedia
                     if (_vlcMedia != null)
                     {
                         string title = _vlcMedia.meta(MediaMeta.Title);
-                        if (!string.IsNullOrEmpty(title))
+                        bool titleIsTemp = !string.IsNullOrEmpty(title) &&
+                            title.IndexOf("hypermedia_temp", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                        if (!string.IsNullOrEmpty(title) && !titleIsTemp)
                         {
                             FileNameText.Text = title;
                         }
@@ -870,8 +1678,14 @@ namespace HyperMedia
                             {
                                 FileNameText.Text = artist + " - " + nowPlaying;
                             }
+                            else if (!string.IsNullOrEmpty(_originalFileName))
+                            {
+                                FileNameText.Text = _originalFileName;
+                            }
                         }
                     }
+
+                    DetectMusicMode();
 
                     // Resume from saved position
                     if (_originalFileName != null && !_isNetworkStream)
@@ -879,9 +1693,17 @@ namespace HyperMedia
                         long resumePos = LoadResumePosition(_originalFileName);
                         if (resumePos > 0)
                         {
-                            _vlcPlayer.setTime(resumePos);
-                            ShowOverlay("已恢复播放 " + FormatTime(resumePos / 1000.0));
-                            HideOverlayDelayed();
+                            _pendingResumePos = resumePos;
+                            Debug.WriteLine("[HyperMedia] Attempting resume seek to {0}ms", resumePos);
+                            bool seekOk = false;
+                            try { _vlcPlayer.setTime(resumePos); seekOk = true; }
+                            catch (Exception ex) { Debug.WriteLine("[HyperMedia] setTime FAILED: {0}", ex.Message); }
+                            if (seekOk)
+                            {
+                                RemoveResumePosition(_originalFileName);
+                                ShowOverlay("已恢复播放 " + FormatTime(resumePos / 1000.0));
+                                HideOverlayDelayed();
+                            }
                         }
                     }
                 }
@@ -892,12 +1714,17 @@ namespace HyperMedia
         private void OnVlcPaused()
         {
             _isPlaying = false;
+            BeginInvokeOnUI(() => _lyricTimer.Stop());
         }
 
         private void OnVlcStopped()
         {
             _isPlaying = false;
-            BeginInvokeOnUI(() => _positionTimer.Stop());
+            BeginInvokeOnUI(() =>
+            {
+                _lyricTimer.Stop();
+                _positionTimer.Stop();
+            });
         }
 
         private void OnVlcEndReached()
@@ -905,6 +1732,7 @@ namespace HyperMedia
             _isPlaying = false;
             BeginInvokeOnUI(() =>
             {
+                _lyricTimer.Stop();
                 _positionTimer.Stop();
                 UpdatePlayPauseIcon(false);
 
@@ -929,15 +1757,88 @@ namespace HyperMedia
             });
         }
 
+        private async void OnSnapshotTaken(string filename)
+        {
+            Debug.WriteLine("[HyperMedia] OnSnapshotTaken callback: filename={0}", filename);
+
+            // Wait for file flush to disk — takeSnapshot is async, file may not be flushed yet
+            bool fileFound = false;
+            for (int i = 0; i < 20; i++)
+            {
+                await Task.Delay(150);
+                try
+                {
+                    if (!string.IsNullOrEmpty(_lastScreenshotPath))
+                    {
+                        var test = await StorageFile.GetFileFromPathAsync(_lastScreenshotPath);
+                        if (test != null)
+                        {
+                            var props = await test.GetBasicPropertiesAsync();
+                            if (props.Size > 0)
+                            {
+                                Debug.WriteLine("[HyperMedia] Screenshot file found after {0} retries, size={1}", i + 1, props.Size);
+                                fileFound = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            string path = _lastScreenshotPath;
+            BeginInvokeOnUI(() =>
+            {
+                Debug.WriteLine("[HyperMedia] Checking screenshot file: {0}, found={1}", path, fileFound);
+
+                if (fileFound && !string.IsNullOrEmpty(path))
+                {
+                    Debug.WriteLine("[HyperMedia] Screenshot file confirmed: {0}", path);
+                    OverlayText.Text = "截图已保存: " + System.IO.Path.GetFileName(path);
+                    OverlayOpenBtn.Visibility = Visibility.Visible;
+                    OverlayOpenBtn.Tag = path;
+                    OverlayNotification.Visibility = Visibility.Visible;
+                    _overlayNotifyTimer.Stop();
+                    _overlayNotifyTimer.Start();
+                }
+                else
+                {
+                    Debug.WriteLine("[HyperMedia] Screenshot file NOT found at: {0}", path);
+                    OverlayText.Text = "截图失败：文件未创建 (path=" + (path ?? "null") + ")";
+                    OverlayNotification.Visibility = Visibility.Visible;
+                    _overlayNotifyTimer.Stop();
+                    _overlayNotifyTimer.Start();
+                }
+            });
+        }
+
         private void OnVlcLengthChanged(long length)
         {
             if (length > 0)
             {
                 _duration = length / 1000.0;
+                Debug.WriteLine("[HyperMedia] OnVlcLengthChanged: {0}ms ({1}s)", length, _duration);
                 BeginInvokeOnUI(() =>
                 {
                     DurationText.Text = FormatTime(_duration);
                     PositionSlider.Maximum = _duration;
+
+                    if (_pendingResumePos > 0 && _vlcPlayer != null)
+                    {
+                        Debug.WriteLine("[HyperMedia] Retrying resume seek to {0}ms (on length changed)", _pendingResumePos);
+                        try
+                        {
+                            _vlcPlayer.setTime(_pendingResumePos);
+                            RemoveResumePosition(_originalFileName);
+                            ShowOverlay("已恢复播放 " + FormatTime(_pendingResumePos / 1000.0));
+                            HideOverlayDelayed();
+                            _pendingResumePos = 0;
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine("[HyperMedia] Retry setTime FAILED: {0}", ex.Message);
+                        }
+                    }
                 });
             }
         }
@@ -1041,8 +1942,10 @@ namespace HyperMedia
         {
             _autoHideTimer.Stop();
             _positionTimer.Stop();
+            _lyricTimer.Stop();
             _isPlaying = false;
             _isSeeking = false;
+            _pendingResumePos = 0;
 
             StopSmtcSync();
 
@@ -1065,6 +1968,10 @@ namespace HyperMedia
             DurationText.Text = "00:00";
             UpdatePlayPauseIcon(false);
             HideOverlay();
+            MusicOverlay.Visibility = Visibility.Collapsed;
+            _isMusicMode = false;
+            _currentMusicFilePath = "";
+            _currentMusicOriginalDir = "";
             _duration = 0;
         }
 
@@ -1702,12 +2609,65 @@ namespace HyperMedia
         private void ShowOverlay(string text)
         {
             OverlayText.Text = text;
-            OverlayText.Visibility = Visibility.Visible;
+            OverlayOpenBtn.Visibility = Visibility.Collapsed;
+            OverlayNotification.Visibility = Visibility.Visible;
+            _overlayNotifyTimer.Stop();
+            _overlayNotifyTimer.Start();
+        }
+
+        private void ShowScreenshotOverlay(string text, string filePath)
+        {
+            OverlayText.Text = text;
+            OverlayOpenBtn.Visibility = Visibility.Visible;
+            OverlayOpenBtn.Tag = filePath;
+            OverlayNotification.Visibility = Visibility.Visible;
+            _overlayNotifyTimer.Stop();
+            _overlayNotifyTimer.Start();
         }
 
         private void HideOverlay()
         {
-            OverlayText.Visibility = Visibility.Collapsed;
+            OverlayNotification.Visibility = Visibility.Collapsed;
+            _overlayNotifyTimer.Stop();
+        }
+
+        private void OverlayNotification_Close(object sender, RoutedEventArgs e)
+        {
+            HideOverlay();
+        }
+
+        private async void OverlayOpen_Click(object sender, RoutedEventArgs e)
+        {
+            var btn = sender as Button;
+            if (btn == null || btn.Tag == null) return;
+
+            string path = btn.Tag as string;
+            if (string.IsNullOrEmpty(path)) return;
+
+            Debug.WriteLine("[HyperMedia] OverlayOpen_Click: path={0}", path);
+
+            try
+            {
+                StorageFile file = null;
+                try
+                {
+                    file = await StorageFile.GetFileFromPathAsync(path);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[HyperMedia] OverlayOpen: GetFileFromPath failed: {0}", ex.Message);
+                    return;
+                }
+
+                if (file != null)
+                {
+                    await Launcher.LaunchFileAsync(file);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] OverlayOpen FAILED: {0}", ex.Message);
+            }
         }
 
         #endregion

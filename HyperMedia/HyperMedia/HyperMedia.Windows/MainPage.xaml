@@ -203,13 +203,136 @@
                 </Border>
             </StackPanel>
 
-            <!-- Overlay Message -->
-            <TextBlock x:Name="OverlayText"
-                       VerticalAlignment="Bottom" HorizontalAlignment="Center"
-                       Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="14"
-                       TextWrapping="Wrap" TextAlignment="Center"
-                       Margin="0,0,0,120"
-                       Visibility="Collapsed"/>
+            <!-- MUSIC: Album Art + Lyrics (shown for audio files) -->
+            <Grid x:Name="MusicOverlay" Visibility="Collapsed" Margin="0,60,0,0">
+                <Grid.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                        <GradientStop Color="#FF0A0A0F" Offset="0"/>
+                        <GradientStop Color="#CC12081A" Offset="0.5"/>
+                        <GradientStop Color="#FF0A0A0F" Offset="1"/>
+                    </LinearGradientBrush>
+                </Grid.Background>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Album Art -->
+                <Border x:Name="AlbumArtBorder" Grid.Column="0"
+                        Margin="80,0,48,0" Width="320" Height="320"
+                        CornerRadius="0"
+                        HorizontalAlignment="Left" VerticalAlignment="Center"
+                        BorderThickness="3,0,0,0">
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#FFE040FB"/>
+                    </Border.BorderBrush>
+                    <Border.Background>
+                        <SolidColorBrush Color="#FF1A1A2E"/>
+                    </Border.Background>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Image x:Name="AlbumArtImage" Grid.Row="0"
+                               Stretch="UniformToFill" HorizontalAlignment="Center"
+                               VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AlbumArtPlaceholder" Grid.Row="0"
+                                   Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="80"
+                                   Foreground="#33E040FB" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="AlbumArtMetaText" Grid.Row="1"
+                                   Text="" FontFamily="Segoe UI" FontSize="12"
+                                   Foreground="#66FFFFFF" TextAlignment="Center"
+                                   Padding="12,8,12,12" TextWrapping="Wrap"
+                                   MaxWidth="320"/>
+                    </Grid>
+                </Border>
+
+                <!-- Lyrics -->
+                <Border x:Name="LyricsBorder" Grid.Column="1"
+                        Margin="0,32,64,32" CornerRadius="0"
+                        VerticalAlignment="Stretch">
+                    <Border.Background>
+                        <SolidColorBrush Color="#10FFFFFF"/>
+                    </Border.Background>
+                    <Border.BorderBrush>
+                        <SolidColorBrush Color="#22E040FB"/>
+                    </Border.BorderBrush>
+                    <Border.BorderThickness>
+                        <Thickness>1,0,0,0</Thickness>
+                    </Border.BorderThickness>
+                    <Grid Margin="24,20">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <TextBlock x:Name="LyricsTitle" Grid.Row="0"
+                                   Text="歌词" FontFamily="Segoe UI" FontSize="14"
+                                   Foreground="#44E040FB" CharacterSpacing="80"
+                                   Margin="0,0,0,16"/>
+                        <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1"
+                                      VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel x:Name="LyricsLines">
+                                <TextBlock x:Name="LyricsPlaceholder"
+                                           Text="暂无歌词"
+                                           FontFamily="Segoe UI" FontSize="16"
+                                           Foreground="#44FFFFFF"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4"/>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <!-- Overlay Notification Bar -->
+            <Border x:Name="OverlayNotification"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                    Visibility="Collapsed" Margin="32,0,32,130"
+                    BorderThickness="3,0,0,0">
+                <Border.Background>
+                    <SolidColorBrush Color="#E01A1A2E"/>
+                </Border.Background>
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#FFE040FB"/>
+                </Border.BorderBrush>
+                <Grid Margin="16,12,16,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="OverlayIcon" Grid.Column="0"
+                               Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
+                               Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock x:Name="OverlayText" Grid.Column="1"
+                               Text="" FontFamily="Segoe UI" FontSize="13"
+                               Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"/>
+                    <Button x:Name="OverlayOpenBtn" Grid.Column="2"
+                            Click="OverlayOpen_Click"
+                            Style="{StaticResource ZuneActionStyle}"
+                            Visibility="Collapsed" Margin="0,0,4,0">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x1F4E4;" FontFamily="Segoe UI Symbol" FontSize="12"
+                                       Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="打开" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                       FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="3" Click="OverlayNotification_Close"
+                            Style="{StaticResource ZunePrimaryStyle}" Margin="4,0,0,0">
+                        <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="12"
+                                   Foreground="#88FFFFFF"/>
+                    </Button>
+                </Grid>
+            </Border>
 
             <!-- A-B Repeat Indicator -->
             <Border x:Name="AbRepeatIndicator" Visibility="Collapsed"
