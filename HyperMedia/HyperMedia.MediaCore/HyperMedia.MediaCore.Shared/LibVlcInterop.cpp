@@ -1,8 +1,10 @@
 #include "pch.h"
 #include "LibVlcInterop.h"
 #include <mutex>
+#include <vector>
 
 using namespace Platform;
+using namespace Windows::ApplicationModel;
 
 namespace HyperMedia { namespace MediaCore {
 
@@ -159,17 +161,52 @@ bool LibVlcDecoder::OpenFile(String^ filePath)
     char* pathUtf8 = new char[bufLen];
     WideCharToMultiByte(CP_UTF8, 0, filePath->Data(), -1, pathUtf8, bufLen, nullptr, nullptr);
 
-    const char* vlcArgs[] = {
+    // Build libVLC args dynamically so we can point at the app's plugin folder
+    // (without --plugin-path, libvlc_new fails to load modules and OpenFile fails).
+    // Use dummy aout/vout: this component has no XAML host, and the winstore
+    // output modules require one. Audio is captured via libvlc_audio_set_callbacks.
+    std::vector<std::string> argStrings = {
         "-I", "dummy",
-        "--no-osx",
+        "--no-plugins-cache",
+        "--no-osd",
         "--no-stats",
+        "--no-loop",
         "--no-video-title-show",
-        "--aout=winstore",
-        "--vout=winstore",
-        nullptr
+        "--aout=adummy",
+        "--vout=vdummy"
     };
 
-    _ctx->vlcInstance = libvlc_new(sizeof(vlcArgs) / sizeof(vlcArgs[0]) - 1, vlcArgs);
+    // Resolve the plugin directory from the install location, if available
+    Platform::String^ pluginDir = nullptr;
+    try
+    {
+        auto pkg = Windows::ApplicationModel::Package::Current;
+        if (pkg != nullptr && pkg->InstalledLocation != nullptr)
+            pluginDir = pkg->InstalledLocation->Path + "\\plugins";
+    }
+    catch (...) { pluginDir = nullptr; }
+
+    if (pluginDir != nullptr && !pluginDir->IsEmpty())
+    {
+        int pbLen = WideCharToMultiByte(CP_UTF8, 0, pluginDir->Data(), -1, nullptr, 0, nullptr, nullptr);
+        if (pbLen > 0)
+        {
+            std::string pluginPathArg = "--plugin-path=";
+            std::string dirUtf8(pbLen, '\0');
+            WideCharToMultiByte(CP_UTF8, 0, pluginDir->Data(), -1, &dirUtf8[0], pbLen, nullptr, nullptr);
+            if (dirUtf8.size() > 0 && dirUtf8.back() == '\0') dirUtf8.pop_back();
+            pluginPathArg += dirUtf8;
+            argStrings.push_back(pluginPathArg);
+        }
+    }
+
+    std::vector<const char*> vlcArgs;
+    vlcArgs.reserve(argStrings.size() + 1);
+    for (const auto& s : argStrings)
+        vlcArgs.push_back(s.c_str());
+    vlcArgs.push_back(nullptr);
+
+    _ctx->vlcInstance = libvlc_new((int)vlcArgs.size() - 1, vlcArgs.data());
     if (!_ctx->vlcInstance)
     {
         delete[] pathUtf8;
@@ -203,28 +240,21 @@ bool LibVlcDecoder::OpenFile(String^ filePath)
     libvlc_time_t durationMs = libvlc_media_get_duration((libvlc_media_t*)_ctx->vlcMedia);
     _duration = (durationMs > 0) ? (double)durationMs / 1000.0 : 0.0;
 
-    // Wait for tracks to be detected
-    libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
-
-    // Give libVLC time to detect tracks
-    libvlc_time_t waitStart = libvlc_clock();
-    while (libvlc_clock() - waitStart < 3000)
-    {
-        _videoWidth = libvlc_video_get_width((libvlc_media_player_t*)_ctx->vlcPlayer);
-        _videoHeight = libvlc_video_get_height((libvlc_media_player_t*)_ctx->vlcPlayer);
-        if (_videoWidth > 0 && _videoHeight > 0)
-            break;
-    }
-
-    _hasVideo = (_videoWidth > 0 && _videoHeight > 0);
+    // NOTE: audio callbacks must be installed BEFORE play() starts the output
+    // pipeline; installing them afterwards means the default aout grabs the
+    // audio and our play callback is never invoked (ring stays empty).
     _hasAudio = true;
     _audioSampleRate = 44100;
     _audioChannels = 2;
+    _ctx->audioSampleRate = _audioSampleRate;   // used by the audio play callback
+    _ctx->audioChannels = _audioChannels;       // used by the audio play callback
 
     // Set up audio output
     {
         _ctx->audioMutex = new std::mutex();
-        _ctx->audioRingSize = 256 * 1024;
+        // ~11.6s of 44.1k stereo 16-bit; must comfortably exceed any
+        // CollectAudioPcm target so the target duration is not truncated.
+        _ctx->audioRingSize = 2 * 1024 * 1024;
         _ctx->audioRingBuffer = new uint8_t[_ctx->audioRingSize];
         _ctx->audioRingWrite = 0;
         _ctx->audioRingRead = 0;
@@ -241,6 +271,21 @@ bool LibVlcDecoder::OpenFile(String^ filePath)
         libvlc_audio_set_format((libvlc_media_player_t*)_ctx->vlcPlayer,
             "S16N", _audioSampleRate, _audioChannels);
     }
+
+    // Now start playback and wait for tracks to be detected
+    libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
+
+    // Give libVLC time to detect tracks
+    libvlc_time_t waitStart = libvlc_clock();
+    while (libvlc_clock() - waitStart < 3000)
+    {
+        _videoWidth = libvlc_video_get_width((libvlc_media_player_t*)_ctx->vlcPlayer);
+        _videoHeight = libvlc_video_get_height((libvlc_media_player_t*)_ctx->vlcPlayer);
+        if (_videoWidth > 0 && _videoHeight > 0)
+            break;
+    }
+
+    _hasVideo = (_videoWidth > 0 && _videoHeight > 0);
 
     // Set up video output
     if (_hasVideo)
@@ -399,9 +444,10 @@ Platform::Array<int16_t>^ LibVlcDecoder::CollectAudioPcm(double seconds)
     libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
 
     int bytesPerSecond = _audioSampleRate * _audioChannels * (int)sizeof(int16_t);
+    // Keep the requested duration; the ring is sized (2MB) well beyond this
+    // so no truncation occurs. Read side drains continuously, so the ring
+    // never overflows.
     int targetBytes = (int)(bytesPerSecond * seconds);
-    if (targetBytes > _ctx->audioRingSize)
-        targetBytes = _ctx->audioRingSize;
 
     auto collected = ref new Platform::Collections::Vector<int16_t>();
     libvlc_time_t startTick = libvlc_clock();

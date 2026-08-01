@@ -114,6 +114,7 @@
     <Compile Include="MainPage.xaml.cs">
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="MetadataEditor.cs" />
     <Compile Include="PlayHistory.cs" />
     <Compile Include="RecentItem.cs" />
     <Compile Include="ShazamAudioExtractor.cs" />
