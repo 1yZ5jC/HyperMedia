@@ -14,6 +14,7 @@ using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
+using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
 
 namespace HyperMedia
@@ -286,18 +287,45 @@ namespace HyperMedia
         private static readonly double[] SnapOffsets = { 0, SECTION_HERO + SECTION_GUTTER, SECTION_HERO + SECTION_GUTTER * 2 + SECTION_WIDTH, SECTION_HERO + SECTION_GUTTER * 3 + SECTION_WIDTH * 2 };
         private bool _snapPending = false;
 
+        // Semantic zoom: shrinking below this factor opens the overview; the
+        // overview returns to details once zoomed back to near 1.0.
+        private const double ZOOM_IN_OVERVIEW_THRESHOLD = 0.85;
+        private const double ZOOM_OUT_DETAILS_THRESHOLD = 0.95;
+
         private void PanoramaScroll_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
         {
+            // Shrinking the panorama below threshold opens the overview (semantic zoom out)
+            if (!_overviewVisible && PanoramaScroll.ZoomFactor < ZOOM_IN_OVERVIEW_THRESHOLD)
+            {
+                ShowOverview();
+                return;
+            }
+
             if (e.IsIntermediate)
             {
                 _snapPending = true;
                 return;
             }
-            if (_snapPending)
+
+            // Only snap sections while fully zoomed in
+            if (_snapPending && PanoramaScroll.ZoomFactor >= 0.999)
             {
                 _snapPending = false;
                 SnapToNearest();
             }
+            else
+            {
+                _snapPending = false;
+            }
+        }
+
+        private void OverviewScroll_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            if (e.IsIntermediate) return;
+
+            // Zooming the overview back out to ~1.0 returns to the panorama (semantic zoom in)
+            if (_overviewVisible && OverviewScroll.ZoomFactor >= ZOOM_OUT_DETAILS_THRESHOLD)
+                HideOverview();
         }
 
         private void SnapToNearest()
@@ -321,6 +349,14 @@ namespace HyperMedia
 
         private void PanoramaScroll_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
+            // Ctrl+wheel = zoom (semantic zoom); let the ScrollViewer handle it
+            bool ctrl = (Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0;
+            if (ctrl)
+            {
+                e.Handled = false;
+                return;
+            }
+
             int delta = e.GetCurrentPoint(PanoramaScroll).Properties.MouseWheelDelta;
             double newOffset = PanoramaScroll.HorizontalOffset + (delta > 0 ? -180 : 180);
             newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
@@ -1326,22 +1362,77 @@ namespace HyperMedia
 
         private void ToggleOverview()
         {
-            _overviewVisible = !_overviewVisible;
-            if (_overviewVisible)
+            if (_overviewVisible) HideOverview();
+            else ShowOverview();
+        }
+
+        private void ShowOverview()
+        {
+            if (_overviewVisible) return;
+            _overviewVisible = true;
+
+            BuildOverviewItems();
+
+            // Start the overview from the zoom level that opened it, so there is
+            // room to zoom back out (to 1.0) and return to the details view.
+            double startZoom = Math.Max(0.5, Math.Min(PanoramaScroll.ZoomFactor, 0.85));
+            PanoramaScroll.ChangeView(null, null, 1.0f, true);
+            OverviewScroll.ChangeView(null, null, (float)startZoom, true);
+
+            OverviewScroll.Opacity = 0;
+            OverviewScroll.Visibility = Visibility.Visible;
+            PanoramaScroll.Visibility = Visibility.Collapsed;
+            OverviewBtnText.Text = L("Back");
+            OverviewBtnGlyph.Text = "\u21A9";
+
+            FadeIn(OverviewScroll);
+        }
+
+        private void HideOverview()
+        {
+            if (!_overviewVisible) return;
+            _overviewVisible = false;
+
+            FadeOut(OverviewScroll, () =>
             {
-                BuildOverviewItems();
-                OverviewView.Visibility = Visibility.Visible;
-                PanoramaScroll.Visibility = Visibility.Collapsed;
-                OverviewBtnText.Text = L("Back");
-                OverviewBtnGlyph.Text = "\u21A9";
-            }
-            else
-            {
-                OverviewView.Visibility = Visibility.Collapsed;
                 PanoramaScroll.Visibility = Visibility.Visible;
+                PanoramaScroll.ChangeView(null, null, 1.0f, true);
+                OverviewScroll.ChangeView(null, null, 1.0f, true);
+                OverviewScroll.Visibility = Visibility.Collapsed;
                 OverviewBtnText.Text = L("Overview");
                 OverviewBtnGlyph.Text = "\uD83D\uDDD4";
-            }
+            });
+        }
+
+        private void FadeIn(Windows.UI.Xaml.UIElement target)
+        {
+            var anim = new Windows.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                From = 0,
+                To = 1,
+                Duration = new Windows.UI.Xaml.Duration(TimeSpan.FromMilliseconds(200))
+            };
+            Storyboard.SetTarget(anim, target);
+            Storyboard.SetTargetProperty(anim, "Opacity");
+            var sb = new Storyboard();
+            sb.Children.Add(anim);
+            sb.Begin();
+        }
+
+        private void FadeOut(Windows.UI.Xaml.UIElement target, Action onComplete)
+        {
+            var anim = new Windows.UI.Xaml.Media.Animation.DoubleAnimation
+            {
+                From = 1,
+                To = 0,
+                Duration = new Windows.UI.Xaml.Duration(TimeSpan.FromMilliseconds(200))
+            };
+            Storyboard.SetTarget(anim, target);
+            Storyboard.SetTargetProperty(anim, "Opacity");
+            var sb = new Storyboard();
+            sb.Children.Add(anim);
+            sb.Completed += (s, e) => onComplete();
+            sb.Begin();
         }
 
         private void BuildOverviewItems()

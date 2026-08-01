@@ -22,6 +22,9 @@
                       HorizontalScrollBarVisibility="Hidden"
                       VerticalScrollBarVisibility="Disabled"
                       VerticalAlignment="Stretch"
+                      ZoomMode="Enabled"
+                      MinZoomFactor="0.5"
+                      MaxZoomFactor="1"
                       ViewChanged="PanoramaScroll_ViewChanged"
                       PointerWheelChanged="PanoramaScroll_PointerWheelChanged">
 
@@ -603,44 +606,51 @@
         <!-- ═══════════════════════════════════════════════════ -->
         <!-- SEMANTIC ZOOM OVERVIEW (Zoomed-Out view)            -->
         <!-- ═══════════════════════════════════════════════════ -->
-        <GridView x:Name="OverviewView" Grid.Row="0" Visibility="Collapsed"
-                  Background="Transparent" SelectionMode="None"
-                  IsItemClickEnabled="True" ItemClick="OverviewView_ItemClick"
-                  Padding="40,60,40,0">
-            <GridView.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapGrid Orientation="Horizontal" HorizontalChildrenAlignment="Left"
-                              MaximumRowsOrColumns="2"/>
-                </ItemsPanelTemplate>
-            </GridView.ItemsPanel>
-            <GridView.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{Binding TileBrush}" Width="300" Height="170"
-                            Margin="0,0,12,12" CornerRadius="0"
-                            PointerEntered="Card_PointerEntered"
-                            PointerExited="Card_PointerExited">
-                        <Grid Margin="20,16">
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Text="{Binding Glyph}" FontFamily="Segoe UI Symbol"
-                                       FontSize="28" Foreground="#FFFFFFFF"
-                                       HorizontalAlignment="Left" VerticalAlignment="Top"/>
-                            <TextBlock Grid.Row="1" Text="{Binding Title}"
-                                       FontFamily="Segoe UI Light" FontSize="34"
-                                       Foreground="#FFFFFFFF"
-                                       HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
-                            <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
-                                       FontFamily="Segoe UI" FontSize="12"
-                                       Foreground="#B3FFFFFF" Margin="0,6,0,0"
-                                       HorizontalAlignment="Left"/>
-                        </Grid>
-                    </Border>
-                </DataTemplate>
-            </GridView.ItemTemplate>
-        </GridView>
+        <ScrollViewer x:Name="OverviewScroll" Grid.Row="0" Visibility="Collapsed"
+                      VerticalScrollBarVisibility="Auto"
+                      ZoomMode="Enabled"
+                      MinZoomFactor="0.5"
+                      MaxZoomFactor="1"
+                      ViewChanged="OverviewScroll_ViewChanged">
+            <GridView x:Name="OverviewView" Visibility="Visible"
+                      Background="Transparent" SelectionMode="None"
+                      IsItemClickEnabled="True" ItemClick="OverviewView_ItemClick"
+                      Padding="40,60,40,40">
+                <GridView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapGrid Orientation="Horizontal" HorizontalChildrenAlignment="Left"
+                                  MaximumRowsOrColumns="2"/>
+                    </ItemsPanelTemplate>
+                </GridView.ItemsPanel>
+                <GridView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{Binding TileBrush}" Width="300" Height="170"
+                                Margin="0,0,12,12" CornerRadius="0"
+                                PointerEntered="Card_PointerEntered"
+                                PointerExited="Card_PointerExited">
+                            <Grid Margin="20,16">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="{Binding Glyph}" FontFamily="Segoe UI Symbol"
+                                           FontSize="28" Foreground="#FFFFFFFF"
+                                           HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                                <TextBlock Grid.Row="1" Text="{Binding Title}"
+                                           FontFamily="Segoe UI Light" FontSize="34"
+                                           Foreground="#FFFFFFFF"
+                                           HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
+                                <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
+                                           FontFamily="Segoe UI" FontSize="12"
+                                           Foreground="#B3FFFFFF" Margin="0,6,0,0"
+                                           HorizontalAlignment="Left"/>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </GridView.ItemTemplate>
+            </GridView>
+        </ScrollViewer>
 
         <!-- Bottom Status Bar -->
         <Border x:Name="HomeBottomBar" Grid.Row="1" Background="#FF0A0A0F">
