@@ -55,6 +55,34 @@ namespace HyperMedia
             }
         }
 
+        private string _ratingText;
+        public string RatingText
+        {
+            get { return _ratingText; }
+            set
+            {
+                if (_ratingText != value)
+                {
+                    _ratingText = value;
+                    OnPropertyChanged("RatingText");
+                }
+            }
+        }
+
+        private string _playCountText;
+        public string PlayCountText
+        {
+            get { return _playCountText; }
+            set
+            {
+                if (_playCountText != value)
+                {
+                    _playCountText = value;
+                    OnPropertyChanged("PlayCountText");
+                }
+            }
+        }
+
         public event PropertyChangedEventHandler PropertyChanged;
 
         protected void OnPropertyChanged(string name)

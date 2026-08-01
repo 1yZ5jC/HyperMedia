@@ -21,12 +21,41 @@ namespace HyperMedia
         private const string KEY_DEINTERLACE = "Settings_Deinterlace";
         private const string KEY_SLEEP_TIMER = "Settings_SleepTimer";
         private const string KEY_SUBTITLE_OUTLINE = "Settings_SubtitleOutline";
+        private const string KEY_LOUDNESS = "Settings_Loudness";
+        private const string KEY_EPISODE = "Settings_Episode";
+        private const string KEY_INTRO_SKIP = "Settings_IntroSkip";
+        private const string KEY_LIGHT_THEME = "Settings_LightTheme";
+        private const string KEY_LANGUAGE = "Settings_Language";
 
         public SettingsPage()
         {
             _isLoading = true;
             this.InitializeComponent();
             LoadSettings();
+            ApplyCurrentLanguage();
+            this.Loaded += (s, e) => ApplyCurrentLanguage();
+        }
+
+        private static string L(string key)
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null) return appText.T(key);
+            }
+            catch { }
+            return key;
+        }
+
+        private void ApplyCurrentLanguage()
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null)
+                    appText.ApplyLanguageTo(this);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ApplyCurrentLanguage failed: {0}", ex.Message); }
         }
 
         private void LoadSettings()
@@ -83,6 +112,35 @@ namespace HyperMedia
                 SleepTimerSlider.Value = (int)settings.Values[KEY_SLEEP_TIMER];
                 SleepTimerText.Text = ((int)settings.Values[KEY_SLEEP_TIMER]) + " 分钟";
             }
+
+            if (settings.Values.ContainsKey(KEY_LOUDNESS))
+                LoudnessToggle.IsOn = (bool)settings.Values[KEY_LOUDNESS];
+
+            if (settings.Values.ContainsKey(KEY_EPISODE))
+                EpisodeToggle.IsOn = (bool)settings.Values[KEY_EPISODE];
+
+            if (settings.Values.ContainsKey(KEY_INTRO_SKIP))
+                IntroSkipToggle.IsOn = (bool)settings.Values[KEY_INTRO_SKIP];
+
+            if (settings.Values.ContainsKey(KEY_LIGHT_THEME))
+                LightThemeToggle.IsOn = (bool)settings.Values[KEY_LIGHT_THEME];
+
+            // Restore language selection (without triggering reload loop)
+            _isLoading = true;
+            if (settings.Values.ContainsKey(KEY_LANGUAGE))
+            {
+                string lang = settings.Values[KEY_LANGUAGE] as string;
+                foreach (var obj in LanguageCombo.Items)
+                {
+                    var it = obj as ComboBoxItem;
+                    if (it != null && it.Tag != null && it.Tag.ToString() == lang)
+                    {
+                        LanguageCombo.SelectedItem = it;
+                        break;
+                    }
+                }
+            }
+            _isLoading = false;
 
             DefaultVolumeSlider.ValueChanged += DefaultVolumeSlider_ValueChanged;
             AutoPlayToggle.Toggled += AutoPlayToggle_Toggled;
@@ -236,6 +294,102 @@ namespace HyperMedia
             return 0;
         }
 
+        private void LoudnessToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            try { SaveSetting(KEY_LOUDNESS, LoudnessToggle.IsOn); }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] LoudnessToggle failed: {0}", ex.Message); }
+        }
+
+        public static bool GetLoudnessEnabled()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_LOUDNESS))
+                    return (bool)settings.Values[KEY_LOUDNESS];
+            }
+            catch { }
+            return false;
+        }
+
+        private void EpisodeToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            try { SaveSetting(KEY_EPISODE, EpisodeToggle.IsOn); }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] EpisodeToggle failed: {0}", ex.Message); }
+        }
+
+        public static bool GetEpisodeAutoPlay()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_EPISODE))
+                    return (bool)settings.Values[KEY_EPISODE];
+            }
+            catch { }
+            return true;
+        }
+
+        private void IntroSkipToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            try { SaveSetting(KEY_INTRO_SKIP, IntroSkipToggle.IsOn); }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] IntroSkipToggle failed: {0}", ex.Message); }
+        }
+
+        public static bool GetIntroSkipEnabled()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_INTRO_SKIP))
+                    return (bool)settings.Values[KEY_INTRO_SKIP];
+            }
+            catch { }
+            return true;
+        }
+
+        private void LightThemeToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            try { SaveSetting(KEY_LIGHT_THEME, LightThemeToggle.IsOn); }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] LightThemeToggle failed: {0}", ex.Message); }
+        }
+
+        public static bool GetLightTheme()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_LIGHT_THEME))
+                    return (bool)settings.Values[KEY_LIGHT_THEME];
+            }
+            catch { }
+            return false;
+        }
+
+        private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                var item = LanguageCombo.SelectedItem as ComboBoxItem;
+                if (item == null || item.Tag == null) return;
+                string lang = item.Tag.ToString();
+                SaveSetting(KEY_LANGUAGE, lang);
+
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null)
+                {
+                    appText.Language = lang;
+                    appText.ApplyLanguageTo(this);
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] LanguageCombo failed: {0}", ex.Message); }
+        }
+
         private void SelectComboBoxItem(ComboBox combo, string tagValue)
         {
             foreach (var item in combo.Items)
@@ -257,9 +411,9 @@ namespace HyperMedia
 
         private async void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Windows.UI.Popups.MessageDialog("确定要清除所有播放历史吗？此操作不可撤销。", "清除播放历史");
-            dialog.Commands.Add(new Windows.UI.Popups.UICommand("清除", (cmd) => { PlayHistory.ClearAll(); }));
-            dialog.Commands.Add(new Windows.UI.Popups.UICommand("取消"));
+            var dialog = new Windows.UI.Popups.MessageDialog(L("ClearHistoryConfirm"), L("ClearHistoryTitle"));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("ClearBtn"), (cmd) => { PlayHistory.ClearAll(); }));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("Cancel")));
             dialog.DefaultCommandIndex = 1;
             dialog.CancelCommandIndex = 1;
             await dialog.ShowAsync();
@@ -267,8 +421,8 @@ namespace HyperMedia
 
         private async void ClearResume_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Windows.UI.Popups.MessageDialog("确定要清除所有续播位置吗？", "清除续播位置");
-            dialog.Commands.Add(new Windows.UI.Popups.UICommand("清除", (cmd) =>
+            var dialog = new Windows.UI.Popups.MessageDialog(L("ClearResumeConfirm"), L("ClearResumePositions"));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("ClearBtn"), (cmd) =>
             {
                 try
                 {
@@ -285,7 +439,7 @@ namespace HyperMedia
                 }
                 catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             }));
-            dialog.Commands.Add(new Windows.UI.Popups.UICommand("取消"));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("Cancel")));
             dialog.DefaultCommandIndex = 1;
             dialog.CancelCommandIndex = 1;
             await dialog.ShowAsync();

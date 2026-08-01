@@ -13,6 +13,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace HyperMedia
@@ -41,6 +42,11 @@ namespace HyperMedia
         {
             this.InitializeComponent();
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
+            this.Loaded += (s, e) =>
+            {
+                ApplyTheme();
+                ApplyHomeLanguage();
+            };
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -60,6 +66,131 @@ namespace HyperMedia
             ApplyToggleState();
             LoadRecentItems();
             InitSearchPane();
+            ApplyTheme();
+            ApplyHomeLanguage();
+            SubscribeLanguage();
+        }
+
+        private void SubscribeLanguage()
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null)
+                {
+                    appText.LanguageChanged -= AppText_LanguageChanged;
+                    appText.LanguageChanged += AppText_LanguageChanged;
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] SubscribeLanguage failed: {0}", ex.Message); }
+        }
+
+        private void AppText_LanguageChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                ApplyTheme();
+                ApplyHomeLanguage();
+                ApplyToggleState();
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] AppText_LanguageChanged failed: {0}", ex.Message); }
+        }
+
+        private void ApplyHomeLanguage()
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null)
+                    appText.ApplyLanguageTo(this);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ApplyHomeLanguage failed: {0}", ex.Message); }
+        }
+
+        private void ApplyTheme()
+        {
+            try
+            {
+                bool light = SettingsPage.GetLightTheme();
+                var bgBrush = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0xEE, 0xEE, 0xF5));
+                var darkBgBrush = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x0A, 0x0F));
+                var fgBrush = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0x20, 0x20, 0x28));
+                var fgSoft = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xAA, 0x20, 0x20, 0x28));
+                var whiteBrush = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+
+                if (HomeRootGrid != null)
+                    HomeRootGrid.Background = light ? bgBrush : darkBgBrush;
+                if (HomeBottomBar != null)
+                    HomeBottomBar.Background = light ? bgBrush : darkBgBrush;
+                if (HomeBrandText != null)
+                    HomeBrandText.Foreground = light ? fgSoft : whiteBrush;
+                if (HomeBottomBrand != null)
+                    HomeBottomBrand.Foreground = light ? fgSoft : whiteBrush;
+                if (HomeTitle1 != null)
+                    HomeTitle1.Foreground = light ? fgBrush : whiteBrush;
+                if (HomeTitle2 != null)
+                    HomeTitle2.Foreground = light ? new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)) : new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                if (HomeDesc != null)
+                    HomeDesc.Foreground = light ? fgSoft : whiteBrush;
+                if (VideosTitle != null)
+                    VideosTitle.Foreground = light ? fgBrush : whiteBrush;
+                if (MusicTitle != null)
+                    MusicTitle.Foreground = light ? fgBrush : whiteBrush;
+                if (PhotosTitle != null)
+                    PhotosTitle.Foreground = light ? fgBrush : whiteBrush;
+
+                ApplyPageTextColor(this, light);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ApplyTheme failed: {0}", ex.Message); }
+        }
+
+        private void ApplyPageTextColor(DependencyObject root, bool light)
+        {
+            try
+            {
+                var darkFg = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0x20, 0x20, 0x28));
+                var whiteFg = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+
+                int count = VisualTreeHelper.GetChildrenCount(root);
+                for (int i = 0; i < count; i++)
+                {
+                    var child = VisualTreeHelper.GetChild(root, i);
+                    var tb = child as TextBlock;
+                    if (tb != null && !tb.Name.StartsWith("Keep", StringComparison.Ordinal))
+                    {
+                        if (tb.Foreground is Windows.UI.Xaml.Media.SolidColorBrush)
+                        {
+                            var brush = tb.Foreground as Windows.UI.Xaml.Media.SolidColorBrush;
+                            byte r = brush.Color.R, g = brush.Color.G, b = brush.Color.B;
+                            bool isColoredAccent = (r > 0x80) && (g < 0x80) && (b > 0x80); // pink/purple
+                            bool isCyanAccent = (g > 0x80) && (r < 0x80) && (b > 0x80);
+                            bool isGreenAccent = (g > 0x80) && (r < 0x80) && (b < 0x80);
+                            if (!isColoredAccent && !isCyanAccent && !isGreenAccent)
+                                tb.Foreground = light ? darkFg : whiteFg;
+                        }
+                    }
+
+                    // In light mode, flip white-ish translucent card backgrounds to dark for contrast
+                    if (light)
+                    {
+                        var bd = child as Border;
+                        if (bd != null && bd.Background is Windows.UI.Xaml.Media.SolidColorBrush)
+                        {
+                            var bbr = bd.Background as Windows.UI.Xaml.Media.SolidColorBrush;
+                            if (bbr.Color.A < 0xFF && bbr.Color.R > 0xE0 && bbr.Color.G > 0xE0 && bbr.Color.B > 0xE0)
+                                bd.Background = new Windows.UI.Xaml.Media.SolidColorBrush(
+                                    Windows.UI.Color.FromArgb(bbr.Color.A, 0x00, 0x00, 0x00));
+                        }
+                    }
+                    ApplyPageTextColor(child, light);
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ApplyPageTextColor failed: {0}", ex.Message); }
         }
 
         protected override void OnNavigatedFrom(NavigationEventArgs e)
@@ -122,6 +253,12 @@ namespace HyperMedia
                 item.ResumeText = PlayHistory.GetResumeText(t.Item2);
                 item.ResumePercent = PlayHistory.GetResumePercent(t.Item2);
                 item.LoadThumbnail();
+                int rating = PlayHistory.GetRating(t.Item2);
+                if (rating > 0)
+                    item.RatingText = new string('\u2605', rating);
+                int playCount = PlayHistory.GetPlayCount(t.Item2);
+                if (playCount > 1)
+                    item.PlayCountText = L("PlayCountLabel") + playCount + L("PlayedTimesSuffix");
                 items.Add(item);
             }
             var source = items.Count > 0 ? items : null;
@@ -133,7 +270,7 @@ namespace HyperMedia
         {
             _activeSearchQuery = null;
             LoadRecentItems();
-            StatusText.Text = "支持几乎所有媒体格式";
+            StatusText.Text = L("TaglineSupport");
         }
 
         private void CoreWindow_PointerEntered(CoreWindow sender, PointerEventArgs args)
@@ -240,6 +377,12 @@ namespace HyperMedia
                 item.ResumeText = PlayHistory.GetResumeText(t.Item2);
                 item.ResumePercent = PlayHistory.GetResumePercent(t.Item2);
                 item.LoadThumbnail();
+                int rating = PlayHistory.GetRating(t.Item2);
+                if (rating > 0)
+                    item.RatingText = new string('\u2605', rating);
+                int playCount = PlayHistory.GetPlayCount(t.Item2);
+                if (playCount > 1)
+                    item.PlayCountText = L("PlayCountLabel") + playCount + L("PlayedTimesSuffix");
                 items.Add(item);
             }
             var source = items.Count > 0 ? items : null;
@@ -343,7 +486,7 @@ namespace HyperMedia
             try
             {
                 var menu = new Windows.UI.Popups.PopupMenu();
-                menu.Commands.Add(new Windows.UI.Popups.UICommand("从历史记录删除", (cmd) =>
+                menu.Commands.Add(new Windows.UI.Popups.UICommand(L("DeleteFromHistory"), (cmd) =>
                 {
                     try
                     {
@@ -417,13 +560,13 @@ namespace HyperMedia
 
         private async void ClearHistory_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Windows.UI.Popups.MessageDialog("确定要清除所有播放历史吗？此操作不可撤销。", "清除播放历史");
+            var dialog = new Windows.UI.Popups.MessageDialog(L("ClearHistoryConfirm"), L("ClearHistoryTitle"));
             dialog.Commands.Add(new Windows.UI.Popups.UICommand("清除", (cmd) =>
             {
                 PlayHistory.ClearAll();
                 LoadRecentItems();
             }));
-            dialog.Commands.Add(new Windows.UI.Popups.UICommand("取消"));
+            dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("Cancel")));
             dialog.DefaultCommandIndex = 1;
             dialog.CancelCommandIndex = 1;
             await dialog.ShowAsync();
@@ -451,7 +594,7 @@ namespace HyperMedia
         {
             var popup = new Popup();
             popup.Width = 520;
-            popup.Height = 420;
+            popup.Height = 620;
 
             var border = new Border();
             border.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xF0, 0x0A, 0x0A, 0x0F));
@@ -461,7 +604,7 @@ namespace HyperMedia
             var panel = new StackPanel();
 
             var title = new TextBlock();
-            title.Text = "媒体库";
+            title.Text = L("Library");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 16;
             title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
@@ -469,7 +612,7 @@ namespace HyperMedia
             panel.Children.Add(title);
 
             var addBtn = new Button();
-            addBtn.Content = "+ 添加文件夹";
+            addBtn.Content = L("AddFolderBtn");
             addBtn.Margin = new Thickness(0, 4, 0, 12);
             addBtn.Click += async (s, ev) =>
             {
@@ -545,7 +688,7 @@ namespace HyperMedia
                     if (count == 0)
                     {
                         var empty = new ListBoxItem();
-                        empty.Content = "文件夹中没有媒体文件";
+                        empty.Content = L("FolderEmpty");
                         empty.IsEnabled = false;
                         empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
                         empty.FontSize = 13;
@@ -559,7 +702,7 @@ namespace HyperMedia
             else
             {
                 var empty = new ListBoxItem();
-                empty.Content = "尚未添加文件夹 — 点击上方按钮选择";
+                empty.Content = L("NoFolderYet");
                 empty.IsEnabled = false;
                 empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
                 empty.FontSize = 13;
@@ -568,8 +711,66 @@ namespace HyperMedia
                 filesList.Items.Add(empty);
             }
 
+            // Network devices (UPnP/DLNA discovery — Win 8.1 has no content-browse API, only device discovery)
+            var netTitle = new TextBlock();
+            netTitle.Text = L("NetworkDevices");
+            netTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            netTitle.FontSize = 11;
+            netTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
+            netTitle.Margin = new Thickness(0, 14, 0, 6);
+            panel.Children.Add(netTitle);
+
+            var netList = new ListBox();
+            netList.MaxHeight = 160;
+            netList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+            netList.BorderThickness = new Thickness(0);
+            netList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            netList.FontSize = 13;
+            netList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
+            try
+            {
+                netList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
+            panel.Children.Add(netList);
+
+            var netLoading = new TextBlock();
+            netLoading.Text = L("Scanning");
+            netLoading.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            netLoading.FontSize = 12;
+            netLoading.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
+            netLoading.Margin = new Thickness(10, 6, 0, 6);
+            netList.Items.Add(new ListBoxItem { Content = netLoading.Text, IsEnabled = false, FontSize = 12 });
+
+            var netDevices = await DiscoverNetworkDevices();
+            netList.Items.Clear();
+            if (netDevices.Count == 0)
+            {
+                var empty = new ListBoxItem();
+                empty.Content = L("NoDevices");
+                empty.IsEnabled = false;
+                empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+                empty.FontSize = 12;
+                empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
+                netList.Items.Add(empty);
+            }
+            else
+            {
+                foreach (var dev in netDevices)
+                {
+                    var item = new ListBoxItem();
+                    item.Content = "\uD83D\uDDA5\uFE0F " + dev.Item1;
+                    item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+                    item.FontSize = 12;
+                    item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
+                    item.Padding = new Thickness(10, 6, 10, 6);
+                    item.IsEnabled = false;
+                    netList.Items.Add(item);
+                }
+            }
+
             var closeBtn = new Button();
-            closeBtn.Content = "关闭";
+            closeBtn.Content = L("Close");
             closeBtn.HorizontalAlignment = HorizontalAlignment.Right;
             closeBtn.Margin = new Thickness(0, 12, 0, 0);
             closeBtn.Click += (s, ev) => { popup.IsOpen = false; };
@@ -580,7 +781,7 @@ namespace HyperMedia
 
             var bounds = Window.Current.Bounds;
             popup.HorizontalOffset = (bounds.Width - 520) / 2;
-            popup.VerticalOffset = (bounds.Height - 420) / 2;
+            popup.VerticalOffset = (bounds.Height - 620) / 2;
 
             popup.IsOpen = true;
         }
@@ -588,6 +789,40 @@ namespace HyperMedia
         private void ShowOverlay(string text)
         {
             StatusText.Text = text;
+        }
+
+        private async System.Threading.Tasks.Task<List<Tuple<string, string>>> DiscoverNetworkDevices()
+        {
+            var result = new List<Tuple<string, string>>();
+            try
+            {
+                var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(
+                    Windows.Devices.Enumeration.DeviceClass.All);
+                foreach (var d in devices)
+                {
+                    if (d == null) continue;
+                    string name = d.Name ?? "";
+                    string id = d.Id ?? "";
+                    if (string.IsNullOrEmpty(name)) continue;
+
+                    // Skip local hardware (GUID-based ids) and common local interface names
+                    if (id.Contains("{")) continue;
+                    if (name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Virtual", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("WAN", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Realtek", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                        name.IndexOf("Monitor", StringComparison.OrdinalIgnoreCase) >= 0) continue;
+
+                    result.Add(Tuple.Create(name, "网络设备"));
+                    if (result.Count >= 30) break;
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] DiscoverNetworkDevices failed: {0}", ex.Message); }
+            return result;
         }
 
         #endregion
@@ -611,7 +846,7 @@ namespace HyperMedia
             var panel = new StackPanel();
 
             var title = new TextBlock();
-            title.Text = "打开网络媒体";
+            title.Text = L("OpenNetworkMedia");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 14;
             title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
@@ -619,7 +854,7 @@ namespace HyperMedia
             panel.Children.Add(title);
 
             var textBox = new TextBox();
-            textBox.PlaceholderText = "http://example.com/video.mp4 或 rtsp://...";
+            textBox.PlaceholderText = L("UrlPlaceholder");
             textBox.Width = 450;
             textBox.Height = 36;
             textBox.FontSize = 14;
@@ -639,7 +874,7 @@ namespace HyperMedia
             if (history.Count > 0)
             {
                 var historyTitle = new TextBlock();
-                historyTitle.Text = "最近打开";
+                historyTitle.Text = L("RecentOpened");
                 historyTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
                 historyTitle.FontSize = 11;
                 historyTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
@@ -676,13 +911,13 @@ namespace HyperMedia
             btnPanel.Margin = new Thickness(0, 16, 0, 0);
 
             var cancelBtn = new Button();
-            cancelBtn.Content = "取消";
+            cancelBtn.Content = L("Cancel");
             cancelBtn.Margin = new Thickness(0, 0, 8, 0);
             cancelBtn.Click += (s, ev) => { popup.IsOpen = false; };
             btnPanel.Children.Add(cancelBtn);
 
             var playBtn = new Button();
-            playBtn.Content = "播放";
+            playBtn.Content = L("Play");
             playBtn.Click += (s, ev) =>
             {
                 string url = textBox.Text.Trim();
@@ -832,7 +1067,7 @@ namespace HyperMedia
             var panel = new StackPanel();
 
             var title = new TextBlock();
-            title.Text = "我的歌单";
+            title.Text = L("MyPlaylists");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 16;
             title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
@@ -840,7 +1075,7 @@ namespace HyperMedia
             panel.Children.Add(title);
 
             var hint = new TextBlock();
-            hint.Text = "在播放器的播放列表中点击 💾 即可将当前列表保存为歌单";
+            hint.Text = L("PlaylistHint");
             hint.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             hint.FontSize = 11;
             hint.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
@@ -848,11 +1083,38 @@ namespace HyperMedia
             hint.TextWrapping = TextWrapping.Wrap;
             panel.Children.Add(hint);
 
+            // Smart playlists (auto-generated from history metadata)
+            var smartTitle = new TextBlock();
+            smartTitle.Text = L("SmartPlaylists");
+            smartTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            smartTitle.FontSize = 11;
+            smartTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
+            smartTitle.Margin = new Thickness(0, 0, 0, 6);
+            panel.Children.Add(smartTitle);
+
+            var smartList = new ListBox();
+            smartList.MaxHeight = 150;
+            smartList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
+            smartList.BorderThickness = new Thickness(0);
+            smartList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            smartList.FontSize = 13;
+            smartList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
+            try
+            {
+                smartList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
+            panel.Children.Add(smartList);
+
+            AddSmartItem(smartList, popup, L("TopRated"), "toprated");
+            AddSmartItem(smartList, popup, L("MostPlayed"), "mostplayed");
+            AddSmartItem(smartList, popup, L("RecentlyPlayedSmart"), "recent");
+
             var names = PlaylistLibrary.GetPlaylistNames();
             if (names.Count == 0)
             {
                 var empty = new TextBlock();
-                empty.Text = "暂无歌单 — 在播放器播放列表点 💾 保存";
+                empty.Text = L("NoPlaylistYet");
                 empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
                 empty.FontSize = 13;
                 empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
@@ -893,8 +1155,8 @@ namespace HyperMedia
                     item.RightTapped += async (s, ev) =>
                     {
                         var menu = new Windows.UI.Popups.PopupMenu();
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand("播放", async (cmd) => { await PlayPlaylist(popup, name); }));
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand("固定到开始屏幕", async (cmd) =>
+                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("Play"), async (cmd) => { await PlayPlaylist(popup, name); }));
+                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("PinToStart"), async (cmd) =>
                         {
                             try
                             {
@@ -907,15 +1169,15 @@ namespace HyperMedia
                                 tile.VisualElements.ForegroundText = Windows.UI.StartScreen.ForegroundText.Light;
                                 bool created = await tile.RequestCreateAsync();
                                 if (created)
-                                    ShowOverlay("已固定到开始屏幕: " + name);
+                                    ShowOverlay(L("PinnedToStart") + name);
                             }
                             catch (Exception ex) { Debug.WriteLine("[HyperMedia] Pin tile failed: {0}", ex.Message); }
                         }));
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand("删除歌单", (cmd) =>
+                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("DeletePlaylist"), (cmd) =>
                         {
                             PlaylistLibrary.DeletePlaylist(name);
                             popup.IsOpen = false;
-                            ShowOverlay("歌单已删除: " + name);
+                            ShowOverlay(L("PlaylistDeleted") + name);
                         }));
                         await menu.ShowForSelectionAsync(new Rect(ev.GetPosition(null), new Size(1, 1)), Windows.UI.Popups.Placement.Above);
                     };
@@ -924,7 +1186,7 @@ namespace HyperMedia
             }
 
             var closeBtn = new Button();
-            closeBtn.Content = "关闭";
+            closeBtn.Content = L("Close");
             closeBtn.HorizontalAlignment = HorizontalAlignment.Right;
             closeBtn.Margin = new Thickness(0, 12, 0, 0);
             closeBtn.Click += (s, ev) => { popup.IsOpen = false; };
@@ -940,12 +1202,63 @@ namespace HyperMedia
             popup.IsOpen = true;
         }
 
+        private void AddSmartItem(ListBox smartList, Popup popup, string label, string kind)
+        {
+            var item = new ListBoxItem();
+            item.Content = label;
+            item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
+            item.FontSize = 13;
+            item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
+            item.Padding = new Thickness(10, 8, 10, 8);
+            item.Tapped += async (s, ev) =>
+            {
+                var paths = PlaylistLibrary.GetSmartPlaylist(kind);
+                if (paths == null || paths.Count == 0)
+                {
+                    ShowOverlay(L("SmartPlaylistEmpty"));
+                    return;
+                }
+                popup.IsOpen = false;
+                await PlayPaths(paths);
+            };
+            smartList.Items.Add(item);
+        }
+
+        private async System.Threading.Tasks.Task PlayPaths(System.Collections.Generic.List<string> paths)
+        {
+            try
+            {
+                StorageFile first = null;
+                var extras = new List<string>();
+                for (int i = 0; i < paths.Count; i++)
+                {
+                    try
+                    {
+                        var f = await StorageFile.GetFileFromPathAsync(paths[i]);
+                        if (i == 0) first = f;
+                        else extras.Add(paths[i]);
+                    }
+                    catch (Exception ex) { Debug.WriteLine("[HyperMedia] Path missing: {0}: {1}", paths[i], ex.Message); }
+                }
+                if (first == null)
+                {
+                    ShowOverlay(L("FileUnavailable"));
+                    return;
+                }
+                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", first);
+                if (extras.Count > 0)
+                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                Frame.Navigate(typeof(MainPage));
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] PlayPaths failed: {0}", ex.Message); }
+        }
+
         private async System.Threading.Tasks.Task PlayPlaylist(Popup popup, string name)
         {
             var files = PlaylistLibrary.GetPlaylistFiles(name);
             if (files == null || files.Count == 0)
             {
-                ShowOverlay("歌单为空");
+                ShowOverlay(L("PlaylistEmpty"));
                 return;
             }
 
@@ -966,7 +1279,7 @@ namespace HyperMedia
 
                 if (first == null)
                 {
-                    ShowOverlay("歌单文件不可用（可能已被移动）");
+                    ShowOverlay(L("PlaylistUnavailable"));
                     return;
                 }
 
@@ -981,6 +1294,17 @@ namespace HyperMedia
         }
 
         #endregion
+
+        private string L(string key)
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null) return appText.T(key);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] L failed: {0}", ex.Message); }
+            return key;
+        }
 
         #region Semantic Zoom Overview
 
@@ -1008,14 +1332,14 @@ namespace HyperMedia
                 BuildOverviewItems();
                 OverviewView.Visibility = Visibility.Visible;
                 PanoramaScroll.Visibility = Visibility.Collapsed;
-                OverviewBtnText.Text = "返回";
+                OverviewBtnText.Text = L("Back");
                 OverviewBtnGlyph.Text = "\u21A9";
             }
             else
             {
                 OverviewView.Visibility = Visibility.Collapsed;
                 PanoramaScroll.Visibility = Visibility.Visible;
-                OverviewBtnText.Text = "概览";
+                OverviewBtnText.Text = L("Overview");
                 OverviewBtnGlyph.Text = "\uD83D\uDDD4";
             }
         }
@@ -1028,28 +1352,29 @@ namespace HyperMedia
             int music = PlayHistory.GetRecent("Music").Count;
             int photos = PlayHistory.GetRecent("Photos").Count;
             int libs = PlaylistLibrary.GetPlaylistNames().Count;
+            bool en = (Application.Current.Resources["AppText"] as AppText)?.IsEnglish ?? false;
 
             items.Add(new OverviewItem
             {
                 Glyph = "\uD83C\uDFAC",
-                Title = "视频",
-                Subtitle = vids > 0 ? "最近播放 " + vids + " 项" : "打开视频文件",
+                Title = L("Videos"),
+                Subtitle = vids > 0 ? L("RecentPlayed") + " " + vids + (en ? " items" : " 项") : L("OpenFile"),
                 TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB)),
                 Action = "category:1"
             });
             items.Add(new OverviewItem
             {
                 Glyph = "\uD83C\uDFB5",
-                Title = "音乐",
-                Subtitle = music > 0 ? "最近播放 " + music + " 项" : "打开音乐文件",
+                Title = L("Music"),
+                Subtitle = music > 0 ? L("RecentPlayed") + " " + music + (en ? " items" : " 项") : L("OpenFile"),
                 TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x00, 0xBC, 0xD4)),
                 Action = "category:2"
             });
             items.Add(new OverviewItem
             {
                 Glyph = "\uD83D\uDCF7",
-                Title = "图片",
-                Subtitle = photos > 0 ? "最近播放 " + photos + " 项" : "打开图片文件",
+                Title = L("Photos"),
+                Subtitle = photos > 0 ? L("RecentPlayed") + " " + photos + (en ? " items" : " 项") : L("OpenFile"),
                 TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x76, 0xFF, 0x00)),
                 Action = "category:3"
             });
@@ -1060,8 +1385,8 @@ namespace HyperMedia
                 items.Add(new OverviewItem
                 {
                     Glyph = "\uD83C\uDFB6",
-                    Title = "歌单",
-                    Subtitle = "在播放器中将列表保存为歌单",
+                    Title = L("Playlists"),
+                    Subtitle = L("NoPlaylists"),
                     TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x88, 0x88, 0xFF)),
                     Action = "playlists"
                 });
@@ -1075,7 +1400,7 @@ namespace HyperMedia
                     {
                         Glyph = "\uD83C\uDFB6",
                         Title = name.Length > 8 ? name.Substring(0, 8) : name,
-                        Subtitle = cnt + " 首 · 点击播放",
+                        Subtitle = cnt + (en ? " tracks · tap to play" : " 首 · 点击播放"),
                         TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x88, 0x88, 0xFF)),
                         Action = "playlist:" + name
                     });
@@ -1085,8 +1410,8 @@ namespace HyperMedia
             items.Add(new OverviewItem
             {
                 Glyph = "\uD83D\uDCC1",
-                Title = "媒体库",
-                Subtitle = libs > 0 ? "浏览文件夹媒体" : "添加文件夹浏览",
+                Title = L("Library"),
+                Subtitle = libs > 0 ? L("BrowseFolder") : L("AddFolder"),
                 TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x4A, 0x4A, 0x5A)),
                 Action = "library"
             });
@@ -1145,7 +1470,7 @@ namespace HyperMedia
             var files = PlaylistLibrary.GetPlaylistFiles(name);
             if (files == null || files.Count == 0)
             {
-                ShowOverlay("歌单为空");
+                ShowOverlay(L("PlaylistEmpty"));
                 return;
             }
             try
@@ -1164,7 +1489,7 @@ namespace HyperMedia
                 }
                 if (first == null)
                 {
-                    ShowOverlay("歌单文件不可用（可能已被移动）");
+                    ShowOverlay(L("PlaylistUnavailable"));
                     return;
                 }
                 StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", first);

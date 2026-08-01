@@ -249,6 +249,98 @@
                     </ComboBox>
                 </Grid>
 
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="响度标准化" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="自动平衡不同媒体的音量差异（压缩器）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="LoudnessToggle" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="LoudnessToggle_Toggled"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="同目录连播（剧集模式）" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="打开单个文件时自动把同目录其他媒体加入播放列表"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="EpisodeToggle" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="EpisodeToggle_Toggled"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="自动跳过片头" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="记录你手动跳过的片头位置，下次自动跳过"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="IntroSkipToggle" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="IntroSkipToggle_Toggled"/>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="语言" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="界面语言（立即生效）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="LanguageCombo" Grid.Column="1" Width="120"
+                              VerticalAlignment="Center"
+                              SelectionChanged="LanguageCombo_SelectionChanged">
+                        <ComboBoxItem Content="简体中文" Tag="zh-CN" IsSelected="True"/>
+                        <ComboBoxItem Content="English" Tag="en-US"/>
+                    </ComboBox>
+                </Grid>
+
+                <!-- Appearance -->
+                <TextBlock Text="外观" FontFamily="Segoe UI" FontSize="11"
+                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="浅色主页" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="主页改用浅色主题（播放器保持深色观看体验）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ToggleSwitch x:Name="LightThemeToggle" Grid.Column="1"
+                                  VerticalAlignment="Center"
+                                  Toggled="LightThemeToggle_Toggled"/>
+                </Grid>
+
                 <!-- Library -->
                 <TextBlock Text="媒体库" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
@@ -269,7 +361,7 @@
                             Click="ClearHistory_Click"
                             Style="{StaticResource ZuneActionStyle}">
                         <TextBlock Text="清除" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
-                                   FontSize="12" CharacterSpacing="40"/>
+                                   FontSize="13" CharacterSpacing="40"/>
                     </Button>
                 </Grid>
 
@@ -315,7 +407,7 @@
                             Click="ClearResume_Click"
                             Style="{StaticResource ZuneActionStyle}">
                         <TextBlock Text="清除" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
-                                   FontSize="12" CharacterSpacing="40"/>
+                                   FontSize="13" CharacterSpacing="40"/>
                     </Button>
                 </Grid>
 

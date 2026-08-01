@@ -10,6 +10,17 @@ namespace HyperMedia
 {
     public sealed partial class App : Application
     {
+        private static string L(string key)
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null) return appText.T(key);
+            }
+            catch { }
+            return key;
+        }
+
         public App()
         {
             this.InitializeComponent();
@@ -79,7 +90,7 @@ namespace HyperMedia
                     try
                     {
                         var about = new Windows.UI.ApplicationSettings.SettingsCommand(
-                            "about", "关于 HyperMedia",
+                            "about", L("AboutCharm"),
                             (cmd) =>
                             {
                                 Frame rootFrame = Window.Current.Content as Frame;

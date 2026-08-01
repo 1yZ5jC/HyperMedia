@@ -141,6 +141,67 @@ namespace HyperMedia
             return -1;
         }
 
+        private const string KEY_RATING = "Rating_";
+        private const string KEY_PLAYCOUNT = "PlayCount_";
+
+        public static int GetRating(string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileName)) return 0;
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_RATING + fileName;
+                if (settings.Values.ContainsKey(key))
+                    return (int)settings.Values[key];
+            }
+            catch { }
+            return 0;
+        }
+
+        public static void SetRating(string fileName, int rating)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileName)) return;
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_RATING + fileName;
+                if (rating <= 0)
+                    settings.Values.Remove(key);
+                else
+                    settings.Values[key] = rating;
+            }
+            catch { }
+        }
+
+        public static int GetPlayCount(string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileName)) return 0;
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_PLAYCOUNT + fileName;
+                if (settings.Values.ContainsKey(key))
+                    return (int)settings.Values[key];
+            }
+            catch { }
+            return 0;
+        }
+
+        public static void IncrementPlayCount(string fileName)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(fileName)) return;
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_PLAYCOUNT + fileName;
+                int count = 1;
+                if (settings.Values.ContainsKey(key))
+                    count = (int)settings.Values[key] + 1;
+                settings.Values[key] = count;
+            }
+            catch { }
+        }
+
         public static void ClearAll()
         {
             try
@@ -276,6 +337,43 @@ namespace HyperMedia
             }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return false;
+        }
+
+        // Smart playlists built from history metadata
+        public static List<string> GetSmartPlaylist(string kind)
+        {
+            var result = new List<string>();
+            try
+            {
+                var candidates = new List<Tuple<string, string, int, int>>(); // path, name, rating, count
+                foreach (var cat in new[] { "Videos", "Music" })
+                {
+                    foreach (var t in PlayHistory.GetRecent(cat))
+                    {
+                        candidates.Add(Tuple.Create(t.Item1, t.Item2, PlayHistory.GetRating(t.Item2), PlayHistory.GetPlayCount(t.Item2)));
+                    }
+                }
+
+                if (kind == "toprated")
+                {
+                    candidates.Sort((a, b) => b.Item3.CompareTo(a.Item3));
+                    foreach (var c in candidates)
+                        if (c.Item3 >= 4) result.Add(c.Item1);
+                }
+                else if (kind == "mostplayed")
+                {
+                    candidates.Sort((a, b) => b.Item4.CompareTo(a.Item4));
+                    foreach (var c in candidates)
+                        if (c.Item4 >= 3) result.Add(c.Item1);
+                }
+                else if (kind == "recent")
+                {
+                    foreach (var c in candidates)
+                        result.Add(c.Item1);
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+            return result;
         }
     }
 }

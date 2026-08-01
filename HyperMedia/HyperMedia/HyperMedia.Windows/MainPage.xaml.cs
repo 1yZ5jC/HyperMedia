@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
 using Windows.Media;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
@@ -59,10 +60,6 @@ namespace HyperMedia
         private Media _vlcMedia;
         private string _vlcInitError;
 
-        // Swipe
-        private double _swipeStartX;
-        private bool _isSwiping;
-
         // Playlist
         private List<StorageFile> _playlist = new List<StorageFile>();
         private int _playlistIndex = -1;
@@ -90,6 +87,22 @@ namespace HyperMedia
         private string[] _videoScales = { "-fit", "fill", "stretch", "crop", "scaled" };
         private float[] _videoScaleFactors = { 1.0f, -1.0f, 0.0f, 2.0f, 1.5f };
         private int _videoScaleIndex = 0;
+
+        // Video rotation: 0=0°, 1=90°, 2=180°, 3=270°
+        private int _videoRotation = 0;
+        private static readonly string[] _rotationNames = { "0°", "90°", "180°", "270°" };
+
+        // Crop geometry
+        private string _cropGeometry = null;
+        private string[] _cropGeometries = { null, "16:9", "4:3", "2.35:1", "16:10" };
+        private string[] _cropNames = { "无", "16:9", "4:3", "2.35:1", "16:10" };
+        private int _cropIndex = 0;
+
+        // Night mode / loudness
+        private bool _nightMode = false;
+        private bool _recording = false;
+        private string _recordingPath = null;
+        private string _recordingFileName = null;
 
         // Equalizer
         private Equalizer _vlcEqualizer;
@@ -172,9 +185,125 @@ namespace HyperMedia
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
 
             InitShareAndTile();
+            ApplyPlayerLanguage();
 
-            this.Loaded += (s, e) => InitLibVlc();
+            this.Loaded += (s, e) =>
+            {
+                InitLibVlc();
+                ApplyPlayerLanguage();
+            };
             ShowControls();
+        }
+
+        private void ApplyPlayerLanguage()
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null)
+                {
+                    appText.ApplyLanguageTo(this);
+                    appText.LanguageChanged -= AppText_LanguageChanged;
+                    appText.LanguageChanged += AppText_LanguageChanged;
+                }
+
+                ApplyPlayerTheme(SettingsPage.GetLightTheme());
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void AppText_LanguageChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                ApplyPlayerLanguage();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void ApplyPlayerTheme(bool light)
+        {
+            try
+            {
+                if (TopBar == null || BottomBar == null) return;
+
+                if (light)
+                {
+                    var topGrad = new LinearGradientBrush
+                    {
+                        StartPoint = new Point(0, 0),
+                        EndPoint = new Point(0, 1)
+                    };
+                    topGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF), Offset = 0 });
+                    topGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF), Offset = 1 });
+                    TopBar.Background = topGrad;
+
+                    var botGrad = new LinearGradientBrush
+                    {
+                        StartPoint = new Point(0, 0),
+                        EndPoint = new Point(0, 1)
+                    };
+                    botGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF), Offset = 0 });
+                    botGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0xF0, 0xFF, 0xFF, 0xFF), Offset = 1 });
+                    BottomBar.Background = botGrad;
+                }
+                else
+                {
+                    var topGrad = new LinearGradientBrush
+                    {
+                        StartPoint = new Point(0, 0),
+                        EndPoint = new Point(0, 1)
+                    };
+                    topGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0xDD, 0x0A, 0x0A, 0x0F), Offset = 0 });
+                    topGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0x00, 0x0A, 0x0A, 0x0F), Offset = 1 });
+                    TopBar.Background = topGrad;
+
+                    var botGrad = new LinearGradientBrush
+                    {
+                        StartPoint = new Point(0, 0),
+                        EndPoint = new Point(0, 1)
+                    };
+                    botGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0x00, 0x0A, 0x0A, 0x0F), Offset = 0 });
+                    botGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0xEE, 0x0A, 0x0A, 0x0F), Offset = 0.3 });
+                    botGrad.GradientStops.Add(new GradientStop { Color = Color.FromArgb(0xFF, 0x0A, 0x0A, 0x0F), Offset = 1 });
+                    BottomBar.Background = botGrad;
+                }
+
+                ApplyBarTextColor(TopBar, light);
+                ApplyBarTextColor(BottomBar, light);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void ApplyBarTextColor(DependencyObject root, bool light)
+        {
+            try
+            {
+                var fg = new SolidColorBrush(Color.FromArgb(0xE6, (byte)(light ? 0x20 : 0xFF), (byte)(light ? 0x20 : 0xFF), (byte)(light ? 0x28 : 0xFF)));
+                var whiteFg = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+
+                int count = VisualTreeHelper.GetChildrenCount(root);
+                for (int i = 0; i < count; i++)
+                {
+                    var child = VisualTreeHelper.GetChild(root, i);
+                    var tb = child as TextBlock;
+                    if (tb != null && !tb.Name.StartsWith("Keep", StringComparison.Ordinal))
+                    {
+                        // Pink/colored accents keep their color; neutral white-ish text becomes dark
+                        if (tb.Foreground is SolidColorBrush)
+                        {
+                            var brush = tb.Foreground as SolidColorBrush;
+                            byte r = brush.Color.R, g = brush.Color.G, b = brush.Color.B;
+                            bool isColoredAccent = (r > 0x80) && (g < 0x80) && (b > 0x80); // e.g. pink #E040FB
+                            bool isCyanAccent = (g > 0x80) && (r < 0x80) && (b > 0x80);
+                            if (!isColoredAccent && !isCyanAccent)
+                                tb.Foreground = light ? fg : whiteFg;
+                        }
+                    }
+                    ApplyBarTextColor(child, light);
+                }
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         #region Share Charm & Live Tile
@@ -211,11 +340,11 @@ namespace HyperMedia
             try
             {
                 var request = args.Request;
-                request.Data.Properties.Title = "分享媒体文件";
+                request.Data.Properties.Title = L("ShareTitle");
                 if (!string.IsNullOrEmpty(_originalFileName))
                 {
                     request.Data.SetText(_originalFileName);
-                    request.Data.Properties.Description = "来自 HyperMedia 播放的媒体";
+                    request.Data.Properties.Description = L("ShareDesc");
                 }
                 if (!string.IsNullOrEmpty(_lastScreenshotPath))
                 {
@@ -241,7 +370,7 @@ namespace HyperMedia
             {
                 string title = FileNameText.Text;
                 if (string.IsNullOrEmpty(title)) return;
-                string subtitle = _isPlaying ? "正在播放" : "已暂停";
+                string subtitle = _isPlaying ? L("Playing") : L("Paused");
 
                 var tileXml = Windows.UI.Notifications.TileUpdateManager.GetTemplateContent(
                     Windows.UI.Notifications.TileTemplateType.TileSquare150x150Text04);
@@ -553,6 +682,8 @@ namespace HyperMedia
         {
             if (file == null) return;
 
+            _introAutoSkippedThisSession = false;
+
             StopPlayback();
             _isNetworkStream = false;
             WelcomeScreen.Visibility = Visibility.Collapsed;
@@ -572,7 +703,11 @@ namespace HyperMedia
             if (_isPhotoMode)
                 ClosePhotoViewer();
 
-            ShowOverlay("正在加载 " + file.Name + "...");
+            // Episode mode: when opening a single media file, auto-queue siblings in same folder
+            if (_playlist.Count <= 1 && SettingsPage.GetEpisodeAutoPlay())
+                await TryQueueSameFolder(file);
+
+            ShowOverlay(L("LoadingPrefix") + file.Name + "...");
 
             try
             {
@@ -594,6 +729,64 @@ namespace HyperMedia
             }
         }
 
+        private async System.Threading.Tasks.Task TryQueueSameFolder(StorageFile file)
+        {
+            try
+            {
+                var folder = await file.GetParentAsync();
+                if (folder == null) return;
+
+                var files = await folder.GetFilesAsync();
+                if (files == null || files.Count <= 1) return;
+
+                var siblings = new List<StorageFile>();
+                foreach (var f in files)
+                {
+                    if (f.Path == file.Path) continue;
+                    string ext = f.FileType.ToLowerInvariant();
+                    if (MUSIC_EXTENSIONS.Contains(ext) || IsVideoExtension(ext))
+                        siblings.Add(f);
+                }
+                if (siblings.Count == 0) return;
+
+                // Only queue when a single file was opened directly (not via playlist navigation)
+                if (_playlist.Count > 1) return;
+
+                siblings.Sort((a, b) => string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
+                var newList = new List<StorageFile>();
+                bool inserted = false;
+                foreach (var s in siblings)
+                {
+                    if (!inserted && string.Compare(s.Name, file.Name, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        newList.Add(file);
+                        inserted = true;
+                    }
+                    newList.Add(s);
+                }
+                if (!inserted) newList.Add(file);
+
+                _playlist = newList;
+                _playlistIndex = newList.FindIndex(f => f.Path == file.Path);
+                if (_playlistIndex < 0) _playlistIndex = 0;
+                Debug.WriteLine("[HyperMedia] Episode mode: queued {0} files from same folder", newList.Count);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private bool IsVideoExtension(string ext)
+        {
+            switch (ext)
+            {
+                case ".mp4": case ".avi": case ".mkv": case ".webm": case ".flv":
+                case ".mov": case ".wmv": case ".3gp": case ".ts": case ".mpg":
+                case ".mpeg": case ".m4v": case ".mka": case ".ogv": case ".vob":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
         private void OpenUrl(string url)
         {
             if (string.IsNullOrEmpty(url)) return;
@@ -603,10 +796,10 @@ namespace HyperMedia
             StopPlayback();
             _isNetworkStream = true;
             WelcomeScreen.Visibility = Visibility.Collapsed;
-            ShowOverlay("正在加载流媒体...");
+            ShowOverlay(L("LoadingStream"));
 
             _originalFileName = url;
-            StatusText.Text = "正在连接...";
+            StatusText.Text = L("Connecting");
             var sw = Stopwatch.StartNew();
             OpenWithLibVlc(url, sw);
         }
@@ -618,7 +811,7 @@ namespace HyperMedia
                 if (_vlcInitError != null)
                     StatusText.Text = _vlcInitError;
                 else
-                    StatusText.Text = "错误: VLC 未初始化";
+                    StatusText.Text = L("VlcNotInit");
                 HideOverlay();
                 return;
             }
@@ -664,6 +857,29 @@ namespace HyperMedia
                 if (!string.IsNullOrEmpty(deinterlace) && deinterlace != "off")
                     _vlcMedia.addOption(":deinterlace=" + deinterlace);
 
+                // Video rotation (transform filter). VLC transform-type: 0=90°, 1=180°, 2=270°
+                if (_videoRotation != 0 && !_isNetworkStream)
+                {
+                    int transformType = (_videoRotation - 1);
+                    _vlcMedia.addOption(":video-filter=transform");
+                    _vlcMedia.addOption(":transform-type=" + transformType);
+                }
+
+                // Loudness normalization
+                if (SettingsPage.GetLoudnessEnabled())
+                {
+                    _vlcMedia.addOption(":audio-filter=compressor");
+                    _vlcMedia.addOption(":compressor-attack=20");
+                    _vlcMedia.addOption(":compressor-release=250");
+                }
+
+                // Recording (transcode to file)
+                if (_recording && !_isNetworkStream && !string.IsNullOrEmpty(_recordingPath))
+                {
+                    _vlcMedia.addOption(":sout=#transcode{vcodec=mp4v,vb=2500,acodec=mpga,ab=128}:standard{access=file,mux=mp4,dst=\"" + _recordingPath + "\"}");
+                    _vlcMedia.addOption(":sout-keep");
+                }
+
                 if (!string.IsNullOrEmpty(_pendingExternalSubPath))
                 {
                     _vlcMedia.addOption(":sub-file=" + _pendingExternalSubPath);
@@ -675,7 +891,7 @@ namespace HyperMedia
             }
             catch (Exception ex)
             {
-                StatusText.Text = "错误: " + ex.Message;
+                StatusText.Text = L("ErrorPrefix") + ex.Message;
                 HideOverlay();
                 Debug.WriteLine("[HyperMedia] VLC media/player create failed: {0}", ex.Message);
                 return;
@@ -877,13 +1093,21 @@ namespace HyperMedia
             public int Index { get; set; }
             public string FileName { get; set; }
             public string DurationText { get; set; }
+            public bool IsCurrent { get; set; }
         }
+
+        private string _playlistFilter = "";
 
         private void RefreshPlaylistSidebar()
         {
             var items = new List<PlaylistItem>();
+            string filter = (_playlistFilter ?? "").Trim();
             for (int i = 0; i < _playlist.Count; i++)
             {
+                if (!string.IsNullOrEmpty(filter) &&
+                    _playlist[i].Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0)
+                    continue;
+
                 string ext = System.IO.Path.GetExtension(_playlist[i].Name ?? "");
                 if (ext.Length > 1)
                     ext = ext.Substring(1).ToUpperInvariant();
@@ -891,14 +1115,36 @@ namespace HyperMedia
                 {
                     Index = i + 1,
                     FileName = _playlist[i].Name,
-                    DurationText = ext
+                    DurationText = ext,
+                    IsCurrent = (i == _playlistIndex)
                 });
             }
             PlaylistListBox.ItemsSource = items;
-            PlaylistEmptyText.Visibility = _playlist.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            PlaylistEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            if (_playlistIndex >= 0 && _playlistIndex < _playlist.Count)
-                PlaylistListBox.SelectedIndex = _playlistIndex;
+            // Restore selection on the currently playing item
+            if (_playlistIndex >= 0 && _playlistIndex < _playlist.Count &&
+                (string.IsNullOrEmpty(filter) || _playlist[_playlistIndex].Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+            {
+                PlaylistListBox.SelectedIndex = items.FindIndex(it => it.Index - 1 == _playlistIndex);
+            }
+        }
+
+        private void PlaylistSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            _playlistFilter = PlaylistSearchBox.Text ?? "";
+            RefreshPlaylistSidebar();
+        }
+
+        private void PlaylistSearchBox_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == VirtualKey.Escape)
+            {
+                PlaylistSearchBox.Text = "";
+                _playlistFilter = "";
+                RefreshPlaylistSidebar();
+                e.Handled = true;
+            }
         }
 
         private void PlaylistToggleButton_Click(object sender, RoutedEventArgs e)
@@ -944,7 +1190,7 @@ namespace HyperMedia
                     StopPlayback();
                     WelcomeScreen.Visibility = Visibility.Visible;
                     FileNameText.Text = "";
-                    StatusText.Text = "播放列表已清空";
+                    StatusText.Text = L("PlaylistCleared");
                 }
                 else
                 {
@@ -1006,8 +1252,8 @@ namespace HyperMedia
         {
             if (_playlist.Count == 0) return;
 
-            var dialog = new MessageDialog("确定要清空播放列表吗？", "清空播放列表");
-            dialog.Commands.Add(new UICommand("清空", (cmd) => { ClearPlaylistCore(); }));
+            var dialog = new MessageDialog(L("ClearPlaylistConfirm"), L("ClearPlaylistTitle"));
+            dialog.Commands.Add(new UICommand(L("ClearBtn"), (cmd) => { ClearPlaylistCore(); }));
             dialog.Commands.Add(new UICommand("取消"));
             dialog.DefaultCommandIndex = 1;
             dialog.CancelCommandIndex = 1;
@@ -1022,7 +1268,7 @@ namespace HyperMedia
             WelcomeScreen.Visibility = Visibility.Visible;
             FileNameText.Text = "";
             PlaylistCounter.Text = "";
-            StatusText.Text = "播放列表已清空";
+            StatusText.Text = L("PlaylistCleared");
             RefreshPlaylistSidebar();
         }
 
@@ -1030,7 +1276,7 @@ namespace HyperMedia
         {
             if (_playlist.Count == 0)
             {
-                ShowOverlay("播放列表为空，无法保存");
+                ShowOverlay(L("PlaylistEmptyNoSave"));
                 HideOverlayDelayed();
                 return;
             }
@@ -1052,7 +1298,7 @@ namespace HyperMedia
             panel.Children.Add(title);
 
             var info = new TextBlock();
-            info.Text = "共 " + _playlist.Count + " 个文件";
+            info.Text = "共 " + _playlist.Count + L("ImportedFilesSuffix");
             info.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             info.FontSize = 11;
             info.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
@@ -1123,12 +1369,12 @@ namespace HyperMedia
 
                 if (PlaylistLibrary.CreatePlaylist(name, paths))
                 {
-                    ShowOverlay("歌单已保存: " + name);
+                    ShowOverlay(L("PlaylistSavedPrefix") + name);
                     HideOverlayDelayed();
                 }
                 else
                 {
-                    ShowOverlay("歌单保存失败");
+                    ShowOverlay(L("PlaylistSaveFailed"));
                     HideOverlayDelayed();
                 }
             }
@@ -1156,13 +1402,13 @@ namespace HyperMedia
                         sb.AppendLine(item.Path);
                     }
                     await FileIO.WriteTextAsync(file, sb.ToString(), Windows.Storage.Streams.UnicodeEncoding.Utf8);
-                    ShowOverlay("播放列表已导出: " + file.Name);
+                    ShowOverlay(L("PlaylistExportedPrefix") + file.Name);
                     HideOverlayDelayed();
                 }
             }
             catch (Exception ex)
             {
-                ShowOverlay("导出失败: " + ex.Message);
+                ShowOverlay(L("ExportFailedPrefix") + ex.Message);
                 HideOverlayDelayed();
             }
         }
@@ -1214,7 +1460,7 @@ namespace HyperMedia
                     {
                         UpdatePlaylistCounter();
                         RefreshPlaylistSidebar();
-                        ShowOverlay("已导入 " + added + " 个文件");
+                        ShowOverlay(L("ImportedPrefix") + added + L("ImportedFilesSuffix"));
                         HideOverlayDelayed();
 
                         if (_playlistIndex < 0)
@@ -1225,14 +1471,14 @@ namespace HyperMedia
                     }
                     else
                     {
-                        ShowOverlay("未找到可播放的文件");
+                        ShowOverlay(L("NoPlayableFiles"));
                         HideOverlayDelayed();
                     }
                 }
             }
             catch (Exception ex)
             {
-                ShowOverlay("导入失败: " + ex.Message);
+                ShowOverlay(L("ImportFailedPrefix") + ex.Message);
                 HideOverlayDelayed();
             }
         }
@@ -1260,7 +1506,7 @@ namespace HyperMedia
                     StopPlayback();
                     WelcomeScreen.Visibility = Visibility.Visible;
                     FileNameText.Text = "";
-                    StatusText.Text = "播放完毕";
+                    StatusText.Text = L("PlaybackComplete");
                     return;
                 }
             }
@@ -1674,12 +1920,12 @@ namespace HyperMedia
             {
                 _abPointA = Math.Max(0, _abPointA + deltaMs / 1000.0);
                 if (_abPointA > _abPointB) _abPointA = _abPointB;
-                ShowOverlay("A 点: " + FormatTime(_abPointA) + " (" + (deltaMs > 0 ? "+" : "") + deltaMs + "ms)");
+                ShowOverlay(L("PointAPrefix") + FormatTime(_abPointA) + " (" + (deltaMs > 0 ? "+" : "") + deltaMs + "ms)");
             }
             else
             {
                 _abPointB = Math.Max(_abPointA, _abPointB + deltaMs / 1000.0);
-                ShowOverlay("B 点: " + FormatTime(_abPointB) + " (" + (deltaMs > 0 ? "+" : "") + deltaMs + "ms)");
+                ShowOverlay(L("PointBPrefix") + FormatTime(_abPointB) + " (" + (deltaMs > 0 ? "+" : "") + deltaMs + "ms)");
             }
             HideOverlayDelayed();
         }
@@ -1693,14 +1939,14 @@ namespace HyperMedia
             if (_vlcPlayer == null)
             {
                 Debug.WriteLine("[HyperMedia] Screenshot FAILED: _vlcPlayer is null");
-                ShowOverlay("截图失败: 播放器未就绪");
+                ShowOverlay(L("ScreenshotNotReady"));
                 HideOverlayDelayed();
                 return;
             }
             if (_isNetworkStream)
             {
                 Debug.WriteLine("[HyperMedia] Screenshot FAILED: network stream");
-                ShowOverlay("截图失败: 网络流不支持截图");
+                ShowOverlay(L("ScreenshotNoNetwork"));
                 HideOverlayDelayed();
                 return;
             }
@@ -1725,7 +1971,7 @@ namespace HyperMedia
 
                 _lastScreenshotPath = filePath;
                 _lastScreenshotFileName = fileName;
-                ShowOverlay("正在截图...");
+                ShowOverlay(L("TakingScreenshot"));
                 Debug.WriteLine("[HyperMedia] Calling takeSnapshot...");
                 _vlcPlayer.takeSnapshot(0, filePath, 0, 0);
                 Debug.WriteLine("[HyperMedia] takeSnapshot called, waiting for OnSnapshotTaken callback");
@@ -1733,7 +1979,7 @@ namespace HyperMedia
             catch (Exception ex)
             {
                 Debug.WriteLine("[HyperMedia] Screenshot FAILED: {0}", ex);
-                ShowOverlay("截图失败: " + ex.Message);
+                ShowOverlay(L("ScreenshotFailedPrefix") + ex.Message);
                 HideOverlayDelayed();
             }
         }
@@ -1745,11 +1991,11 @@ namespace HyperMedia
         {
             if (_vlcPlayer == null || _isNetworkStream)
             {
-                ShowOverlay("截图连拍不可用");
+                ShowOverlay(L("BurstNotAvailable"));
                 HideOverlayDelayed();
                 return;
             }
-            ShowOverlay("连拍 " + SCREENSHOT_BURST_COUNT + " 张...");
+            ShowOverlay(L("BurstPrefix") + SCREENSHOT_BURST_COUNT + " " + L("BurstSuffix"));
             for (int i = 0; i < SCREENSHOT_BURST_COUNT; i++)
             {
                 TakeScreenshot();
@@ -1792,13 +2038,13 @@ namespace HyperMedia
 
                 if (list.Remove(time))
                 {
-                    ShowOverlay("书签已移除: " + FormatTime(time / 1000.0));
+                    ShowOverlay(L("BookmarkRemovedPrefix") + FormatTime(time / 1000.0));
                 }
                 else
                 {
                     list.Add(time);
                     list.Sort();
-                    ShowOverlay("书签已添加: " + FormatTime(time / 1000.0) + " (Ctrl+B 查看)");
+                    ShowOverlay(L("BookmarkAddedPrefix") + FormatTime(time / 1000.0) + L("BookmarkHintSuffix"));
                 }
                 settings.Values[key] = string.Join("|", list);
             }
@@ -1810,7 +2056,7 @@ namespace HyperMedia
             var menu = new MenuFlyout();
             menu.Placement = FlyoutPlacementMode.Bottom;
 
-            var header = new MenuFlyoutItem { Text = "书签" };
+            var header = new MenuFlyoutItem { Text = L("BookmarkTitle") };
             header.IsEnabled = false;
             menu.Items.Add(header);
 
@@ -1818,7 +2064,7 @@ namespace HyperMedia
             {
                 if (_vlcPlayer == null || string.IsNullOrEmpty(_originalFileName))
                 {
-                    menu.Items.Add(new MenuFlyoutItem { Text = "无书签" });
+                    menu.Items.Add(new MenuFlyoutItem { Text = L("NoBookmarksShort") });
                     menu.ShowAt(BookmarkBtn);
                     return;
                 }
@@ -1924,6 +2170,9 @@ namespace HyperMedia
                 SnapshotButton.Visibility = v;
                 ChapterBtn.Visibility = v;
                 AudioDeviceBtn.Visibility = v;
+                RotateBtn.Visibility = v;
+                CropBtn.Visibility = v;
+                RecordBtn.Visibility = v;
             }
             catch (Exception ex) { LogUnhandled(ex); }
         }
@@ -2521,10 +2770,31 @@ namespace HyperMedia
 
                     DetectMusicMode();
 
+                    if (!_isNetworkStream && !string.IsNullOrEmpty(_originalFileName))
+                        PlayHistory.IncrementPlayCount(_originalFileName);
+
                     if (_lyricLines.Count > 0 && !_lyricTimer.IsEnabled)
                         _lyricTimer.Start();
 
                     UpdateLiveTile();
+
+                    UpdateRatingBtnIcon();
+
+                    // Re-apply runtime-only settings after media reload
+                    try
+                    {
+                        if (!string.IsNullOrEmpty(_cropGeometry) && _vlcPlayer != null)
+                            _vlcPlayer.setCropGeometry(_cropGeometry);
+                        if (_nightMode && _vlcPlayer != null)
+                        {
+                            _vlcPlayer.setAdjustFloat(0, 0.72f);
+                            _vlcPlayer.setAdjustFloat(1, 0.88f);
+                            _vlcPlayer.setAdjustFloat(2, -10f);
+                            _vlcPlayer.setAdjustFloat(3, 0.9f);
+                            _vlcPlayer.setAdjustFloat(4, 1.08f);
+                        }
+                    }
+                    catch (Exception ex) { LogUnhandled(ex); }
 
                     // Resume from saved position
                     if (_originalFileName != null && !_isNetworkStream)
@@ -2540,9 +2810,13 @@ namespace HyperMedia
                             if (seekOk)
                             {
                                 RemoveResumePosition(_originalFileName);
-                                ShowOverlay("已恢复播放 " + FormatTime(resumePos / 1000.0));
+                                ShowOverlay(L("ResumeRestoredPrefix") + FormatTime(resumePos / 1000.0));
                                 HideOverlayDelayed();
                             }
+                        }
+                        else
+                        {
+                            ApplyIntroSkipIfNeeded();
                         }
                     }
                 }
@@ -2587,7 +2861,7 @@ namespace HyperMedia
                 }
                 else
                 {
-                    StatusText.Text = "播放完毕";
+                    StatusText.Text = L("PlaybackComplete");
                     ShowControls();
                 }
             });
@@ -2599,9 +2873,9 @@ namespace HyperMedia
             BeginInvokeOnUI(() =>
             {
                 _positionTimer.Stop();
-                StatusText.Text = "播放错误";
+                StatusText.Text = L("PlaybackError");
                 ShowControls();
-                ShowToast("播放错误", "无法播放此媒体，可能格式不受支持或文件已损坏");
+                ShowToast(L("PlaybackError"), L("PlaybackErrorDetail"));
             });
         }
 
@@ -2699,7 +2973,7 @@ namespace HyperMedia
                         {
                             _vlcPlayer.setTime(_pendingResumePos);
                             RemoveResumePosition(_originalFileName);
-                            ShowOverlay("已恢复播放 " + FormatTime(_pendingResumePos / 1000.0));
+                            ShowOverlay(L("ResumeRestoredPrefix") + FormatTime(_pendingResumePos / 1000.0));
                             HideOverlayDelayed();
                             _pendingResumePos = 0;
                         }
@@ -2810,9 +3084,9 @@ namespace HyperMedia
                 StopPlayback();
                 WelcomeScreen.Visibility = Visibility.Visible;
                 FileNameText.Text = "";
-                ShowOverlay("睡眠定时器: 播放已停止");
+                ShowOverlay(L("SleepTimerStopped"));
                 HideOverlayDelayed();
-                ShowToast("睡眠定时器", "播放已自动停止");
+                ShowToast(L("SleepTimer"), L("PlaybackStoppedToast"));
             }
         }
 
@@ -2980,6 +3254,64 @@ namespace HyperMedia
             if (_duration <= 0) return;
             _vlcPlayer?.setTime((long)(seconds * 1000));
             CurrentTimeText.Text = FormatTime(seconds);
+
+            // Auto-skip intro learning: manual forward seek into 25s-5min zone = "intro ends here"
+            if (!_isNetworkStream && !string.IsNullOrEmpty(_originalFileName) && _vlcPlayer != null && !_isSeeking)
+            {
+                TryLearnIntroSkip(seconds);
+            }
+        }
+
+        private const string KEY_SKIP_INTRO = "SkipIntro_";
+        private const int INTRO_MIN_MS = 25000;
+        private const int INTRO_MAX_MS = 300000;
+        private bool _introAutoSkippedThisSession = false;
+
+        private void TryLearnIntroSkip(double seconds)
+        {
+            try
+            {
+                if (seconds < INTRO_MIN_MS / 1000.0 || seconds > INTRO_MAX_MS / 1000.0)
+                {
+                    if (seconds < 5 && _vlcPlayer != null)
+                    {
+                        // User went back to start — clear learned intro
+                        var settings = ApplicationData.Current.LocalSettings;
+                        settings.Values.Remove(KEY_SKIP_INTRO + _originalFileName);
+                        Debug.WriteLine("[HyperMedia] Intro skip cleared (user seeked to start)");
+                    }
+                    return;
+                }
+                var settings2 = ApplicationData.Current.LocalSettings;
+                settings2.Values[KEY_SKIP_INTRO + _originalFileName] = (long)(seconds * 1000);
+                Debug.WriteLine("[HyperMedia] Intro skip learned: {0}s for {1}", (int)seconds, _originalFileName);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void ApplyIntroSkipIfNeeded()
+        {
+            if (_isNetworkStream || string.IsNullOrEmpty(_originalFileName)) return;
+            if (_introAutoSkippedThisSession) return;
+            if (!SettingsPage.GetIntroSkipEnabled()) return;
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                string key = KEY_SKIP_INTRO + _originalFileName;
+                if (settings.Values.ContainsKey(key))
+                {
+                    long skipTo = (long)settings.Values[key];
+                    if (skipTo > INTRO_MIN_MS && skipTo < INTRO_MAX_MS && _vlcPlayer != null)
+                    {
+                        _vlcPlayer.setTime(skipTo);
+                        _introAutoSkippedThisSession = true;
+                        ShowOverlay(L("IntroSkippedPrefix") + FormatTime(skipTo / 1000.0));
+                        HideOverlayDelayed();
+                        Debug.WriteLine("[HyperMedia] Auto-skipped intro to {0}ms for {1}", skipTo, _originalFileName);
+                    }
+                }
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         private void VolumeSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
@@ -3135,17 +3467,17 @@ namespace HyperMedia
                     string nowPlaying = _vlcMedia.meta(MediaMeta.NowPlaying);
 
                     if (!string.IsNullOrEmpty(title) && title != "hypermedia_temp")
-                        MediaInfoMetaTitle.Text = "标题: " + title;
+                        MediaInfoMetaTitle.Text = L("TitleLabel") + title;
                     if (!string.IsNullOrEmpty(artist) && artist != "hypermedia_temp")
-                        MediaInfoMetaArtist.Text = "艺术家: " + artist;
+                        MediaInfoMetaArtist.Text = L("ArtistLabel") + artist;
                     if (!string.IsNullOrEmpty(album) && album != "hypermedia_temp")
-                        MediaInfoMetaAlbum.Text = "专辑: " + album;
+                        MediaInfoMetaAlbum.Text = L("AlbumLabel") + album;
                     if (!string.IsNullOrEmpty(date) && date != "hypermedia_temp")
-                        MediaInfoMetaDate.Text = "日期: " + date;
+                        MediaInfoMetaDate.Text = L("DateLabel") + date;
                     if (!string.IsNullOrEmpty(nowPlaying) && nowPlaying != "hypermedia_temp")
                     {
                         if (string.IsNullOrEmpty(MediaInfoMetaTitle.Text))
-                            MediaInfoMetaTitle.Text = "标题: " + nowPlaying;
+                            MediaInfoMetaTitle.Text = L("TitleLabel") + nowPlaying;
                     }
                 }
             }
@@ -3162,12 +3494,12 @@ namespace HyperMedia
                         if (videoDescs != null)
                         {
                             foreach (var v in videoDescs)
-                                MediaInfoVideoTrack.Text += (MediaInfoVideoTrack.Text.Length > 0 ? ", " : "视频: ") + (v.name() ?? "Track " + v.id());
+                                MediaInfoVideoTrack.Text += (MediaInfoVideoTrack.Text.Length > 0 ? ", " : L("VideoLabel")) + (v.name() ?? "Track " + v.id());
                         }
                     }
                     else
                     {
-                        MediaInfoVideoTrack.Text = "视频: 无";
+                        MediaInfoVideoTrack.Text = L("VideoNone");
                     }
 
                     int audioCount = _vlcPlayer.audioTrackCount();
@@ -3177,13 +3509,13 @@ namespace HyperMedia
                         if (audioDescs != null)
                         {
                             foreach (var a in audioDescs)
-                                MediaInfoAudioTrack.Text += (MediaInfoAudioTrack.Text.Length > 0 ? ", " : "音频: ") + (a.name() ?? "Track " + a.id());
+                                MediaInfoAudioTrack.Text += (MediaInfoAudioTrack.Text.Length > 0 ? ", " : L("AudioLabel")) + (a.name() ?? "Track " + a.id());
                         }
                     }
 
                     int spuCount = _vlcPlayer.spuCount();
                     if (spuCount > 0)
-                        MediaInfoSubCount.Text = "字幕轨: " + spuCount;
+                        MediaInfoSubCount.Text = L("SubtitleTrackLabel") + spuCount;
                 }
             }
             catch (Exception ex) { LogUnhandled(ex); }
@@ -3191,7 +3523,7 @@ namespace HyperMedia
             if (_duration > 0)
             {
                 TimeSpan ts = TimeSpan.FromSeconds(_duration);
-                MediaInfoDuration.Text = string.Format("时长: {0:D2}:{1:D2}:{2:D2}", ts.Hours, ts.Minutes, ts.Seconds);
+                MediaInfoDuration.Text = string.Format(L("DurationLabel") + string.Format("{0:D2}:{1:D2}:{2:D2}", ts.Hours, ts.Minutes, ts.Seconds));
             }
 
             try
@@ -3202,11 +3534,11 @@ namespace HyperMedia
                     var props = await file.GetBasicPropertiesAsync();
                     ulong bytes = props.Size;
                     if (bytes > 1024 * 1024 * 1024)
-                        MediaInfoFileSize.Text = string.Format("文件大小: {0:F2} GB", bytes / (1024.0 * 1024 * 1024));
+                        MediaInfoFileSize.Text = string.Format(L("FileSizeGb"), bytes / (1024.0 * 1024 * 1024));
                     else if (bytes > 1024 * 1024)
-                        MediaInfoFileSize.Text = string.Format("文件大小: {0:F1} MB", bytes / (1024.0 * 1024));
+                        MediaInfoFileSize.Text = string.Format(L("FileSizeMb"), bytes / (1024.0 * 1024));
                     else
-                        MediaInfoFileSize.Text = string.Format("文件大小: {0:F0} KB", bytes / 1024.0);
+                        MediaInfoFileSize.Text = string.Format(L("FileSizeKb"), bytes / 1024.0);
                 }
             }
             catch (Exception ex) { LogUnhandled(ex); }
@@ -3272,7 +3604,7 @@ namespace HyperMedia
             }
             catch (Exception ex)
             {
-                ShowOverlay("打开图片失败: " + ex.Message);
+                ShowOverlay(L("OpenImageFailedPrefix") + ex.Message);
                 HideOverlayDelayed();
                 ClosePhotoViewer();
             }
@@ -3453,14 +3785,14 @@ namespace HyperMedia
 
                 // Disable subtitles
                 var disableItem = new MenuFlyoutItem();
-                disableItem.Text = "关闭字幕";
+                disableItem.Text = L("DisableSubtitles");
                 disableItem.Tapped += (s, ev) =>
                 {
                     try
                     {
                         _vlcPlayer.setSpu(-1);
                         _currentSpu = -1;
-                        ShowOverlay("字幕已关闭");
+                        ShowOverlay(L("SubtitlesOff"));
                         HideOverlayDelayed();
                     }
                     catch (Exception ex) { LogUnhandled(ex); }
@@ -3480,7 +3812,7 @@ namespace HyperMedia
                             {
                                 var trackItem = new MenuFlyoutItem();
                                 int tid = desc.id();
-                                string trackName = desc.name() ?? ("字幕轨道 " + tid);
+                                string trackName = desc.name() ?? (L("SubtitleTrack") + tid);
                                 trackItem.Text = trackName;
                                 trackItem.Tapped += (s, ev) =>
                                 {
@@ -3488,7 +3820,7 @@ namespace HyperMedia
                                     {
                                         _vlcPlayer.setSpu(tid);
                                         _currentSpu = tid;
-                                        ShowOverlay("已切换: " + trackName);
+                                        ShowOverlay(L("SwitchedPrefix") + trackName);
                                         HideOverlayDelayed();
                                     }
                                     catch (Exception ex) { LogUnhandled(ex); }
@@ -3502,7 +3834,7 @@ namespace HyperMedia
 
                 // Load external subtitle
                 var loadExternal = new MenuFlyoutItem();
-                loadExternal.Text = "加载外部字幕...";
+                loadExternal.Text = L("LoadExternalSubtitle");
                 loadExternal.Tapped += async (s, ev) =>
                 {
                     try
@@ -3529,13 +3861,13 @@ namespace HyperMedia
                             StopPlayback();
                             OpenFile(_playlist[_playlistIndex]);
 
-                            ShowOverlay("字幕已加载: " + file.Name);
+                            ShowOverlay(L("SubtitleLoadedPrefix") + file.Name);
                             HideOverlayDelayed();
                         }
                     }
                     catch (Exception ex)
                     {
-                        ShowOverlay("字幕错误: " + ex.Message);
+                        ShowOverlay(L("SubtitleErrorPrefix") + ex.Message);
                         HideOverlayDelayed();
                     }
                 };
@@ -3568,14 +3900,14 @@ namespace HyperMedia
                             {
                                 var trackItem = new MenuFlyoutItem();
                                 int tid = desc.id();
-                                string trackName = desc.name() ?? ("音轨 " + tid);
+                                string trackName = desc.name() ?? (L("AudioTrackItem") + tid);
                                 trackItem.Text = trackName;
                                 trackItem.Tapped += (s, ev) =>
                                 {
                                     try
                                     {
                                         _vlcPlayer.setAudioTrack(tid);
-                                        ShowOverlay("已切换: " + trackName);
+                                        ShowOverlay(L("SwitchedPrefix") + trackName);
                                         HideOverlayDelayed();
                                     }
                                     catch (Exception ex) { LogUnhandled(ex); }
@@ -3590,7 +3922,7 @@ namespace HyperMedia
                 if (menu.Items.Count == 0)
                 {
                     var noTrack = new MenuFlyoutItem();
-                    noTrack.Text = "无可用音轨";
+                    noTrack.Text = L("NoAudioTracks");
                     noTrack.IsEnabled = false;
                     menu.Items.Add(noTrack);
                 }
@@ -3683,6 +4015,7 @@ namespace HyperMedia
             bool handled = true;
             bool ctrl = (Window.Current.CoreWindow.GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) != 0;
             bool shift = (Window.Current.CoreWindow.GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) != 0;
+            bool alt = (Window.Current.CoreWindow.GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) != 0;
 
             if (_isPhotoMode)
             {
@@ -3713,21 +4046,25 @@ namespace HyperMedia
                     TogglePlayPause();
                     break;
                 case VirtualKey.Left:
-                    if (ctrl && shift) { NudgeAbPoint(-FRAME_STEP_MS); }
-                    else if (ctrl) { _audioDelay -= AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay("音频延迟: " + _audioDelay + "ms"); HideOverlayDelayed(); }
+                    if (ctrl && alt) { NudgeAbPoint(-FRAME_STEP_MS); }
+                    else if (ctrl && shift) { AdjustVideoContrast(-0.05f); }
+                    else if (ctrl) { _audioDelay -= AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay(L("AudioDelayPrefix") + _audioDelay + "ms"); HideOverlayDelayed(); }
                     else SeekRelative(-10);
                     break;
                 case VirtualKey.Right:
-                    if (ctrl && shift) { NudgeAbPoint(FRAME_STEP_MS); }
-                    else if (ctrl) { _audioDelay += AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay("音频延迟: " + _audioDelay + "ms"); HideOverlayDelayed(); }
+                    if (ctrl && alt) { NudgeAbPoint(FRAME_STEP_MS); }
+                    else if (ctrl && shift) { AdjustVideoContrast(0.05f); }
+                    else if (ctrl) { _audioDelay += AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay(L("AudioDelayPrefix") + _audioDelay + "ms"); HideOverlayDelayed(); }
                     else SeekRelative(10);
                     break;
                 case VirtualKey.Up:
-                    if (ctrl) { _subtitleDelay += AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay("字幕延迟: " + _subtitleDelay + "ms"); HideOverlayDelayed(); }
+                    if (ctrl && shift) { AdjustVideoBrightness(0.05f); }
+                    else if (ctrl) { _subtitleDelay += AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay(L("SubtitleDelayPrefix") + _subtitleDelay + "ms"); HideOverlayDelayed(); }
                     else AdjustVolume(5);
                     break;
                 case VirtualKey.Down:
-                    if (ctrl) { _subtitleDelay -= AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay("字幕延迟: " + _subtitleDelay + "ms"); HideOverlayDelayed(); }
+                    if (ctrl && shift) { AdjustVideoBrightness(-0.05f); }
+                    else if (ctrl) { _subtitleDelay -= AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay(L("SubtitleDelayPrefix") + _subtitleDelay + "ms"); HideOverlayDelayed(); }
                     else AdjustVolume(-5);
                     break;
                 case VirtualKey.F:
@@ -3749,6 +4086,9 @@ namespace HyperMedia
                     break;
                 case VirtualKey.L:
                     PlaylistToggleButton_Click(null, null);
+                    break;
+                case VirtualKey.M:
+                    if (!_isMusicMode) ToggleMiniPlayer();
                     break;
                 case VirtualKey.S:
                     if (_isMusicMode) { handled = false; break; }
@@ -3820,20 +4160,104 @@ namespace HyperMedia
 
         #region Swipe Gestures
 
+        private bool _isSwiping;
+        private int _gestureMode = 0; // 0=none, 1=brightness(left), 2=volume(right)
+        private double _gestureAccum = 0;
+
+        private const double GESTURE_STEP = 10;
+
         private void VideoArea_ManipulationStarted(object sender, ManipulationStartedRoutedEventArgs e)
         {
-            _swipeStartX = e.Position.X;
             _isSwiping = false;
+            _gestureMode = 0;
+            _gestureAccum = 0;
         }
 
         private void VideoArea_ManipulationDelta(object sender, ManipulationDeltaRoutedEventArgs e)
         {
             double deltaX = e.Cumulative.Translation.X;
-            if (Math.Abs(deltaX) > 50)
+            double deltaY = e.Cumulative.Translation.Y;
+
+            // Determine gesture mode on first significant movement
+            if (_gestureMode == 0 && (Math.Abs(deltaX) > 20 || Math.Abs(deltaY) > 20))
             {
-                _isSwiping = true;
-                SwipeIndicator.Visibility = Visibility.Visible;
+                if (Math.Abs(deltaY) > Math.Abs(deltaX))
+                {
+                    // Vertical gesture: brightness (left half) / volume (right half)
+                    var point = e.Position;
+                    double width = VlcVideoPanel.ActualWidth > 0 ? VlcVideoPanel.ActualWidth : 800;
+                    _gestureMode = (point.X < width / 2) ? 1 : 2;
+                }
+                else
+                {
+                    _gestureMode = -1; // horizontal seek
+                    _isSwiping = true;
+                    SwipeIndicator.Visibility = Visibility.Visible;
+                }
             }
+
+            if (_gestureMode == 1)
+            {
+                _gestureAccum += e.Delta.Translation.Y;
+                while (_gestureAccum > GESTURE_STEP)
+                {
+                    _gestureAccum -= GESTURE_STEP;
+                    AdjustGestureBrightness(-0.03f);
+                }
+                while (_gestureAccum < -GESTURE_STEP)
+                {
+                    _gestureAccum += GESTURE_STEP;
+                    AdjustGestureBrightness(0.03f);
+                }
+                e.Handled = true;
+            }
+            else if (_gestureMode == 2)
+            {
+                _gestureAccum += e.Delta.Translation.Y;
+                while (_gestureAccum > GESTURE_STEP)
+                {
+                    _gestureAccum -= GESTURE_STEP;
+                    AdjustVolume(-3);
+                }
+                while (_gestureAccum < -GESTURE_STEP)
+                {
+                    _gestureAccum += GESTURE_STEP;
+                    AdjustVolume(3);
+                }
+                e.Handled = true;
+            }
+        }
+
+        private void AdjustGestureBrightness(float delta)
+        {
+            if (_vlcPlayer == null) return;
+            try
+            {
+                _videoBrightness = Math.Max(0.3f, Math.Min(1.7f, _videoBrightness + delta));
+                _vlcPlayer.setAdjustFloat(0, _videoBrightness);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void AdjustVideoBrightness(float delta)
+        {
+            AdjustGestureBrightness(delta);
+            if (_vlcPlayer != null)
+                ShowOverlay(L("BrightnessPrefix") + ((int)(_videoBrightness * 100)) + "%");
+            HideOverlayDelayed();
+        }
+
+        private void AdjustVideoContrast(float delta)
+        {
+            if (_vlcPlayer == null) return;
+            try
+            {
+                _videoContrast = Math.Max(0.3f, Math.Min(1.7f, _videoContrast + delta));
+                _vlcPlayer.setAdjustFloat(1, _videoContrast);
+                ShowOverlay(L("ContrastPrefix") + ((int)(_videoContrast * 100)) + "%");
+                HideOverlayDelayed();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         private void VideoArea_ManipulationCompleted(object sender, ManipulationCompletedRoutedEventArgs e)
@@ -3850,6 +4274,7 @@ namespace HyperMedia
             }
 
             _isSwiping = false;
+            _gestureMode = 0;
         }
 
         #endregion
@@ -4094,27 +4519,27 @@ namespace HyperMedia
             menu.Placement = FlyoutPlacementMode.Bottom;
 
             var audioPlus = new MenuFlyoutItem { Text = "音频延迟 +" + AV_SYNC_STEP + "ms" };
-            audioPlus.Tapped += (s, ev) => { _audioDelay += AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay("音频延迟: " + _audioDelay + "ms"); HideOverlayDelayed(); };
+            audioPlus.Tapped += (s, ev) => { _audioDelay += AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay(L("AudioDelayPrefix") + _audioDelay + "ms"); HideOverlayDelayed(); };
             menu.Items.Add(audioPlus);
 
             var audioMinus = new MenuFlyoutItem { Text = "音频延迟 -" + AV_SYNC_STEP + "ms" };
-            audioMinus.Tapped += (s, ev) => { _audioDelay -= AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay("音频延迟: " + _audioDelay + "ms"); HideOverlayDelayed(); };
+            audioMinus.Tapped += (s, ev) => { _audioDelay -= AV_SYNC_STEP; ApplyAudioDelay(); ShowOverlay(L("AudioDelayPrefix") + _audioDelay + "ms"); HideOverlayDelayed(); };
             menu.Items.Add(audioMinus);
 
             var audioReset = new MenuFlyoutItem { Text = "重置音频延迟" };
-            audioReset.Tapped += (s, ev) => { _audioDelay = 0; ApplyAudioDelay(); ShowOverlay("音频延迟已重置"); HideOverlayDelayed(); };
+            audioReset.Tapped += (s, ev) => { _audioDelay = 0; ApplyAudioDelay(); ShowOverlay(L("AudioDelayReset")); HideOverlayDelayed(); };
             menu.Items.Add(audioReset);
 
             var subPlus = new MenuFlyoutItem { Text = "字幕延迟 +" + AV_SYNC_STEP + "ms" };
-            subPlus.Tapped += (s, ev) => { _subtitleDelay += AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay("字幕延迟: " + _subtitleDelay + "ms"); HideOverlayDelayed(); };
+            subPlus.Tapped += (s, ev) => { _subtitleDelay += AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay(L("SubtitleDelayPrefix") + _subtitleDelay + "ms"); HideOverlayDelayed(); };
             menu.Items.Add(subPlus);
 
             var subMinus = new MenuFlyoutItem { Text = "字幕延迟 -" + AV_SYNC_STEP + "ms" };
-            subMinus.Tapped += (s, ev) => { _subtitleDelay -= AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay("字幕延迟: " + _subtitleDelay + "ms"); HideOverlayDelayed(); };
+            subMinus.Tapped += (s, ev) => { _subtitleDelay -= AV_SYNC_STEP; ApplySubtitleDelay(); ShowOverlay(L("SubtitleDelayPrefix") + _subtitleDelay + "ms"); HideOverlayDelayed(); };
             menu.Items.Add(subMinus);
 
             var subReset = new MenuFlyoutItem { Text = "重置字幕延迟" };
-            subReset.Tapped += (s, ev) => { _subtitleDelay = 0; ApplySubtitleDelay(); ShowOverlay("字幕延迟已重置"); HideOverlayDelayed(); };
+            subReset.Tapped += (s, ev) => { _subtitleDelay = 0; ApplySubtitleDelay(); ShowOverlay(L("SubtitleDelayReset")); HideOverlayDelayed(); };
             menu.Items.Add(subReset);
 
             menu.ShowAt(AudioSyncBtn);
@@ -4174,7 +4599,7 @@ namespace HyperMedia
                         item.Tapped += (s, ev) =>
                         {
                             try { _vlcPlayer?.outputDeviceSet(capturedId); } catch (Exception ex) { LogUnhandled(ex); }
-                            ShowOverlay("音频设备: " + devName);
+                            ShowOverlay(L("AudioDevicePrefix") + devName);
                             HideOverlayDelayed();
                         };
                         menu.Items.Add(item);
@@ -4215,7 +4640,7 @@ namespace HyperMedia
                 {
                     _aspectRatioIndex = idx;
                     try { _vlcPlayer?.setAspectRatio(_aspectRatios[idx]); } catch (Exception ex) { LogUnhandled(ex); }
-                    ShowOverlay("画面比例: " + ratioNames[idx]);
+                    ShowOverlay(L("AspectRatioPrefix") + ratioNames[idx]);
                     HideOverlayDelayed();
                 };
                 menu.Items.Add(item);
@@ -4235,13 +4660,352 @@ namespace HyperMedia
                 {
                     _videoScaleIndex = idx;
                     try { _vlcPlayer?.setScale(_videoScaleFactors[idx]); } catch (Exception ex) { LogUnhandled(ex); }
-                    ShowOverlay("缩放: " + scaleNames[idx]);
+                    ShowOverlay(L("ScalePrefix") + scaleNames[idx]);
                     HideOverlayDelayed();
                 };
                 menu.Items.Add(item);
             }
 
             menu.ShowAt(AspectRatioButton);
+        }
+
+        #endregion
+
+        #region Video Rotation
+
+        private void RotateBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isNetworkStream)
+            {
+                ShowOverlay(L("NetworkNoRotate"));
+                HideOverlayDelayed();
+                return;
+            }
+
+            _videoRotation = (_videoRotation + 1) % 4;
+            ShowOverlay(L("RotationPrefix") + _rotationNames[_videoRotation]);
+            HideOverlayDelayed();
+
+            if (_videoRotation == 0)
+            {
+                // Reopen without transform filter
+                ReloadCurrentMedia();
+            }
+            else
+            {
+                ReloadCurrentMedia();
+            }
+        }
+
+        private void ReloadCurrentMedia()
+        {
+            if (_vlcPlayer == null || _playlist.Count == 0 || _playlistIndex < 0) return;
+
+            // Preserve position via resume mechanism
+            SaveResumePosition();
+            _isPlaying = false;
+
+            try
+            {
+                _vlcPlayer.stop();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+
+            OpenFile(_playlist[_playlistIndex]);
+        }
+
+        #endregion
+
+        #region Crop
+
+        private void CropBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new MenuFlyout();
+            menu.Placement = FlyoutPlacementMode.Bottom;
+
+            var header = new MenuFlyoutItem { Text = "画面裁剪" };
+            header.IsEnabled = false;
+            menu.Items.Add(header);
+
+            for (int i = 0; i < _cropGeometries.Length; i++)
+            {
+                int idx = i;
+                var item = new MenuFlyoutItem { Text = _cropNames[i] };
+                if (idx == _cropIndex) item.Text = "✓ " + item.Text;
+                item.Tapped += (s, ev) =>
+                {
+                    _cropIndex = idx;
+                    _cropGeometry = _cropGeometries[idx];
+                    try
+                    {
+                        if (_vlcPlayer != null)
+                            _vlcPlayer.setCropGeometry(_cropGeometry);
+                    }
+                    catch (Exception ex) { LogUnhandled(ex); }
+                    ShowOverlay(L("CropPrefix") + _cropNames[idx]);
+                    HideOverlayDelayed();
+                };
+                menu.Items.Add(item);
+            }
+
+            menu.ShowAt(CropBtn);
+        }
+
+        #endregion
+
+        #region Night Mode
+
+        private void NightModeBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _nightMode = !_nightMode;
+            NightModeBtn.Opacity = _nightMode ? 1.0 : 0.6;
+            ApplyNightMode();
+        }
+
+        private void ApplyNightMode()
+        {
+            try
+            {
+                if (_vlcPlayer == null) return;
+                if (_nightMode)
+                {
+                    // Warm low-brightness preset
+                    _vlcPlayer.setAdjustFloat(0, 0.72f);   // brightness
+                    _vlcPlayer.setAdjustFloat(1, 0.88f);   // contrast
+                    _vlcPlayer.setAdjustFloat(2, -10f);    // hue (warm)
+                    _vlcPlayer.setAdjustFloat(3, 0.9f);    // saturation
+                    _vlcPlayer.setAdjustFloat(4, 1.08f);   // gamma
+                    ShowOverlay(L("NightModeOn"));
+                }
+                else
+                {
+                    _vlcPlayer.setAdjustFloat(0, _videoBrightness);
+                    _vlcPlayer.setAdjustFloat(1, _videoContrast);
+                    _vlcPlayer.setAdjustFloat(2, _videoHue);
+                    _vlcPlayer.setAdjustFloat(3, _videoSaturation);
+                    _vlcPlayer.setAdjustFloat(4, _videoGamma);
+                    ShowOverlay(L("NightModeOff"));
+                }
+                HideOverlayDelayed();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        #endregion
+
+        #region Recording
+
+        private void RecordBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isNetworkStream)
+            {
+                ShowOverlay(L("NetworkNoRecord"));
+                HideOverlayDelayed();
+                return;
+            }
+            if (_vlcPlayer == null || _playlist.Count == 0 || _playlistIndex < 0)
+            {
+                ShowOverlay(L("NoMedia"));
+                HideOverlayDelayed();
+                return;
+            }
+
+            if (!_recording)
+            {
+                StartRecording();
+            }
+            else
+            {
+                StopRecording();
+            }
+        }
+
+        private void StartRecording()
+        {
+            try
+            {
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                _recordingFileName = "Recording_" + timestamp + ".mp4";
+                var tempFolder = ApplicationData.Current.TemporaryFolder;
+                _recordingPath = tempFolder.Path + "\\" + _recordingFileName;
+                _recording = true;
+
+                var icon = RecordBtn.Content as TextBlock;
+                if (icon != null)
+                {
+                    icon.Text = "\u23F9";
+                    icon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xFF, 0x44, 0x44));
+                }
+
+                ShowOverlay(L("RecordingStarted") + " -> " + _recordingFileName);
+                HideOverlayDelayed();
+                ReloadCurrentMedia();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private async void StopRecording()
+        {
+            try
+            {
+                _recording = false;
+                string savedPath = _recordingPath;
+                string savedName = _recordingFileName;
+
+                var icon = RecordBtn.Content as TextBlock;
+                if (icon != null)
+                {
+                    icon.Text = "\u23FA";
+                    icon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+                }
+
+                // Reload media without sout to resume normal playback
+                ReloadCurrentMedia();
+
+                // Wait for file to flush, then copy to Videos library
+                await Task.Delay(2000);
+                try
+                {
+                    var tempFile = await StorageFile.GetFileFromPathAsync(savedPath);
+                    var videosFolder = KnownFolders.VideosLibrary;
+                    var dest = await tempFile.CopyAsync(videosFolder, savedName, NameCollisionOption.ReplaceExisting);
+                    ShowOverlay(L("RecordingSaved") + ": " + savedName);
+                    OverlayOpenBtn.Visibility = Visibility.Visible;
+                    OverlayOpenBtn.Tag = dest.Path;
+                    OverlayNotification.Visibility = Visibility.Visible;
+                    _overlayNotifyTimer.Stop();
+                    _overlayNotifyTimer.Start();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[HyperMedia] Recording save failed: {0}", ex.Message);
+                    ShowOverlay(L("RecordingFailed") + ": " + ex.Message);
+                    HideOverlayDelayed();
+                }
+
+                _recordingPath = null;
+                _recordingFileName = null;
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        #endregion
+
+        #region Rating & Stats
+
+        private void RatingBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var menu = new MenuFlyout();
+            menu.Placement = FlyoutPlacementMode.Bottom;
+
+            var header = new MenuFlyoutItem { Text = "媒体评分" };
+            header.IsEnabled = false;
+            menu.Items.Add(header);
+
+            string[] stars = { "☆☆☆☆☆", "★☆☆☆☆", "★★☆☆☆", "★★★☆☆", "★★★★☆", "★★★★★" };
+            int current = 0;
+            if (!string.IsNullOrEmpty(_originalFileName))
+                current = PlayHistory.GetRating(_originalFileName);
+
+            for (int i = 0; i <= 5; i++)
+            {
+                int rating = i;
+                var item = new MenuFlyoutItem { Text = stars[i] };
+                if (rating == current) item.Text = "✓ " + item.Text;
+                item.Tapped += (s, ev) =>
+                {
+                    if (string.IsNullOrEmpty(_originalFileName)) return;
+                    PlayHistory.SetRating(_originalFileName, rating);
+                    UpdateRatingBtnIcon();
+                    ShowOverlay(rating > 0 ? L("RatingPrefix") + stars[rating] : L("RatingCleared"));
+                    HideOverlayDelayed();
+                };
+                menu.Items.Add(item);
+            }
+
+            // Show stats
+            if (!string.IsNullOrEmpty(_originalFileName))
+            {
+                int playCount = PlayHistory.GetPlayCount(_originalFileName);
+                var statsItem = new MenuFlyoutItem { Text = "播放次数: " + playCount };
+                statsItem.IsEnabled = false;
+                menu.Items.Add(statsItem);
+            }
+
+            menu.ShowAt(RatingBtn);
+        }
+
+        private void UpdateRatingBtnIcon()
+        {
+            try
+            {
+                var icon = RatingBtn.Content as TextBlock;
+                if (icon == null) return;
+                int rating = !string.IsNullOrEmpty(_originalFileName) ? PlayHistory.GetRating(_originalFileName) : 0;
+                icon.Text = rating > 0 ? "\u2605" : "\u2606";
+                icon.Foreground = rating > 0
+                    ? new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB))
+                    : new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        #endregion
+
+        #region Mini Player
+
+        private bool _miniPlayerMode = false;
+
+        private void ToggleMiniPlayer()
+        {
+            _miniPlayerMode = !_miniPlayerMode;
+            if (_miniPlayerMode)
+            {
+                MiniPlayerTitle.Text = _originalFileName ?? "";
+                UpdateMiniPlayerIcon();
+                MiniPlayerOverlay.Visibility = Visibility.Visible;
+                HideControls();
+                _autoHideTimer.Stop();
+            }
+            else
+            {
+                MiniPlayerOverlay.Visibility = Visibility.Collapsed;
+                ShowControls();
+            }
+        }
+
+        private void UpdateMiniPlayerIcon()
+        {
+            var icon = MiniPlayPauseIcon;
+            if (icon == null) return;
+            icon.Text = _isPlaying ? "\u2016" : "\u25B6";
+        }
+
+        private void MiniPlayPauseBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePlayPause();
+            UpdateMiniPlayerIcon();
+        }
+
+        private void MiniPrevBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playlist.Count > 0) PlayPrev();
+        }
+
+        private void MiniNextBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playlist.Count > 0) PlayNext();
+        }
+
+        private void MiniExitBtn_Click(object sender, RoutedEventArgs e)
+        {
+            SaveResumePosition();
+            StopPlayback();
+            MiniPlayerOverlay.Visibility = Visibility.Collapsed;
+            _miniPlayerMode = false;
+            WelcomeScreen.Visibility = Visibility.Visible;
+            FileNameText.Text = "";
+            ShowControls();
         }
 
         #endregion
@@ -4339,7 +5103,7 @@ namespace HyperMedia
             }
             catch (Exception ex)
             {
-                ShowOverlay("均衡器错误: " + ex.Message);
+                ShowOverlay(L("EqualizerErrorPrefix") + ex.Message);
                 HideOverlayDelayed();
             }
         }
@@ -4438,7 +5202,7 @@ namespace HyperMedia
                         EqPresetCombo.Items.Add(new ComboBoxItem { Content = "自定义", Tag = -1 });
                 }
 
-                ShowOverlay("自定义均衡器预置已保存");
+                ShowOverlay(L("EqCustomSaved"));
                 HideOverlayDelayed();
             }
             catch (Exception ex) { LogUnhandled(ex); }
@@ -4539,7 +5303,7 @@ namespace HyperMedia
             SaturationSlider.Value = _videoSaturation;
             GammaSlider.Value = _videoGamma;
             _filterInitializing = false;
-            ShowOverlay("视频滤镜已重置");
+            ShowOverlay(L("FilterReset"));
             HideOverlayDelayed();
         }
 
@@ -4576,7 +5340,7 @@ namespace HyperMedia
                         item.Tapped += (s, ev) =>
                         {
                             try { _vlcPlayer.setChapter(idx); } catch (Exception ex) { LogUnhandled(ex); }
-                            ShowOverlay("跳转: " + name);
+                            ShowOverlay(L("JumpPrefix") + name);
                             HideOverlayDelayed();
                         };
                         menu.Items.Add(item);
@@ -4672,6 +5436,17 @@ namespace HyperMedia
         #endregion
 
         #region Utility
+
+        private static string L(string key)
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null) return appText.T(key);
+            }
+            catch { }
+            return key;
+        }
 
         private static void LogUnhandled(Exception ex)
         {

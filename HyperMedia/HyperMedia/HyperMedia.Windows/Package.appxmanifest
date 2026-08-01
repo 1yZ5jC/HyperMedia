@@ -23,6 +23,44 @@
           <Protocol Name="hypermedia" />
         </Extension>
         <Extension Category="windows.search" />
+        <Extension Category="windows.fileTypeAssociation">
+          <FileTypeAssociation Name="hypermedia.video">
+            <DisplayName>HyperMedia 视频</DisplayName>
+            <Logo>Assets\Logo.png</Logo>
+            <SupportedFileTypes>
+              <FileType>.mp4</FileType>
+              <FileType>.mkv</FileType>
+              <FileType>.avi</FileType>
+              <FileType>.webm</FileType>
+              <FileType>.flv</FileType>
+              <FileType>.mov</FileType>
+              <FileType>.wmv</FileType>
+              <FileType>.m4v</FileType>
+              <FileType>.mpg</FileType>
+              <FileType>.mpeg</FileType>
+              <FileType>.ts</FileType>
+              <FileType>.3gp</FileType>
+              <FileType>.rmvb</FileType>
+              <FileType>.vob</FileType>
+            </SupportedFileTypes>
+          </FileTypeAssociation>
+        </Extension>
+        <Extension Category="windows.fileTypeAssociation">
+          <FileTypeAssociation Name="hypermedia.audio">
+            <DisplayName>HyperMedia 音频</DisplayName>
+            <Logo>Assets\Logo.png</Logo>
+            <SupportedFileTypes>
+              <FileType>.mp3</FileType>
+              <FileType>.flac</FileType>
+              <FileType>.wav</FileType>
+              <FileType>.aac</FileType>
+              <FileType>.ogg</FileType>
+              <FileType>.wma</FileType>
+              <FileType>.m4a</FileType>
+              <FileType>.opus</FileType>
+            </SupportedFileTypes>
+          </FileTypeAssociation>
+        </Extension>
       </Extensions>
     </Application>
   </Applications>

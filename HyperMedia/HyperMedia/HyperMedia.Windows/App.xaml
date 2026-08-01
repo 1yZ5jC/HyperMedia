@@ -5,15 +5,19 @@
     xmlns:local="using:HyperMedia">
     <Application.Resources>
         <ResourceDictionary>
+            <local:AppText x:Key="AppText"/>
             <local:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
             <local:NonNegativeToVisibilityConverter x:Key="NonNegativeToVisibilityConverter"/>
+            <local:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
+            <local:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
+            <local:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
 
             <!-- Zune Navigation Style -->
             <Style x:Key="ZuneNavStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Foreground" Value="#99FFFFFF"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="4,2"/>
+                <Setter Property="Padding" Value="10,8"/>
                 <Setter Property="FontFamily" Value="Segoe UI"/>
                 <Setter Property="FontSize" Value="12"/>
                 <Setter Property="CharacterSpacing" Value="60"/>
@@ -59,7 +63,7 @@
                 <Setter Property="Background" Value="#FFE040FB"/>
                 <Setter Property="Foreground" Value="#FF0A0A0F"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="20,8"/>
+                <Setter Property="Padding" Value="24,12"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -98,7 +102,7 @@
                 <Setter Property="Background" Value="#FFE040FB"/>
                 <Setter Property="Foreground" Value="#FF0A0A0F"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="28,12"/>
+                <Setter Property="Padding" Value="32,14"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -137,7 +141,7 @@
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Foreground" Value="#FFFFFFFF"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="16,12"/>
+                <Setter Property="Padding" Value="20,14"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
@@ -240,7 +244,7 @@
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="Foreground" Value="#FFFFFFFF"/>
                 <Setter Property="BorderThickness" Value="0"/>
-                <Setter Property="Padding" Value="14,10"/>
+                <Setter Property="Padding" Value="18,14"/>
                 <Setter Property="Template">
                     <Setter.Value>
                         <ControlTemplate TargetType="Button">
