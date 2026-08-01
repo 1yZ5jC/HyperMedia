@@ -102,6 +102,17 @@
                                                FontSize="13" VerticalAlignment="Center" CharacterSpacing="40"/>
                                 </StackPanel>
                             </Button>
+                            <Button x:Name="IdentifyBtn" Click="IdentifyButton_Click" Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,16,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="听歌识曲：选择音频文件识别歌曲"/>
+                                </ToolTipService.ToolTip>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="14"
+                                               Foreground="#99FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock x:Name="IdentifyBtnText" Text="听歌识曲" Foreground="#99FFFFFF" FontFamily="Segoe UI"
+                                               FontSize="13" VerticalAlignment="Center" CharacterSpacing="40"/>
+                                </StackPanel>
+                            </Button>
                             <TextBlock Text="或将文件拖入窗口"
                                        FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
                                        VerticalAlignment="Center"/>

@@ -222,6 +222,27 @@
                     </StackPanel>
                 </Grid>
 
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="歌词来源" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="选择在线歌词的获取来源（无本地歌词时生效）"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="LyricSourceCombo" Grid.Column="1"
+                              Width="120" VerticalAlignment="Center"
+                              SelectionChanged="LyricSourceCombo_SelectionChanged">
+                        <ComboBoxItem Content="自动" Tag="auto" IsSelected="True"/>
+                        <ComboBoxItem Content="网易云音乐" Tag="netease"/>
+                        <ComboBoxItem Content="QQ 音乐" Tag="qq"/>
+                    </ComboBox>
+                </Grid>
+
                 <!-- Video -->
                 <TextBlock Text="视频" FontFamily="Segoe UI" FontSize="11"
                            Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>

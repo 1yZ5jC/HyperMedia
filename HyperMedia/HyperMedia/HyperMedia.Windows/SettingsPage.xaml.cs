@@ -26,6 +26,7 @@ namespace HyperMedia
         private const string KEY_INTRO_SKIP = "Settings_IntroSkip";
         private const string KEY_LIGHT_THEME = "Settings_LightTheme";
         private const string KEY_LANGUAGE = "Settings_Language";
+        private const string KEY_LYRIC_SOURCE = "Settings_LyricSource";
 
         public SettingsPage()
         {
@@ -125,6 +126,13 @@ namespace HyperMedia
             if (settings.Values.ContainsKey(KEY_LIGHT_THEME))
                 LightThemeToggle.IsOn = (bool)settings.Values[KEY_LIGHT_THEME];
 
+            if (settings.Values.ContainsKey(KEY_LYRIC_SOURCE))
+            {
+                string source = settings.Values[KEY_LYRIC_SOURCE] as string;
+                if (!string.IsNullOrEmpty(source))
+                    SelectComboBoxItem(LyricSourceCombo, source);
+            }
+
             // Restore language selection (without triggering reload loop)
             _isLoading = true;
             if (settings.Values.ContainsKey(KEY_LANGUAGE))
@@ -151,7 +159,6 @@ namespace HyperMedia
             SubtitleColorCombo.SelectionChanged += SubtitleColorCombo_SelectionChanged;
             _isLoading = false;
         }
-
         private void SaveSetting(string key, object value)
         {
             try
@@ -368,6 +375,34 @@ namespace HyperMedia
             }
             catch { }
             return false;
+        }
+
+        private void LyricSourceCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                if (LyricSourceCombo.SelectedItem == null) return;
+                var item = LyricSourceCombo.SelectedItem as ComboBoxItem;
+                if (item != null && item.Tag != null)
+                    SaveSetting(KEY_LYRIC_SOURCE, item.Tag.ToString());
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] LyricSourceCombo failed: {0}", ex.Message); }
+        }
+
+        public static string GetLyricSource()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_LYRIC_SOURCE))
+                {
+                    string v = settings.Values[KEY_LYRIC_SOURCE] as string;
+                    if (!string.IsNullOrEmpty(v)) return v;
+                }
+            }
+            catch { }
+            return "auto";
         }
 
         private void LanguageCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)

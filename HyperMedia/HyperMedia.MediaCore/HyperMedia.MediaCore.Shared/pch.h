@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
@@ -19,7 +19,11 @@ namespace Windows { namespace Storage { namespace Streams {
 }}}
 #endif
 
+// Default to enabled; the WindowsPhone project overrides this to 0 via
+// HYPERMEDIA_HAS_LIBVLC=0 in its preprocessor definitions (no libVLC there).
+#ifndef HYPERMEDIA_HAS_LIBVLC
 #define HYPERMEDIA_HAS_LIBVLC 1
+#endif
 
 #if HYPERMEDIA_HAS_LIBVLC
 #include <vlc/vlc.h>

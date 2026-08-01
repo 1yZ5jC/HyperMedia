@@ -388,6 +388,73 @@ DecodedAudioFrame^ LibVlcDecoder::ReadNextAudioFrame()
 #endif
 }
 
+Platform::Array<int16_t>^ LibVlcDecoder::CollectAudioPcm(double seconds)
+{
+#if HYPERMEDIA_HAS_LIBVLC
+    if (!_ctx || !_ctx->vlcPlayer || !_ctx->audioRingBuffer) return nullptr;
+
+    std::mutex* mtx = (std::mutex*)_ctx->audioMutex;
+
+    // Resume playback so the audio callback keeps producing samples
+    libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
+
+    int bytesPerSecond = _audioSampleRate * _audioChannels * (int)sizeof(int16_t);
+    int targetBytes = (int)(bytesPerSecond * seconds);
+    if (targetBytes > _ctx->audioRingSize)
+        targetBytes = _ctx->audioRingSize;
+
+    auto collected = ref new Platform::Collections::Vector<int16_t>();
+    libvlc_time_t startTick = libvlc_clock();
+    int64_t lastTick = 0;
+
+    while (collected->Size < (unsigned)(targetBytes / (int)sizeof(int16_t)))
+    {
+        {
+            std::lock_guard<std::mutex> lock(*mtx);
+            int available = _ctx->audioRingCount;
+            if (available >= 4096)
+            {
+                int readBytes = (available / 4096) * 4096;
+                if (readBytes > 65536) readBytes = 65536;
+                for (int i = 0; i < readBytes; i += 2)
+                {
+                    int16_t sample = (int16_t)((uint8_t)_ctx->audioRingBuffer[_ctx->audioRingRead] |
+                        ((uint8_t)_ctx->audioRingBuffer[(_ctx->audioRingRead + 1) % _ctx->audioRingSize] << 8));
+                    collected->Append(sample);
+                    _ctx->audioRingRead = (_ctx->audioRingRead + 2) % _ctx->audioRingSize;
+                }
+                _ctx->audioRingCount -= readBytes;
+            }
+        }
+
+        // Stop when the media finishes or a timeout far beyond the target elapses
+        libvlc_time_t now = libvlc_clock();
+        if (libvlc_media_player_get_state((libvlc_media_player_t*)_ctx->vlcPlayer) == libvlc_Ended)
+            break;
+        if (now - startTick > (libvlc_time_t)((seconds + 8.0) * 1000000))
+            break;
+
+        // Sleep a little to let the callback fill the ring
+        if (libvlc_clock() - lastTick > 20000)
+        {
+            lastTick = libvlc_clock();
+            ::Sleep(10);
+        }
+    }
+
+    libvlc_media_player_pause((libvlc_media_player_t*)_ctx->vlcPlayer);
+
+    if (collected->Size == 0) return nullptr;
+
+    auto result = ref new Platform::Array<int16_t>(collected->Size);
+    for (unsigned i = 0; i < collected->Size; i++)
+        result[i] = collected->GetAt(i);
+    return result;
+#else
+    return nullptr;
+#endif
+}
+
 void LibVlcDecoder::SeekTo(double seconds)
 {
 #if HYPERMEDIA_HAS_LIBVLC

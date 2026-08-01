@@ -317,10 +317,35 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
-                        <TextBlock x:Name="LyricsTitle" Grid.Row="0"
-                                   Text="歌词" FontFamily="Segoe UI" FontSize="14"
-                                   Foreground="#44E040FB" CharacterSpacing="80"
-                                   Margin="0,0,0,16"/>
+                        <Grid Grid.Row="0" Margin="0,0,0,16">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="LyricsTitle" Grid.Column="0"
+                                       Text="歌词" FontFamily="Segoe UI" FontSize="14"
+                                       Foreground="#44E040FB" CharacterSpacing="80"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="来源:" FontFamily="Segoe UI" FontSize="10"
+                                           Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                                <Button x:Name="LyricSrcAutoBtn" Click="LyricSourceButton_Click"
+                                        Tag="auto" FontSize="10" Padding="8,4" Margin="0,0,2,0"
+                                        Background="#33E040FB" Foreground="#FFFFFFFF" BorderThickness="0">
+                                    <TextBlock Text="自动" FontSize="10" Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="LyricSrcNeteaseBtn" Click="LyricSourceButton_Click"
+                                        Tag="netease" FontSize="10" Padding="8,4" Margin="0,0,2,0"
+                                        Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
+                                    <TextBlock Text="网易云" FontSize="10" Foreground="#88FFFFFF"/>
+                                </Button>
+                                <Button x:Name="LyricSrcQqBtn" Click="LyricSourceButton_Click"
+                                        Tag="qq" FontSize="10" Padding="8,4" Margin="0,0,0,0"
+                                        Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
+                                    <TextBlock Text="QQ" FontSize="10" Foreground="#88FFFFFF"/>
+                                </Button>
+                            </StackPanel>
+                        </Grid>
                         <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1"
                                       VerticalScrollBarVisibility="Auto"
                                       HorizontalScrollBarVisibility="Disabled">

@@ -1,7 +1,43 @@
 #pragma once
 
 #include "pch.h"
-#include "FFmpegInterop.h"
+
+// Decoded frame types that were previously provided by the (absent) FFmpegInterop.h.
+namespace HyperMedia
+{
+    namespace MediaCore
+    {
+        public ref class DecodedVideoFrame sealed
+        {
+        internal:
+            Platform::Array<uint8_t>^ _data;
+            int _width;
+            int _height;
+            int64_t _timestamp;
+        public:
+            property Platform::Array<uint8_t>^ Data { Platform::Array<uint8_t>^ get() { return _data; } }
+            property int Width { int get() { return _width; } }
+            property int Height { int get() { return _height; } }
+            property int64_t Timestamp { int64_t get() { return _timestamp; } }
+        };
+
+        public ref class DecodedAudioFrame sealed
+        {
+        internal:
+            Platform::Array<uint8_t>^ _data;
+            int _sampleCount;
+            int _sampleRate;
+            int _channels;
+            int64_t _timestamp;
+        public:
+            property Platform::Array<uint8_t>^ Data { Platform::Array<uint8_t>^ get() { return _data; } }
+            property int SampleCount { int get() { return _sampleCount; } }
+            property int SampleRate { int get() { return _sampleRate; } }
+            property int Channels { int get() { return _channels; } }
+            property int64_t Timestamp { int64_t get() { return _timestamp; } }
+        };
+    }
+}
 
 struct LibVlcContextData
 {
@@ -62,6 +98,10 @@ namespace HyperMedia
 
             DecodedVideoFrame^ ReadNextVideoFrame();
             DecodedAudioFrame^ ReadNextAudioFrame();
+
+            // Play the file for the given duration (or to the end, whichever first)
+            // and return the captured audio as interleaved S16N PCM.
+            Platform::Array<int16_t>^ CollectAudioPcm(double seconds);
 
             void SeekTo(double seconds);
 
