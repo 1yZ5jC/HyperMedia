@@ -9,10 +9,119 @@
     KeyDown="Page_KeyDown"
     PointerMoved="Page_PointerMoved"
     PointerWheelChanged="Page_PointerWheelChanged"
-    AllowDrop="True"
-    DragOver="Page_DragOver"
-    Drop="Page_Drop"
     Background="#FF0A0A0F">
+
+    <Page.BottomAppBar>
+        <AppBar x:Name="ToolsAppBar" IsSticky="False">
+            <StackPanel Orientation="Horizontal" Margin="20,0">
+                <Button x:Name="RecordBtn" Click="RecordBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="录制当前视频 (转码保存)"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock x:Name="RecordBtnIcon" Text="&#x23FA;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="AspectRatioButton" Click="AspectRatioButton_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="画面比例"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x2B1A;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="RotateBtn" Click="RotateBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="视频旋转"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F504;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="CropBtn" Click="CropBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="画面裁剪"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x25A2;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="NightModeBtn" Click="NightModeBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="夜间护眼模式"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F319;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="AudioDeviceBtn" Click="AudioDeviceBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="音频输出设备"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F3A7;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="MiniPlayerBtn" Click="MiniPlayerBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="迷你播放器 (M)"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="AudioSyncBtn" Click="AudioSyncBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="音画同步"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x23F3;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="EqualizerBtn" Click="EqualizerBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="均衡器"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="VideoFilterBtn" Click="VideoFilterBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="视频滤镜"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F3A8;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="ChapterBtn" Click="ChapterBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0"
+                        Visibility="Collapsed">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="章节"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F4D6;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="StatsBtn" Click="StatsBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="播放统计 (Ctrl+I)"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F4CA;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="OpenFolderBtn" Click="OpenFolderBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="打开文件所在目录 (Ctrl+E)"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+            </StackPanel>
+        </AppBar>
+    </Page.BottomAppBar>
 
     <Grid x:Name="RootGrid">
         <Grid.ColumnDefinitions>
@@ -65,7 +174,7 @@
                         <StackPanel Grid.Column="0" VerticalAlignment="Center" MaxWidth="520">
                             <TextBlock Text="欢迎" FontFamily="Segoe UI Light" FontSize="56"
                                        Foreground="#FFFFFFFF" Margin="0,0,0,8"/>
-                            <TextBlock Text="拖放文件到这里，按 Ctrl+O 打开，或输入网络地址"
+                            <TextBlock Text="按 Ctrl+O 打开文件，或输入网络地址"
                                        FontFamily="Segoe UI" FontSize="18"
                                        Foreground="#66FFFFFF" Margin="0,0,0,32"
                                        TextWrapping="Wrap"/>
@@ -859,46 +968,6 @@
                             <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
-                        <Button x:Name="RecordBtn" Click="RecordBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="录制当前视频 (转码保存)"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock x:Name="RecordBtnIcon" Text="&#x23FA;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="AspectRatioButton" Click="AspectRatioButton_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="画面比例"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x2B1A;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="RotateBtn" Click="RotateBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="视频旋转"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F504;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="CropBtn" Click="CropBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="画面裁剪"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x25A2;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="NightModeBtn" Click="NightModeBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="夜间护眼模式"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F319;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
                         <Button x:Name="RatingBtn" Click="RatingBtn_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                             <ToolTipService.ToolTip>
@@ -907,69 +976,13 @@
                             <TextBlock Text="&#x2606;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#FFE040FB"/>
                         </Button>
-                        <Button x:Name="AudioSyncBtn" Click="AudioSyncBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="音画同步"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x23F3;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="AudioDeviceBtn" Click="AudioDeviceBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="音频输出设备"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F3A7;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
+
                         <Button x:Name="BookmarkBtn" Click="BookmarkBtn_Click"
                                 Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                             <ToolTipService.ToolTip>
                                 <ToolTip Content="书签 (Ctrl+B 添加 / Ctrl+Shift+B 查看)"/>
                             </ToolTipService.ToolTip>
                             <TextBlock Text="&#x1F516;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="EqualizerBtn" Click="EqualizerBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="均衡器"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="VideoFilterBtn" Click="VideoFilterBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="视频滤镜"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F3A8;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="ChapterBtn" Click="ChapterBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0"
-                                Visibility="Collapsed">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="章节"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F4D6;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="StatsBtn" Click="StatsBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="播放统计 (Ctrl+I)"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F4CA;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
-                        <Button x:Name="OpenFolderBtn" Click="OpenFolderBtn_Click"
-                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="打开文件所在目录 (Ctrl+E)"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x1F4C2;" FontFamily="Segoe UI Symbol" FontSize="14"
                                        Foreground="#66FFFFFF"/>
                         </Button>
                         <Button x:Name="SpeedButton" Click="SpeedButton_Click"

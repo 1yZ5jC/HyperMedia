@@ -35,6 +35,22 @@ namespace HyperMedia
             LoadSettings();
             ApplyCurrentLanguage();
             this.Loaded += (s, e) => ApplyCurrentLanguage();
+            UpdatePerfLevelText();
+        }
+
+        private void UpdatePerfLevelText()
+        {
+            try
+            {
+                if (PerfLevelText != null)
+                {
+                    string levelName = PerformanceProfile.Level == PerformanceLevel.Low ? L("PerfLow")
+                        : PerformanceProfile.Level == PerformanceLevel.Medium ? L("PerfMedium")
+                        : L("PerfHigh");
+                    PerfLevelText.Text = L("PerfLevel") + ": " + levelName;
+                }
+            }
+            catch { }
         }
 
         private static string L(string key)
@@ -466,7 +482,7 @@ namespace HyperMedia
                     foreach (var key in settings.Values.Keys)
                     {
                         string k = key != null ? key.ToString() : "";
-                        if (k.StartsWith("ResumePosition_") || k.StartsWith("ResumePercent_"))
+                        if (k.StartsWith("ResumePosition_") || k.StartsWith("ResumePercent_") || k.StartsWith("SkipIntro_"))
                             keys.Add(k);
                     }
                     foreach (var key in keys)

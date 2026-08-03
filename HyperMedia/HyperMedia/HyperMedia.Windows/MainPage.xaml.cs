@@ -630,6 +630,10 @@ namespace HyperMedia
                     _playbackSpeed = (double)restore.Values["Restore_Speed"];
                     restore.Values.Remove("Restore_Speed");
                 }
+                if (PerformanceProfile.Level == PerformanceLevel.Low && _playbackSpeed > 1.5)
+                    _playbackSpeed = 1.5;
+                else if (PerformanceProfile.Level == PerformanceLevel.Medium && _playbackSpeed > 2.0)
+                    _playbackSpeed = 2.0;
                 if (restore.Values.ContainsKey("Restore_RepeatMode"))
                 {
                     _repeatMode = (int)restore.Values["Restore_RepeatMode"];
@@ -2231,7 +2235,6 @@ namespace HyperMedia
                 VideoFilterBtn.Visibility = v;
                 SnapshotButton.Visibility = v;
                 ChapterBtn.Visibility = v;
-                AudioDeviceBtn.Visibility = v;
                 RotateBtn.Visibility = v;
                 CropBtn.Visibility = v;
                 RecordBtn.Visibility = v;
@@ -3735,6 +3738,7 @@ namespace HyperMedia
             double seekTo = PositionSlider.Value;
             _isSeeking = false;
             SeekTo(seekTo);
+            TryLearnIntroSkip(seekTo);
         }
 
         private void SeekTo(double seconds)
@@ -3742,12 +3746,6 @@ namespace HyperMedia
             if (_duration <= 0) return;
             _vlcPlayer?.setTime((long)(seconds * 1000));
             CurrentTimeText.Text = FormatTime(seconds);
-
-            // Auto-skip intro learning: manual forward seek into 25s-5min zone = "intro ends here"
-            if (!_isNetworkStream && !string.IsNullOrEmpty(_originalFileName) && _vlcPlayer != null && !_isSeeking)
-            {
-                TryLearnIntroSkip(seconds);
-            }
         }
 
         private const string KEY_SKIP_INTRO = "SkipIntro_";
@@ -3759,6 +3757,8 @@ namespace HyperMedia
         {
             try
             {
+                if (_isNetworkStream || string.IsNullOrEmpty(_originalFileName) || _vlcPlayer == null)
+                    return;
                 if (seconds < INTRO_MIN_MS / 1000.0 || seconds > INTRO_MAX_MS / 1000.0)
                 {
                     if (seconds < 5 && _vlcPlayer != null)
@@ -3848,7 +3848,19 @@ namespace HyperMedia
 
         private void SpeedButton_Click(object sender, RoutedEventArgs e)
         {
-            double[] speeds = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
+            double[] speeds;
+            switch (PerformanceProfile.Level)
+            {
+                case PerformanceLevel.Low:
+                    speeds = new double[] { 0.5, 0.75, 1.0, 1.25, 1.5 };
+                    break;
+                case PerformanceLevel.Medium:
+                    speeds = new double[] { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
+                    break;
+                default:
+                    speeds = new double[] { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0 };
+                    break;
+            }
             int current = Array.IndexOf(speeds, _playbackSpeed);
             if (current < 0) current = 2;
             int next = (current + 1) % speeds.Length;
@@ -3878,17 +3890,17 @@ namespace HyperMedia
             switch (_repeatMode)
             {
                 case 0:
-                    RepeatIcon.Text = "\u1F501";
+                    RepeatIcon.Text = "\U0001F501";
                     RepeatIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
                         Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
                     break;
                 case 1:
-                    RepeatIcon.Text = "\u1F501";
+                    RepeatIcon.Text = "\U0001F501";
                     RepeatIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
                         Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
                     break;
                 case 2:
-                    RepeatIcon.Text = "\u1F502";
+                    RepeatIcon.Text = "\U0001F502";
                     RepeatIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
                         Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
                     break;
@@ -4576,7 +4588,7 @@ namespace HyperMedia
                     PlaylistToggleButton_Click(null, null);
                     break;
                 case VirtualKey.M:
-                    if (!_isMusicMode) ToggleMiniPlayer();
+                    ToggleMiniPlayer();
                     break;
                 case VirtualKey.S:
                     if (_isMusicMode) { handled = false; break; }
@@ -4894,39 +4906,6 @@ namespace HyperMedia
             _autoHideTimer.Stop();
             if (_isPlaying && SettingsPage.GetAutoHideEnabled())
                 HideControls();
-        }
-
-        #endregion
-
-        #region Drag & Drop
-
-        private void Page_DragOver(object sender, DragEventArgs e)
-        {
-        }
-
-        private async void Page_Drop(object sender, DragEventArgs e)
-        {
-            try
-            {
-                var view = e.Data.GetView();
-                if (view.Contains(StandardDataFormats.StorageItems))
-                {
-                    var items = await view.GetStorageItemsAsync();
-                    if (items.Count > 0)
-                    {
-                        _playlist.Clear();
-                        foreach (var item in items)
-                        {
-                            var file = item as StorageFile;
-                            if (file != null)
-                                _playlist.Add(file);
-                        }
-                        _playlistIndex = 0;
-                        OpenFile(_playlist[0]);
-                    }
-                }
-            }
-            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         #endregion
@@ -5285,6 +5264,12 @@ namespace HyperMedia
 
         private void RecordBtn_Click(object sender, RoutedEventArgs e)
         {
+            if (PerformanceProfile.Level == PerformanceLevel.Low)
+            {
+                ShowOverlay(L("PerfNoRecord"));
+                HideOverlayDelayed();
+                return;
+            }
             if (_isNetworkStream)
             {
                 ShowOverlay(L("NetworkNoRecord"));
@@ -5460,6 +5445,11 @@ namespace HyperMedia
                 MiniPlayerOverlay.Visibility = Visibility.Collapsed;
                 ShowControls();
             }
+        }
+
+        private void MiniPlayerBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleMiniPlayer();
         }
 
         private void UpdateMiniPlayerIcon()

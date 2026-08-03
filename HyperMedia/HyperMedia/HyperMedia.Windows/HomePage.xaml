@@ -7,9 +7,6 @@
     mc:Ignorable="d"
     IsTabStop="True"
     KeyDown="Page_KeyDown"
-    AllowDrop="True"
-    DragOver="Page_DragOver"
-    Drop="Page_Drop"
     Background="#FF0A0A0F">
 
     <Grid x:Name="HomeRootGrid" Background="#FF0A0A0F">
@@ -20,7 +17,7 @@
 
         <ScrollViewer x:Name="PanoramaScroll"
                       HorizontalScrollBarVisibility="Hidden"
-                      VerticalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="Auto"
                       VerticalAlignment="Stretch"
                       ZoomMode="Enabled"
                       MinZoomFactor="0.5"
@@ -28,7 +25,7 @@
                       ViewChanged="PanoramaScroll_ViewChanged"
                       PointerWheelChanged="PanoramaScroll_PointerWheelChanged">
 
-            <Grid Height="{Binding ActualHeight, ElementName=PanoramaScroll}">
+            <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="40"/>
@@ -755,30 +752,5 @@
             </Border>
         </Border>
 
-        <!-- Drag & Drop Overlay -->
-        <Border x:Name="DropOverlay" Grid.RowSpan="2" Visibility="Collapsed"
-                AllowDrop="True" DragOver="Page_DragOver" Drop="Page_Drop">
-            <Border.Background>
-                <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
-                    <GradientStop Color="#30E040FB" Offset="0"/>
-                    <GradientStop Color="#1000BCD4" Offset="1"/>
-                </LinearGradientBrush>
-            </Border.Background>
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
-                <Border Width="120" Height="120" CornerRadius="60"
-                        BorderThickness="2" BorderBrush="#FFE040FB"
-                        HorizontalAlignment="Center" Margin="0,0,0,32">
-                    <Grid Background="#10E040FB">
-                        <TextBlock Text="&#x2B07;" FontFamily="Segoe UI Symbol" FontSize="48"
-                                   Foreground="#FFE040FB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                    </Grid>
-                </Border>
-                <TextBlock Text="拖放播放" FontFamily="Segoe UI Light" FontSize="36"
-                           Foreground="#FFFFFFFF" HorizontalAlignment="Center" CharacterSpacing="80"/>
-                <TextBlock Text="释放以开始播放"
-                           FontFamily="Segoe UI" FontSize="16" Foreground="#66FFFFFF"
-                           HorizontalAlignment="Center" Margin="0,16,0,0"/>
-            </StackPanel>
-        </Border>
     </Grid>
 </Page>

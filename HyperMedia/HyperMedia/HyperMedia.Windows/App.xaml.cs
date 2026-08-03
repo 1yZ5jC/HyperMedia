@@ -91,18 +91,7 @@ namespace HyperMedia
                     {
                         var about = new Windows.UI.ApplicationSettings.SettingsCommand(
                             "about", L("AboutCharm"),
-                            (cmd) =>
-                            {
-                                Frame rootFrame = Window.Current.Content as Frame;
-                                if (rootFrame == null)
-                                {
-                                    rootFrame = new Frame();
-                                    rootFrame.CacheSize = 1;
-                                    Window.Current.Content = rootFrame;
-                                }
-                                rootFrame.Navigate(typeof(SettingsPage));
-                                Window.Current.Activate();
-                            });
+                            (cmd) => ShowAboutFlyout());
                         args.Request.ApplicationCommands.Add(about);
                     }
                     catch (Exception ex)
@@ -114,6 +103,74 @@ namespace HyperMedia
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("[HyperMedia] RegisterSettingsCharm failed: {0}", ex.Message);
+            }
+        }
+
+        private void ShowAboutFlyout()
+        {
+            try
+            {
+                var flyout = new SettingsFlyout();
+                flyout.Title = L("AboutCharm");
+
+                var panel = new StackPanel { Margin = new Windows.UI.Xaml.Thickness(28, 8, 28, 28) };
+
+                var logoRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Windows.UI.Xaml.Thickness(0, 0, 0, 12) };
+                var logo = new TextBlock
+                {
+                    Text = "\u25B6",
+                    FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI Symbol"),
+                    FontSize = 18,
+                    Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Margin = new Windows.UI.Xaml.Thickness(0, 0, 10, 0)
+                };
+                var name = new TextBlock
+                {
+                    Text = "HYPERMEDIA",
+                    FontSize = 18,
+                    CharacterSpacing = 80,
+                    Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x33, 0x33, 0x33)),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                logoRow.Children.Add(logo);
+                logoRow.Children.Add(name);
+                panel.Children.Add(logoRow);
+
+                var v = Package.Current.Id.Version;
+                panel.Children.Add(MakeAboutLine(L("AboutVersion") + " " + v.Major + "." + v.Minor + "." + v.Build + "." + v.Revision));
+                panel.Children.Add(MakeAboutLine(L("PerfLevel") + ": " + PerfLevelName()));
+                panel.Children.Add(MakeAboutLine("基于 libVLC 驱动 / Powered by libVLC"));
+                panel.Children.Add(MakeAboutLine(L("AboutLicense")));
+
+                flyout.Content = panel;
+                flyout.ShowIndependent();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ShowAboutFlyout failed: {0}", ex.Message);
+            }
+        }
+
+        private static TextBlock MakeAboutLine(string text)
+        {
+            return new TextBlock
+            {
+                Text = text,
+                FontSize = 13,
+                Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0x33, 0x33, 0x33)),
+                Margin = new Windows.UI.Xaml.Thickness(0, 0, 0, 8),
+                TextWrapping = TextWrapping.Wrap
+            };
+        }
+
+        private static string PerfLevelName()
+        {
+            switch (PerformanceProfile.Level)
+            {
+                case PerformanceLevel.Low: return L("PerfLow");
+                case PerformanceLevel.Medium: return L("PerfMedium");
+                default: return L("PerfHigh");
             }
         }
 

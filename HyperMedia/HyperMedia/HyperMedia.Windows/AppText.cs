@@ -195,6 +195,7 @@ namespace HyperMedia
             Add("IntroSkipped", "已自动跳过片头", "Intro skipped");
             Add("NoMedia", "没有正在播放的媒体", "No media playing");
             Add("NetworkNoRecord", "网络流不支持录制", "Recording not supported for streams");
+            Add("PerfNoRecord", "设备性能不足，不支持录制", "Recording not supported on this device");
             Add("NetworkNoRotate", "网络流不支持旋转", "Rotation not supported for streams");
             Add("NetworkNoSnapshot", "网络流不支持截图", "Screenshots not supported for streams");
             Add("NoBookmarks", "无书签 (Ctrl+B 添加)", "No bookmarks (Ctrl+B to add)");
@@ -252,13 +253,11 @@ namespace HyperMedia
             Add("OpenVideosPlay", "打开视频  ▶  播放", "Open Videos  ▶  Play");
             Add("OpenMusicPlay", "打开音乐  ▶  播放", "Open Music  ▶  Play");
             Add("OpenPhotosView", "打开图片  ▶  查看", "Open Photos  ▶  View");
-            Add("DropPlay", "拖放播放", "Drop to Play");
-            Add("DropRelease", "释放以开始播放", "Release to start playing");
             Add("OpenNetworkTip", "打开网络媒体 (Ctrl+U)", "Open Network Media (Ctrl+U)");
             Add("SemanticZoomTip", "语义缩放概览 (Ctrl+M)", "Semantic Zoom Overview (Ctrl+M)");
             // Player welcome page
             Add("Welcome", "欢迎", "Welcome");
-            Add("WelcomeHint", "拖放文件到这里，按 Ctrl+O 打开，或输入网络地址", "Drop files here, press Ctrl+O to open, or enter a network address");
+            Add("WelcomeHint", "按 Ctrl+O 打开文件，或输入网络地址", "Press Ctrl+O to open a file, or enter a network address");
             Add("ShortcutsTitle", "快捷键", "Shortcuts");
             Add("PlayPauseDesc", "播放 / 暂停", "Play / Pause");
             Add("SeekDesc", "快进 / 快退", "Seek Backward / Forward");
@@ -389,6 +388,12 @@ namespace HyperMedia
             Add("DeleteFromHistory", "从历史记录删除", "Remove from History");
             Add("PinnedToStart", "已固定到开始屏幕: ", "Pinned to Start: ");
             Add("AboutCharm", "关于 HyperMedia", "About HyperMedia");
+            Add("PerfLevel", "设备性能等级", "Device Performance Level");
+            Add("PerfLow", "低性能", "Low");
+            Add("PerfMedium", "中性能", "Medium");
+            Add("PerfHigh", "高性能", "High");
+            Add("AboutVersion", "版本", "Version");
+            Add("AboutLicense", "采用 GPL v2 许可证", "Licensed under GPL v2");
             Add("SearchQueryHint", "  — 点按任意项目播放 (Esc 清除)", " — tap any item to play (Esc to clear)");
             Add("PlayedTimesSuffix", " 次", " times");
             Add("PlayCountLabel", "播放 ", "Played ");

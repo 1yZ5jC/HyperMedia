@@ -358,9 +358,21 @@ namespace HyperMedia
             }
 
             int delta = e.GetCurrentPoint(PanoramaScroll).Properties.MouseWheelDelta;
-            double newOffset = PanoramaScroll.HorizontalOffset + (delta > 0 ? -180 : 180);
-            newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
-            PanoramaScroll.ChangeView(newOffset, null, null, true);
+
+            // Shift+wheel = horizontal panorama paging; plain wheel = vertical scrolling
+            bool shift = (Window.Current.CoreWindow.GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) != 0;
+            if (shift)
+            {
+                double newOffset = PanoramaScroll.HorizontalOffset + (delta > 0 ? -180 : 180);
+                newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
+                PanoramaScroll.ChangeView(newOffset, null, null, true);
+            }
+            else
+            {
+                double newOffsetY = PanoramaScroll.VerticalOffset + (delta > 0 ? -90 : 90);
+                newOffsetY = Math.Max(0, Math.Min(newOffsetY, PanoramaScroll.ScrollableHeight));
+                PanoramaScroll.ChangeView(null, newOffsetY, null, true);
+            }
             e.Handled = true;
         }
 
@@ -1957,46 +1969,6 @@ namespace HyperMedia
                 Frame.Navigate(typeof(MainPage));
             }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] PlayPlaylist failed: {0}", ex.Message); }
-        }
-
-        #endregion
-
-        #region Drag & Drop
-
-        private void Page_DragOver(object sender, DragEventArgs e)
-        {
-            DropOverlay.Visibility = Visibility.Visible;
-        }
-
-        private async void Page_Drop(object sender, DragEventArgs e)
-        {
-            DropOverlay.Visibility = Visibility.Collapsed;
-
-            try
-            {
-                var view = e.Data.GetView();
-                if (view.Contains(StandardDataFormats.StorageItems))
-                {
-                    var items = await view.GetStorageItemsAsync();
-                    if (items.Count > 0)
-                    {
-                        StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", items[0] as StorageFile);
-                        if (items.Count > 1)
-                        {
-                            var extras = new List<string>();
-                            for (int i = 1; i < items.Count; i++)
-                            {
-                                var f = items[i] as StorageFile;
-                                if (f != null) extras.Add(f.Path);
-                            }
-                            if (extras.Count > 0)
-                                ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
-                        }
-                        Frame.Navigate(typeof(MainPage));
-                    }
-                }
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
         }
 
         #endregion
