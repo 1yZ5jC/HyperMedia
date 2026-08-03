@@ -94,6 +94,7 @@ namespace HyperMedia
             virtual ~LibVlcDecoder();
 
             bool OpenFile(Platform::String^ filePath);
+            [Windows::Foundation::Metadata::DefaultOverload]
             void Close();
 
             DecodedVideoFrame^ ReadNextVideoFrame();
