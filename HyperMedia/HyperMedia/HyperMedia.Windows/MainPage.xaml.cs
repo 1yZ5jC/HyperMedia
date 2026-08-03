@@ -1852,7 +1852,23 @@ namespace HyperMedia
                     _smtc.PlaybackStatus = MediaPlaybackStatus.Playing;
                 }
                 catch (Exception ex) { LogUnhandled(ex); }
+                SaveBackgroundState();
             }
+        }
+
+        private void SaveBackgroundState()
+        {
+            try
+            {
+                if (_isNetworkStream || _currentOriginalFile == null || _vlcPlayer == null) return;
+                long pos = _vlcPlayer.time();
+                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", _currentOriginalFile);
+                var settings = ApplicationData.Current.LocalSettings;
+                settings.Values["Bg_Resume_File"] = _originalFileName;
+                settings.Values["Bg_Resume_Pos"] = pos;
+                settings.Values["Bg_Resume_WasPlaying"] = true;
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         private void OnSmtcAppResumed(object sender, object e)
@@ -1865,6 +1881,30 @@ namespace HyperMedia
                 }
                 catch (Exception ex) { LogUnhandled(ex); }
             }
+            ResumeAfterSuspend();
+        }
+
+        private async void ResumeAfterSuspend()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (!settings.Values.ContainsKey("Bg_Resume_WasPlaying")) return;
+                bool wasPlaying = (bool)settings.Values["Bg_Resume_WasPlaying"];
+                long pos = settings.Values.ContainsKey("Bg_Resume_Pos") ? (long)settings.Values["Bg_Resume_Pos"] : 0;
+                settings.Values.Remove("Bg_Resume_File");
+                settings.Values.Remove("Bg_Resume_Pos");
+                settings.Values.Remove("Bg_Resume_WasPlaying");
+                if (!wasPlaying || _isPlaying || _vlcPlayer != null) return;
+                if (!StorageApplicationPermissions.FutureAccessList.ContainsItem("PlaybackFile")) return;
+
+                var file = await StorageApplicationPermissions.FutureAccessList.GetFileAsync("PlaybackFile");
+                if (file == null) return;
+                _pendingResumePos = pos;
+                OpenFile(file);
+                Debug.WriteLine("[HyperMedia] Auto-resumed playback after suspend: {0} at {1}ms", file.Name, pos);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         #endregion

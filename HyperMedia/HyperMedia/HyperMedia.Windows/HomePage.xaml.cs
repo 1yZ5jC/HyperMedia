@@ -334,13 +334,24 @@ namespace HyperMedia
             double current = PanoramaScroll.HorizontalOffset;
             double best = 0;
             double bestDist = double.MaxValue;
+
+            // Only snap to section starts that are actually reachable,
+            // plus the far-right end so the panorama can be scrolled all the way.
+            var targets = new List<double>();
             foreach (double off in SnapOffsets)
             {
-                double dist = Math.Abs(current - off);
+                if (off <= PanoramaScroll.ScrollableWidth)
+                    targets.Add(off);
+            }
+            targets.Add(PanoramaScroll.ScrollableWidth);
+
+            foreach (double t in targets)
+            {
+                double dist = Math.Abs(current - t);
                 if (dist < bestDist)
                 {
                     bestDist = dist;
-                    best = off;
+                    best = t;
                 }
             }
             if (bestDist > 1)
