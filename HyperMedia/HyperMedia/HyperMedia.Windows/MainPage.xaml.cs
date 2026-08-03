@@ -889,6 +889,7 @@ namespace HyperMedia
                 }
 
                 _vlcPlayer = new MediaPlayer(_vlcInstance);
+                _vlcPlayer.setAdjustInt(0, 1);
                 _vlcPlayer.setMedia(_vlcMedia);
             }
             catch (Exception ex)
@@ -3274,11 +3275,11 @@ namespace HyperMedia
                             _vlcPlayer.setCropGeometry(_cropGeometry);
                         if (_nightMode && _vlcPlayer != null)
                         {
-                            _vlcPlayer.setAdjustFloat(0, 0.72f);
+                            _vlcPlayer.setAdjustFloat(2, 0.72f);
                             _vlcPlayer.setAdjustFloat(1, 0.88f);
-                            _vlcPlayer.setAdjustFloat(2, -10f);
-                            _vlcPlayer.setAdjustFloat(3, 0.9f);
-                            _vlcPlayer.setAdjustFloat(4, 1.08f);
+                            _vlcPlayer.setAdjustFloat(3, -10f);
+                            _vlcPlayer.setAdjustFloat(4, 0.9f);
+                            _vlcPlayer.setAdjustFloat(5, 1.08f);
                         }
                     }
                     catch (Exception ex) { LogUnhandled(ex); }
@@ -4721,7 +4722,7 @@ namespace HyperMedia
             try
             {
                 _videoBrightness = Math.Max(0.3f, Math.Min(1.7f, _videoBrightness + delta));
-                _vlcPlayer.setAdjustFloat(0, _videoBrightness);
+                _vlcPlayer.setAdjustFloat(2, _videoBrightness);
             }
             catch (Exception ex) { LogUnhandled(ex); }
         }
@@ -5257,20 +5258,20 @@ namespace HyperMedia
                 if (_nightMode)
                 {
                     // Warm low-brightness preset
-                    _vlcPlayer.setAdjustFloat(0, 0.72f);   // brightness
+                    _vlcPlayer.setAdjustFloat(2, 0.72f);   // brightness
                     _vlcPlayer.setAdjustFloat(1, 0.88f);   // contrast
-                    _vlcPlayer.setAdjustFloat(2, -10f);    // hue (warm)
-                    _vlcPlayer.setAdjustFloat(3, 0.9f);    // saturation
-                    _vlcPlayer.setAdjustFloat(4, 1.08f);   // gamma
+                    _vlcPlayer.setAdjustFloat(3, -10f);    // hue (warm)
+                    _vlcPlayer.setAdjustFloat(4, 0.9f);    // saturation
+                    _vlcPlayer.setAdjustFloat(5, 1.08f);   // gamma
                     ShowOverlay(L("NightModeOn"));
                 }
                 else
                 {
-                    _vlcPlayer.setAdjustFloat(0, _videoBrightness);
+                    _vlcPlayer.setAdjustFloat(2, _videoBrightness);
                     _vlcPlayer.setAdjustFloat(1, _videoContrast);
-                    _vlcPlayer.setAdjustFloat(2, _videoHue);
-                    _vlcPlayer.setAdjustFloat(3, _videoSaturation);
-                    _vlcPlayer.setAdjustFloat(4, _videoGamma);
+                    _vlcPlayer.setAdjustFloat(3, _videoHue);
+                    _vlcPlayer.setAdjustFloat(4, _videoSaturation);
+                    _vlcPlayer.setAdjustFloat(5, _videoGamma);
                     ShowOverlay(L("NightModeOff"));
                 }
                 HideOverlayDelayed();
@@ -5727,7 +5728,7 @@ namespace HyperMedia
         {
             if (_filterInitializing) return;
             _videoBrightness = (float)e.NewValue;
-            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(0, _videoBrightness); }
+            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(2, _videoBrightness); }
             catch (Exception ex) { LogUnhandled(ex); }
         }
 
@@ -5743,7 +5744,7 @@ namespace HyperMedia
         {
             if (_filterInitializing) return;
             _videoHue = (float)e.NewValue;
-            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(2, _videoHue); }
+            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(3, _videoHue); }
             catch (Exception ex) { LogUnhandled(ex); }
         }
 
@@ -5751,7 +5752,7 @@ namespace HyperMedia
         {
             if (_filterInitializing) return;
             _videoSaturation = (float)e.NewValue;
-            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(3, _videoSaturation); }
+            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(4, _videoSaturation); }
             catch (Exception ex) { LogUnhandled(ex); }
         }
 
@@ -5759,7 +5760,7 @@ namespace HyperMedia
         {
             if (_filterInitializing) return;
             _videoGamma = (float)e.NewValue;
-            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(4, _videoGamma); }
+            try { if (_vlcPlayer != null) _vlcPlayer.setAdjustFloat(5, _videoGamma); }
             catch (Exception ex) { LogUnhandled(ex); }
         }
 
@@ -5774,11 +5775,11 @@ namespace HyperMedia
             {
                 if (_vlcPlayer != null)
                 {
-                    _vlcPlayer.setAdjustFloat(0, _videoBrightness);
+                    _vlcPlayer.setAdjustFloat(2, _videoBrightness);
                     _vlcPlayer.setAdjustFloat(1, _videoContrast);
-                    _vlcPlayer.setAdjustFloat(2, _videoHue);
-                    _vlcPlayer.setAdjustFloat(3, _videoSaturation);
-                    _vlcPlayer.setAdjustFloat(4, _videoGamma);
+                    _vlcPlayer.setAdjustFloat(3, _videoHue);
+                    _vlcPlayer.setAdjustFloat(4, _videoSaturation);
+                    _vlcPlayer.setAdjustFloat(5, _videoGamma);
                 }
             }
             catch (Exception ex) { LogUnhandled(ex); }
