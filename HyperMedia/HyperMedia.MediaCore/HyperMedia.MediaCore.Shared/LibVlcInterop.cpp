@@ -2,6 +2,7 @@
 #include "LibVlcInterop.h"
 #include <mutex>
 #include <vector>
+#include <d3d11.h>
 
 using namespace Platform;
 using namespace Windows::ApplicationModel;
@@ -120,6 +121,69 @@ void LibVlcManager::Shutdown()
         _initialized = false;
     }
 #endif
+}
+
+// --- Hardware decode capability probe (D3D11 video decoder profiles) ---
+// DXVA2 / D3D11 decoder profile GUIDs (identical constants across d3d11.h and dxva2api.h).
+namespace
+{
+    const GUID kGpuH264NoFgt   = { 0x1b81be64, 0xa0c7, 0x11d3, { 0xb9, 0x84, 0x00, 0xc0, 0x4f, 0x2e, 0x73, 0xc5 } };
+    const GUID kGpuH264Fgt     = { 0x1b81be65, 0xa0c7, 0x11d3, { 0xb9, 0x84, 0x00, 0xc0, 0x4f, 0x2e, 0x73, 0xc5 } };
+    const GUID kGpuHevcMain    = { 0x5f11f7e4, 0x4d0a, 0x4f73, { 0x8b, 0x0f, 0x8c, 0x0f, 0x5b, 0x8f, 0x41, 0x1f } };
+    const GUID kGpuHevcMain10  = { 0x7374e49d, 0xc60e, 0x4b40, { 0x9b, 0x6e, 0x18, 0x44, 0x4d, 0x59, 0x14, 0x1c } };
+}
+
+static int s_hardwareDecodeGrade = -1;
+
+int LibVlcManager::GetHardwareDecodeGrade()
+{
+    if (s_hardwareDecodeGrade >= 0)
+        return s_hardwareDecodeGrade;
+
+    s_hardwareDecodeGrade = 0;
+
+#if HYPERMEDIA_HAS_LIBVLC
+    ID3D11Device* device = nullptr;
+    HRESULT hr = D3D11CreateDevice(
+        nullptr, D3D_DRIVER_TYPE_HARDWARE, nullptr,
+        D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+        nullptr, 0, D3D11_SDK_VERSION,
+        &device, nullptr, nullptr);
+    if (FAILED(hr) || !device)
+        return s_hardwareDecodeGrade;
+
+    ID3D11VideoDevice* videoDevice = nullptr;
+    if (SUCCEEDED(device->QueryInterface(__uuidof(ID3D11VideoDevice), (void**)&videoDevice)) && videoDevice)
+    {
+        bool hasH264 = false;
+        bool hasHevc8 = false;
+        bool hasHevc10 = false;
+
+        UINT count = videoDevice->GetVideoDecoderProfileCount();
+        for (UINT i = 0; i < count; i++)
+        {
+            GUID profile;
+            if (SUCCEEDED(videoDevice->GetVideoDecoderProfile(i, &profile)))
+            {
+                if (profile == kGpuH264NoFgt || profile == kGpuH264Fgt)
+                    hasH264 = true;
+                else if (profile == kGpuHevcMain10)
+                    hasHevc10 = true;
+                else if (profile == kGpuHevcMain)
+                    hasHevc8 = true;
+            }
+        }
+
+        if (hasH264) s_hardwareDecodeGrade = 1;
+        if (hasHevc8) s_hardwareDecodeGrade = 2;
+        if (hasHevc10) s_hardwareDecodeGrade = 3;
+
+        videoDevice->Release();
+    }
+    device->Release();
+#endif
+
+    return s_hardwareDecodeGrade;
 }
 
 // --- LibVlcDecoder ---

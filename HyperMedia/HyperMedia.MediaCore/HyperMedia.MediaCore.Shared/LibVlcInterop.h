@@ -81,6 +81,10 @@ namespace HyperMedia
             static void Initialize();
             static void Shutdown();
 
+            // Hardware video decode capability via D3D11/DXGI profile enumeration.
+            // Returns: 0 = none, 1 = H.264, 2 = H.264 + H.265 8-bit, 3 = + H.265 10-bit.
+            static int GetHardwareDecodeGrade();
+
             property bool IsInitialized { bool get() { return _initialized; } }
 
         private:

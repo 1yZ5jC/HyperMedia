@@ -140,7 +140,7 @@ namespace HyperMedia
                 var v = Package.Current.Id.Version;
                 panel.Children.Add(MakeAboutLine(L("AboutVersion") + " " + v.Major + "." + v.Minor + "." + v.Build + "." + v.Revision));
                 panel.Children.Add(MakeAboutLine(L("PerfLevel") + ": " + PerfLevelName()));
-                panel.Children.Add(MakeAboutLine("基于 libVLC 驱动 / Powered by libVLC"));
+                panel.Children.Add(MakeAboutLine(L("AboutPoweredBy")));
                 panel.Children.Add(MakeAboutLine(L("AboutLicense")));
 
                 flyout.Content = panel;

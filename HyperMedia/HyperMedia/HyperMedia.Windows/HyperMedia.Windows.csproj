@@ -123,6 +123,7 @@
     <Compile Include="RecentItem.cs" />
     <Compile Include="ShazamAudioExtractor.cs" />
     <Compile Include="ShazamFingerprint.cs" />
+    <Compile Include="VideoThumbnailService.cs" />
     <Compile Include="ShazamRecognizer.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>

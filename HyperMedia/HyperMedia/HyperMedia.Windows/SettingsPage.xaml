@@ -452,6 +452,8 @@
                                    Foreground="#55FFFFFF" Margin="0,4,0,0"/>
                         <TextBlock x:Name="PerfLevelText" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#FFE040FB" Margin="0,8,0,0"/>
+                        <TextBlock x:Name="HardDecodeText" FontFamily="Segoe UI" FontSize="12"
+                                   Foreground="#FFE040FB" Margin="0,4,0,0"/>
                     </StackPanel>
                 </Border>
 

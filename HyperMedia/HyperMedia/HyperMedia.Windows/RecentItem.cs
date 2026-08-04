@@ -141,9 +141,19 @@ namespace HyperMedia
                         var image = new BitmapImage();
                         await image.SetSourceAsync(thumbnail);
                         Thumbnail = image;
+                        return;
                     }
                 }
                 catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+
+                // No system thumbnail available (typical for HEVC on Windows 8.1).
+                // Software-decode the first frame with libVLC and cache it.
+                if (Category == "Videos")
+                {
+                    var custom = await VideoThumbnailService.TryGetThumbnailAsync(FilePath);
+                    if (custom != null)
+                        Thumbnail = custom;
+                }
             }
             catch (Exception ex)
             {

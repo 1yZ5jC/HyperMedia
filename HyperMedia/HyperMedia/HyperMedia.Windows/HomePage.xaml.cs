@@ -36,8 +36,8 @@ namespace HyperMedia
         private bool _musicTileView;
         private bool _photosTileView;
 
-        private const string ICON_LIST = "\u25A1";
-        private const string ICON_TILE = "\u25A3";
+        private const string ICON_LIST = "\u2630";
+        private const string ICON_TILE = "\u25A6";
 
         public HomePage()
         {

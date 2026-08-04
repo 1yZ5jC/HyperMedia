@@ -49,6 +49,14 @@ namespace HyperMedia
                         : L("PerfHigh");
                     PerfLevelText.Text = L("PerfLevel") + ": " + levelName;
                 }
+                if (HardDecodeText != null)
+                {
+                    int grade = PerformanceProfile.HardwareDecodeGrade;
+                    string h264 = grade >= 1 ? L("HardH264Yes") : L("HardH264No");
+                    string h265 = grade >= 3 ? L("HardHevc10")
+                        : grade >= 2 ? L("HardHevc8") : L("HardHevcNone");
+                    HardDecodeText.Text = L("PerfHardDecode") + ": " + h264 + " / " + h265;
+                }
             }
             catch { }
         }

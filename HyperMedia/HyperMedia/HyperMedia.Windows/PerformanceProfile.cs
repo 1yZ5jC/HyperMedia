@@ -49,6 +49,16 @@ namespace HyperMedia
             }
         }
 
+        // 0 = none, 1 = H.264, 2 = + H.265 8-bit, 3 = + H.265 10-bit.
+        public static int HardwareDecodeGrade
+        {
+            get
+            {
+                try { return HyperMedia.MediaCore.LibVlcManager.GetHardwareDecodeGrade(); }
+                catch { return 0; }
+            }
+        }
+
         private static long RunCpuBenchmark()
         {
             var sw = Stopwatch.StartNew();
