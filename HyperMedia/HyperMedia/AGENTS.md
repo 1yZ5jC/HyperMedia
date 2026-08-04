@@ -22,6 +22,17 @@ Windows 8.1 商店应用（WinRT）媒体播放器，C# (XAML) + C++/CX MediaCor
 - 性能：`PerformanceProfile` 用 CPU 基准评级（Low/Medium/High 限倍速与录像）；`LibVlcManager.GetHardwareDecodeGrade()` 检测 D3D11 硬解能力（0=无/1=H264/2=+HEVC8/3=+HEVC10），仅展示不影响评分。
 - 本地化：所有文案走 `AppText` 键（中/英），`L("Key")` 读取。
 
+## 音乐可视化（SpectrumEngine）— 设计决策
+
+- **数据源分三级**（`ISpectrumSource`，引擎自动切换，`SpectrumEngine.cs`）：
+  - A 实时：另起 `LibVlcDecoder` 静音解码同一临时文件（`--aout=adummy` 已内建），后台线程每 ~33ms `ReadNextAudioFrame` 拿 S16N → C# FFT（`Fft.cs`，自写 radix-2 + Hann，512/1024 点）→ 48 对数频段；采样计数对齐主播放时间，漂移 >0.8s 时 `SeekTo` 校正。
+  - B 波形预扫：`LibVlcDecoder.ScanWaveform()`（MediaCore C++，16x 加速播放 + Butterworth 三频段 biquad，每 50ms 输出 low/mid/high/env 4 元组），缓存 `LocalFolder\WaveCache\<sha1>.vfs`（int32 帧数 + float 流）；播放时按进度插值重放 + BPM 自相关估计（60/beatPhase 驱动节拍脉冲）。
+  - C 伪频谱兜底：噪声+正弦，永不失败。
+- 渲染层 `IVisualizerRenderer`（`Visualizers.cs`）：7 种风格（等距条/对称镜像/环形/粒子风暴/霓虹窗/封面色晕/示波），直接写 WriteableBitmap BGRA 像素，`CompositionTarget.Rendering` 驱动 ~30fps；主题色从专辑封面缩略图 24×24 采样平均提取。
+- 显示规则：**歌词显示时看歌词，关闭歌词时（`LyricsToggleBtn`，设置键 `Settings_LyricsVisible`）看可视化**；迷你播放器同样带封面 + 小频谱。
+- **8.1 平台限制**：无 `System.Threading.Thread`（用 async + Task.Delay）、无 Composition API（WriteableBitmap）、无 System.Numerics FFT。
+- MediaCore 每次改动后需先单独构建 MediaCore 再构建 C#（winmd 必须刷新）。
+
 ## 构建与验证
 
 - 命令行构建（工作目录不限）：

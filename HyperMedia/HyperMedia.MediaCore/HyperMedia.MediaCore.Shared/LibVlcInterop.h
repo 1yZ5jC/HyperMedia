@@ -108,6 +108,14 @@ namespace HyperMedia
             // and return the captured audio as interleaved S16N PCM.
             Platform::Array<int16_t>^ CollectAudioPcm(double seconds);
 
+            // Pause (playing=false) or resume (true) the underlying libVLC player.
+            void SetPlayPause(bool playing);
+
+            // Full-file waveform scan. Returns a float array of 4-tuples per 50ms
+            // window: [low, mid, high, envelope] each normalized 0..1 (0 = silence).
+            // Returns nullptr when the file has no audio or the scan fails.
+            Platform::Array<float>^ ScanWaveform();
+
             void SeekTo(double seconds);
 
             property bool HasVideo { bool get() { return _hasVideo; } }

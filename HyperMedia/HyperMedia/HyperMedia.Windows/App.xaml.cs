@@ -10,6 +10,16 @@ namespace HyperMedia
 {
     public sealed partial class App : Application
     {
+        /// <summary>Raised when the light-home theme setting changes (from any settings
+        /// entry point) so live pages can re-apply their colors immediately.</summary>
+        public static event EventHandler LightThemeChanged;
+
+        public static void NotifyLightThemeChanged()
+        {
+            var h = LightThemeChanged;
+            if (h != null) h(null, EventArgs.Empty);
+        }
+
         private static string L(string key)
         {
             try
@@ -89,6 +99,11 @@ namespace HyperMedia
                 {
                     try
                     {
+                        var settings = new Windows.UI.ApplicationSettings.SettingsCommand(
+                            "settings", "设置",
+                            (cmd) => ShowSettingsFlyout());
+                        args.Request.ApplicationCommands.Add(settings);
+
                         var about = new Windows.UI.ApplicationSettings.SettingsCommand(
                             "about", L("AboutCharm"),
                             (cmd) => ShowAboutFlyout());
@@ -103,6 +118,24 @@ namespace HyperMedia
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine("[HyperMedia] RegisterSettingsCharm failed: {0}", ex.Message);
+            }
+        }
+
+        private void ShowSettingsFlyout()
+        {
+            try
+            {
+                var flyout = new SettingsFlyout
+                {
+                    Title = "设置",
+                    RequestedTheme = ElementTheme.Light,
+                    Content = new CharmSettingsControl()
+                };
+                flyout.Show();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ShowSettingsFlyout failed: {0}", ex.Message);
             }
         }
 

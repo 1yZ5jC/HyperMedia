@@ -43,11 +43,19 @@ namespace HyperMedia
         {
             this.InitializeComponent();
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
+            App.LightThemeChanged -= Home_LightThemeChanged;
+            App.LightThemeChanged += Home_LightThemeChanged;
             this.Loaded += (s, e) =>
             {
                 ApplyTheme();
                 ApplyHomeLanguage();
             };
+        }
+
+        private void Home_LightThemeChanged(object sender, EventArgs e)
+        {
+            try { ApplyTheme(); }
+            catch { }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)

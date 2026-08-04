@@ -124,9 +124,15 @@
     <Compile Include="ShazamAudioExtractor.cs" />
     <Compile Include="ShazamFingerprint.cs" />
     <Compile Include="VideoThumbnailService.cs" />
+    <Compile Include="Fft.cs" />
+    <Compile Include="SpectrumEngine.cs" />
+    <Compile Include="Visualizers.cs" />
     <Compile Include="ShazamRecognizer.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="CharmSettingsControl.xaml.cs">
+      <DependentUpon>CharmSettingsControl.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
@@ -160,6 +166,10 @@
       <SubType>Designer</SubType>
     </Page>
     <Page Include="SettingsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="CharmSettingsControl.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>

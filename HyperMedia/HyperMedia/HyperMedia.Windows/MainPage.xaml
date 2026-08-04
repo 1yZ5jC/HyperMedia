@@ -378,7 +378,7 @@
 
                 <!-- Album Art -->
                 <Border x:Name="AlbumArtBorder" Grid.Column="0"
-                        Margin="80,0,48,0" Width="320" Height="320"
+                        Margin="64,0,56,0" Width="420" Height="420"
                         CornerRadius="0"
                         HorizontalAlignment="Left" VerticalAlignment="Center"
                         BorderThickness="3,0,0,0">
@@ -394,81 +394,87 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Image x:Name="AlbumArtImage" Grid.Row="0"
-                               Stretch="UniformToFill" HorizontalAlignment="Center"
+                               Stretch="Uniform" HorizontalAlignment="Center"
                                VerticalAlignment="Center"/>
                         <TextBlock x:Name="AlbumArtPlaceholder" Grid.Row="0"
-                                   Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="80"
+                                   Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="104"
                                    Foreground="#33E040FB" HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                         <TextBlock x:Name="AlbumArtMetaText" Grid.Row="1"
-                                   Text="" FontFamily="Segoe UI" FontSize="12"
+                                   Text="" FontFamily="Segoe UI" FontSize="13"
                                    Foreground="#66FFFFFF" TextAlignment="Center"
-                                   Padding="12,8,12,12" TextWrapping="Wrap"
-                                   MaxWidth="320"/>
+                                   Padding="14,10,14,14" TextWrapping="Wrap"
+                                   MaxWidth="420"/>
                     </Grid>
                 </Border>
 
-                <!-- Lyrics -->
-                <Border x:Name="LyricsBorder" Grid.Column="1"
-                        Margin="0,32,64,32" CornerRadius="0"
-                        VerticalAlignment="Stretch">
-                    <Border.Background>
-                        <SolidColorBrush Color="#10FFFFFF"/>
-                    </Border.Background>
-                    <Border.BorderBrush>
-                        <SolidColorBrush Color="#22E040FB"/>
-                    </Border.BorderBrush>
-                    <Border.BorderThickness>
-                        <Thickness>1,0,0,0</Thickness>
-                    </Border.BorderThickness>
-                    <Grid Margin="24,20">
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                        </Grid.RowDefinitions>
-                        <Grid Grid.Row="0" Margin="0,0,0,16">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <TextBlock x:Name="LyricsTitle" Grid.Column="0"
-                                       Text="歌词" FontFamily="Segoe UI" FontSize="14"
-                                       Foreground="#44E040FB" CharacterSpacing="80"
-                                       VerticalAlignment="Center"/>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                                <TextBlock Text="来源:" FontFamily="Segoe UI" FontSize="10"
-                                           Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                                <Button x:Name="LyricSrcAutoBtn" Click="LyricSourceButton_Click"
-                                        Tag="auto" FontSize="10" Padding="8,4" Margin="0,0,2,0"
-                                        Background="#33E040FB" Foreground="#FFFFFFFF" BorderThickness="0">
-                                    <TextBlock Text="自动" FontSize="10" Foreground="#FFFFFFFF"/>
-                                </Button>
-                                <Button x:Name="LyricSrcNeteaseBtn" Click="LyricSourceButton_Click"
-                                        Tag="netease" FontSize="10" Padding="8,4" Margin="0,0,2,0"
-                                        Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
-                                    <TextBlock Text="网易云" FontSize="10" Foreground="#88FFFFFF"/>
-                                </Button>
-                                <Button x:Name="LyricSrcQqBtn" Click="LyricSourceButton_Click"
-                                        Tag="qq" FontSize="10" Padding="8,4" Margin="0,0,0,0"
-                                        Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
-                                    <TextBlock Text="QQ" FontSize="10" Foreground="#88FFFFFF"/>
-                                </Button>
-                            </StackPanel>
+                <!-- Lyrics / Visualizer -->
+                <Grid Grid.Column="1" Margin="0,28,56,28" VerticalAlignment="Stretch">
+                    <Border x:Name="LyricsBorder"
+                            CornerRadius="0"
+                            VerticalAlignment="Stretch">
+                        <Border.Background>
+                            <SolidColorBrush Color="#10FFFFFF"/>
+                        </Border.Background>
+                        <Border.BorderBrush>
+                            <SolidColorBrush Color="#22E040FB"/>
+                        </Border.BorderBrush>
+                        <Border.BorderThickness>
+                            <Thickness>1,0,0,0</Thickness>
+                        </Border.BorderThickness>
+                        <Grid Margin="28,24">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <Grid Grid.Row="0" Margin="0,0,0,18">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock x:Name="LyricsTitle" Grid.Column="0"
+                                           Text="歌词" FontFamily="Segoe UI" FontSize="18"
+                                           Foreground="#44E040FB" CharacterSpacing="80"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="来源:" FontFamily="Segoe UI" FontSize="12"
+                                               Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <Button x:Name="LyricSrcAutoBtn" Click="LyricSourceButton_Click"
+                                            Tag="auto" FontSize="12" Padding="12,7" Margin="0,0,4,0"
+                                            Background="#33E040FB" Foreground="#FFFFFFFF" BorderThickness="0">
+                                        <TextBlock Text="自动" FontSize="12" Foreground="#FFFFFFFF"/>
+                                    </Button>
+                                    <Button x:Name="LyricSrcNeteaseBtn" Click="LyricSourceButton_Click"
+                                            Tag="netease" FontSize="12" Padding="12,7" Margin="0,0,4,0"
+                                            Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
+                                        <TextBlock Text="网易云" FontSize="12" Foreground="#88FFFFFF"/>
+                                    </Button>
+                                    <Button x:Name="LyricSrcQqBtn" Click="LyricSourceButton_Click"
+                                            Tag="qq" FontSize="12" Padding="12,7" Margin="0,0,0,0"
+                                            Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
+                                        <TextBlock Text="QQ" FontSize="12" Foreground="#88FFFFFF"/>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                            <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled">
+                                <StackPanel x:Name="LyricsLines">
+                                    <TextBlock x:Name="LyricsPlaceholder"
+                                               Text="暂无歌词"
+                                               FontFamily="Segoe UI" FontSize="19"
+                                               Foreground="#44FFFFFF"
+                                               TextWrapping="Wrap"
+                                               Margin="0,6"/>
+                                </StackPanel>
+                            </ScrollViewer>
                         </Grid>
-                        <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1"
-                                      VerticalScrollBarVisibility="Auto"
-                                      HorizontalScrollBarVisibility="Disabled">
-                            <StackPanel x:Name="LyricsLines">
-                                <TextBlock x:Name="LyricsPlaceholder"
-                                           Text="暂无歌词"
-                                           FontFamily="Segoe UI" FontSize="16"
-                                           Foreground="#44FFFFFF"
-                                           TextWrapping="Wrap"
-                                           Margin="0,4"/>
-                            </StackPanel>
-                        </ScrollViewer>
+                    </Border>
+                    <Grid x:Name="VisualizerHost" Visibility="Collapsed">
+                        <Image x:Name="VisualizerImage" Stretch="Fill"
+                               HorizontalAlignment="Stretch" VerticalAlignment="Stretch"/>
                     </Grid>
-                </Border>
+                </Grid>
             </Grid>
 
             <!-- PHOTO VIEWER OVERLAY -->
@@ -747,9 +753,15 @@
                     Margin="0,0,24,24" Background="#D9080910"
                     BorderThickness="1" BorderBrush="#44E040FB">
                 <StackPanel Orientation="Horizontal" Margin="12,8">
-                    <TextBlock x:Name="MiniPlayerTitle" Text="" FontFamily="Segoe UI" FontSize="11"
-                               Foreground="#AAFFFFFF" VerticalAlignment="Center"
-                               MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                    <Image x:Name="MiniPlayerArt" Width="40" Height="40" Stretch="Uniform"
+                           Margin="0,0,10,0" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock x:Name="MiniPlayerTitle" Text="" FontFamily="Segoe UI" FontSize="11"
+                                   Foreground="#AAFFFFFF" VerticalAlignment="Center"
+                                   MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,0,12,0"/>
+                        <Image x:Name="MiniVisImage" Width="120" Height="32" Stretch="Fill"
+                               VerticalAlignment="Center" Margin="0,0,12,0" Visibility="Collapsed"/>
+                    </StackPanel>
                     <Button x:Name="MiniPlayPauseBtn" Click="MiniPlayPauseBtn_Click"
                             Style="{StaticResource ZunePrimaryStyle}" Padding="10,6">
                         <TextBlock x:Name="MiniPlayPauseIcon" Text="&#x2016;" FontFamily="Segoe UI Symbol" FontSize="12" Foreground="#FFFFFFFF"/>
@@ -1048,110 +1060,131 @@
                     </Grid>
 
                     <!-- Row 2: Transport -->
-                    <Grid Grid.Row="1">
+                    <Grid Grid.Row="1" Margin="16,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
-                        <Button x:Name="PrevButton" Grid.Column="0"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="PrevButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="上一个"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
-                                       Foreground="#FFFFFFFF"/>
-                        </Button>
+                        <!-- Left group: playback controls -->
+                        <StackPanel Grid.Column="0" Orientation="Horizontal"
+                                    VerticalAlignment="Center" HorizontalAlignment="Left">
+                            <Button x:Name="PrevButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="PrevButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="上一个"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
 
-                        <Button x:Name="PlayPauseButton" Grid.Column="1"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="PlayPauseButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="播放 / 暂停 (空格)"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock x:Name="PlayPauseIcon" Text="&#x25B6;"
-                                       FontFamily="Segoe UI Symbol" FontSize="24"
-                                       Foreground="#FFFFFFFF" Margin="2,0,0,0"/>
-                        </Button>
+                            <Button x:Name="PlayPauseButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="PlayPauseButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="播放 / 暂停 (空格)"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="PlayPauseIcon" Text="&#x25B6;"
+                                           FontFamily="Segoe UI Symbol" FontSize="24"
+                                           Foreground="#FFFFFFFF" Margin="2,0,0,0"/>
+                            </Button>
 
-                        <Button x:Name="StopButton" Grid.Column="2"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="StopButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="停止"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x25A0;" FontFamily="Segoe UI Symbol" FontSize="18"
-                                       Foreground="#FFFFFFFF"/>
-                        </Button>
+                            <Button x:Name="StopButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="StopButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="停止"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x25A0;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
 
-                        <Button x:Name="NextButton" Grid.Column="3"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="NextButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="下一个"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x23ED;" FontFamily="Segoe UI Symbol" FontSize="18"
-                                       Foreground="#FFFFFFFF"/>
-                        </Button>
+                            <Button x:Name="NextButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="NextButton_Click" Margin="0,0,16,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="下一个"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x23ED;" FontFamily="Segoe UI Symbol" FontSize="18"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
 
-                        <Grid Grid.Column="4"/>
+                            <Button x:Name="RepeatButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="RepeatButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="循环 (关 / 全部 / 单曲)"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="RepeatIcon" Text="&#x1F501;"
+                                           FontFamily="Segoe UI Symbol" FontSize="16"
+                                           Foreground="#66FFFFFF"/>
+                            </Button>
 
-                        <Button x:Name="RepeatButton" Grid.Column="5"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="RepeatButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="循环 (关 / 全部 / 单曲)"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock x:Name="RepeatIcon" Text="&#x1F501;"
-                                       FontFamily="Segoe UI Symbol" FontSize="16"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
+                            <Button x:Name="ShuffleButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="ShuffleButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="随机播放"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="ShuffleIcon" Text="&#x1F500;"
+                                           FontFamily="Segoe UI Symbol" FontSize="16"
+                                           Foreground="#66FFFFFF"/>
+                            </Button>
+                        </StackPanel>
 
-                        <Button x:Name="ShuffleButton" Grid.Column="6"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="ShuffleButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="随机播放"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock x:Name="ShuffleIcon" Text="&#x1F500;"
-                                       FontFamily="Segoe UI Symbol" FontSize="16"
-                                       Foreground="#66FFFFFF"/>
-                        </Button>
+                        <!-- Right group: volume + toggles -->
+                        <StackPanel Grid.Column="2" Orientation="Horizontal"
+                                    VerticalAlignment="Center" HorizontalAlignment="Right">
+                            <Button x:Name="MuteButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="MuteButton_Click" Margin="0,0,8,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="静音 / 取消静音"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="VolumeIcon" Text="&#x1F50A;"
+                                           FontFamily="Segoe UI Symbol" FontSize="16"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
 
-                        <Button x:Name="MuteButton" Grid.Column="7"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="MuteButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="静音 / 取消静音"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock x:Name="VolumeIcon" Text="&#x1F50A;"
-                                       FontFamily="Segoe UI Symbol" FontSize="16"
-                                       Foreground="#FFFFFFFF"/>
-                        </Button>
+                            <Slider x:Name="VolumeSlider"
+                                    Width="90" Minimum="0" Maximum="100" Value="100"
+                                    ValueChanged="VolumeSlider_ValueChanged"
+                                    VerticalAlignment="Center" Height="36" Margin="0,0,8,0"/>
 
-                        <Slider x:Name="VolumeSlider" Grid.Column="8"
-                                Width="140" Minimum="0" Maximum="100" Value="100"
-                                ValueChanged="VolumeSlider_ValueChanged"
-                                VerticalAlignment="Center" Height="36" Margin="8,0,0,0"/>
+                            <Button x:Name="PlaylistToggleButton"
+                                    Style="{StaticResource ZunePrimaryStyle}"
+                                    Click="PlaylistToggleButton_Click" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="播放列表"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x2630;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
 
-                        <Button x:Name="PlaylistToggleButton" Grid.Column="9"
-                                Style="{StaticResource ZunePrimaryStyle}"
-                                Click="PlaylistToggleButton_Click">
-                            <ToolTipService.ToolTip>
-                                <ToolTip Content="播放列表"/>
-                            </ToolTipService.ToolTip>
-                            <TextBlock Text="&#x2630;" FontFamily="Segoe UI Symbol" FontSize="16"
-                                       Foreground="#FFFFFFFF"/>
-                        </Button>
+                            <Button x:Name="LyricsToggleBtn"
+                                    Click="LyricsToggleBtn_Click" Tag="hide"
+                                    Padding="16,10"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="歌词 / 可视化切换"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="LyricsToggleText" Text="歌词"
+                                           FontFamily="Segoe UI" FontSize="14" Foreground="#FFFFFFFF"/>
+                            </Button>
+
+                            <Button x:Name="VisStyleBtn"
+                                    Click="VisStyleBtn_Click"
+                                    Padding="16,10"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="可视化风格"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="VisStyleText" Text="&#x25D9;"
+                                           FontFamily="Segoe UI Symbol" FontSize="18" Foreground="#FFFFFFFF"/>
+                            </Button>
+                        </StackPanel>
                     </Grid>
                 </Grid>
             </Border>

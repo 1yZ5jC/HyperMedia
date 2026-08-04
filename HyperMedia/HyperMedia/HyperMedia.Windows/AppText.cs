@@ -386,6 +386,16 @@ namespace HyperMedia
             Add("AboutCharm", "关于", "About");
             Add("AboutPoweredBy", "基于 libVLC 驱动", "Powered by libVLC");
             Add("FileOpenFailed", "无法打开此文件。文件可能已被移动或删除，或受系统 API 访问限制。\n请通过「打开」按钮重新打开文件。", "Cannot open this file. It may have been moved or deleted, or access is restricted by the system API.\nPlease reopen it with the Open button.");
+            Add("LyricsHide", "隐藏歌词", "Hide lyrics");
+            Add("LyricsShow", "显示歌词", "Show lyrics");
+            Add("VisPrefix", "可视化", "Visualizer");
+            Add("VisBars", "等距条", "Bars");
+            Add("VisSymmetry", "对称镜像", "Mirror");
+            Add("VisRing", "环形", "Ring");
+            Add("VisParticles", "粒子风暴", "Particles");
+            Add("VisNebula", "霓虹窗", "Nebula");
+            Add("VisAlbumHue", "封面色晕", "Album hue");
+            Add("VisWave", "示波", "Scope");
             Add("FolderLaunchFailed", "无法在资源管理器中打开此文件夹（系统 API 限制）。\n你可以复制下面的路径，在资源管理器中手动打开：", "Unable to open this folder in File Explorer (system API restriction).\nYou can copy the path below and open it manually:");
             Add("FolderCopyTitle", "文件夹路径", "Folder Path");
             Add("CopyPathCmd", "复制路径", "Copy Path");

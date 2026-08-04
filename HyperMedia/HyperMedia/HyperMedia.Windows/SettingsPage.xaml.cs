@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Windows.Storage;
+using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace HyperMedia
@@ -462,10 +465,15 @@ namespace HyperMedia
             }
         }
 
+        /// Raised when hosted in a Popup overlay (no Frame to GoBack to).
+        public event EventHandler CloseRequested;
+
         private void BackButton_Click(object sender, RoutedEventArgs e)
         {
-            if (Frame.CanGoBack)
+            if (CloseRequested == null && Frame != null && Frame.CanGoBack)
                 Frame.GoBack();
+            else if (CloseRequested != null)
+                CloseRequested(this, EventArgs.Empty);
         }
 
         private async void ClearHistory_Click(object sender, RoutedEventArgs e)

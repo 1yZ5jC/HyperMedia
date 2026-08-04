@@ -14,14 +14,14 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <Grid Grid.Row="0" Margin="32,24,32,0">
+        <Grid x:Name="HeaderRow" Grid.Row="0" Margin="32,24,32,0">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Button Click="BackButton_Click" Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,20,0">
                     <TextBlock Text="&#x2190;" FontFamily="Segoe UI" FontSize="18"
-                               Foreground="#FFFFFFFF"/>
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                 </Button>
                 <TextBlock Text="设置" FontFamily="Segoe UI Light" FontSize="36"
-                           Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}" VerticalAlignment="Center"
                            CharacterSpacing="80"/>
             </StackPanel>
         </Grid>
@@ -32,7 +32,7 @@
 
                 <!-- Playback -->
                 <TextBlock Text="播放" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,0,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,0,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -41,9 +41,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="默认音量" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="打开新文件时的音量级别"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Slider x:Name="DefaultVolumeSlider" Grid.Column="1"
@@ -58,9 +58,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="自动播放下一个" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="自动播放播放列表中的下一个文件"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="AutoPlayToggle" Grid.Column="1"
@@ -74,9 +74,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="断点续播" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="记住上次播放位置并从断点继续"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="ResumeToggle" Grid.Column="1"
@@ -85,7 +85,7 @@
 
                 <!-- Controls -->
                 <TextBlock Text="控制" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -94,9 +94,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="自动隐藏控制栏" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="播放时自动隐藏控制按钮"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="AutoHideToggle" Grid.Column="1"
@@ -110,9 +110,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="自动隐藏延迟" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="控制栏自动隐藏前的等待时间"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -122,14 +122,14 @@
                                 VerticalAlignment="Center" Height="36"/>
                         <TextBlock x:Name="AutoHideDelayText" Text="3s"
                                    FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" VerticalAlignment="Center"
                                    Width="36" Margin="8,0,0,0"/>
                     </StackPanel>
                 </Grid>
 
                 <!-- Subtitle -->
                 <TextBlock Text="字幕" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -138,9 +138,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="字幕字号" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="调整外挂字幕的显示大小"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="SubtitleSizeCombo" Grid.Column="1"
@@ -160,9 +160,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="字幕颜色" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="调整字幕文字颜色"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="SubtitleColorCombo" Grid.Column="1"
@@ -183,9 +183,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="字幕描边" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="为字幕添加黑色描边以提高对比度"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="SubtitleOutlineCombo" Grid.Column="1"
@@ -205,9 +205,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="字幕位置偏移" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="上下移动字幕显示位置"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
@@ -217,7 +217,7 @@
                                 VerticalAlignment="Center" Height="36"/>
                         <TextBlock x:Name="SubtitleMarginText" Text="0px"
                                    FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF" VerticalAlignment="Center"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}" VerticalAlignment="Center"
                                    Width="44" Margin="8,0,0,0"/>
                     </StackPanel>
                 </Grid>
@@ -229,9 +229,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="歌词来源" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="选择在线歌词的获取来源（无本地歌词时生效）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="LyricSourceCombo" Grid.Column="1"
@@ -245,7 +245,7 @@
 
                 <!-- Video -->
                 <TextBlock Text="视频" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -254,9 +254,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="去隔行模式" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="处理隔行扫描视频（DVD、旧录像等）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="DeinterlaceCombo" Grid.Column="1"
@@ -277,9 +277,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="响度标准化" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="自动平衡不同媒体的音量差异（压缩器）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="LoudnessToggle" Grid.Column="1"
@@ -294,9 +294,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="同目录连播（剧集模式）" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="打开单个文件时自动把同目录其他媒体加入播放列表"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="EpisodeToggle" Grid.Column="1"
@@ -311,9 +311,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="自动跳过片头" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="记录你手动跳过的片头位置，下次自动跳过"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="IntroSkipToggle" Grid.Column="1"
@@ -328,9 +328,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="语言" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="界面语言（立即生效）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ComboBox x:Name="LanguageCombo" Grid.Column="1" Width="120"
@@ -343,7 +343,7 @@
 
                 <!-- Appearance -->
                 <TextBlock Text="外观" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -352,9 +352,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="浅色主页" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="主页改用浅色主题（播放器保持深色观看体验）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <ToggleSwitch x:Name="LightThemeToggle" Grid.Column="1"
@@ -364,7 +364,7 @@
 
                 <!-- Library -->
                 <TextBlock Text="媒体库" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Grid Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
@@ -373,9 +373,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="清除播放历史" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="删除所有最近播放记录"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Button x:Name="ClearHistoryBtn" Grid.Column="1"
@@ -393,9 +393,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="睡眠定时器" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="播放指定时长后自动停止（0 = 关闭）"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Grid Grid.Column="1" VerticalAlignment="Center">
@@ -407,7 +407,7 @@
                                 Minimum="0" Maximum="180" StepFrequency="5" Width="140"
                                 ValueChanged="SleepTimerSlider_ValueChanged"/>
                         <TextBlock x:Name="SleepTimerText" Grid.Column="1" Text="0 分钟"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#99FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    VerticalAlignment="Center" Margin="12,0,0,0" Width="60"/>
                     </Grid>
                 </Grid>
@@ -419,9 +419,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
                         <TextBlock Text="清除续播位置" FontFamily="Segoe UI" FontSize="15"
-                                   Foreground="#FFFFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                         <TextBlock Text="清除所有已保存的播放进度"
-                                   FontFamily="Segoe UI" FontSize="12" Foreground="#55FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
                     <Button x:Name="ClearResumeBtn" Grid.Column="1"
@@ -434,7 +434,7 @@
 
                 <!-- About -->
                 <TextBlock Text="关于" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#44FFFFFF" CharacterSpacing="80" Margin="0,16,0,16"/>
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
                 <Border Background="#08FFFFFF" Padding="20,16">
                     <StackPanel>
@@ -442,14 +442,14 @@
                             <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="12"
                                        Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="12"
-                                       Foreground="#FFFFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
+                                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}" VerticalAlignment="Center" CharacterSpacing="80"/>
                         </StackPanel>
                         <TextBlock Text="版本 1.0.0" FontFamily="Segoe UI" FontSize="12"
-                                   Foreground="#55FFFFFF"/>
+                                   Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"/>
                         <TextBlock Text="基于 libVLC 驱动" FontFamily="Segoe UI" FontSize="12"
-                                   Foreground="#55FFFFFF" Margin="0,4,0,0"/>
+                                   Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" Margin="0,4,0,0"/>
                         <TextBlock Text="采用 GPL v2 许可证" FontFamily="Segoe UI" FontSize="12"
-                                   Foreground="#55FFFFFF" Margin="0,4,0,0"/>
+                                   Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" Margin="0,4,0,0"/>
                         <TextBlock x:Name="PerfLevelText" FontFamily="Segoe UI" FontSize="12"
                                    Foreground="#FFE040FB" Margin="0,8,0,0"/>
                         <TextBlock x:Name="HardDecodeText" FontFamily="Segoe UI" FontSize="12"

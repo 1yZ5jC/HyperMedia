@@ -565,6 +565,224 @@ Platform::Array<int16_t>^ LibVlcDecoder::CollectAudioPcm(double seconds)
 #endif
 }
 
+void LibVlcDecoder::SetPlayPause(bool playing)
+{
+#if HYPERMEDIA_HAS_LIBVLC
+    if (!_ctx || !_ctx->vlcPlayer) return;
+    if (playing)
+        libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
+    else
+        libvlc_media_player_pause((libvlc_media_player_t*)_ctx->vlcPlayer);
+#else
+    (void)playing;
+#endif
+}
+
+Platform::Array<float>^ LibVlcDecoder::ScanWaveform()
+{
+#if HYPERMEDIA_HAS_LIBVLC
+    if (!_ctx || !_ctx->vlcPlayer || !_ctx->audioRingBuffer || !_hasAudio) return nullptr;
+
+    std::mutex* mtx = (std::mutex*)_ctx->audioMutex;
+
+    // 2nd-order Butterworth low-pass filters @44.1kHz:
+    //   band_low  = lp(250Hz)
+    //   band_mid  = lp(4500Hz) - lp(250Hz)
+    //   band_high = raw - lp(4500Hz)
+    const double fs = 44100.0;
+    const double pi = 3.14159265358979323846;
+
+    struct LpCoef { double b0, b1, b2, a1, a2; };
+    auto makeLowPass = [&](double fc) -> LpCoef
+    {
+        double w = 2.0 * pi * fc / fs;
+        double c = cos(w), s = sin(w), alpha = s * 0.7071067811865476;
+        double a0 = 1.0 + alpha;
+        LpCoef k;
+        k.b0 = ((1.0 - c) / 2.0) / a0;
+        k.b1 = ((1.0 - c)) / a0;
+        k.b2 = ((1.0 - c) / 2.0) / a0;
+        k.a1 = (-2.0 * c) / a0;
+        k.a2 = (1.0 - alpha) / a0;
+        return k;
+    };
+    LpCoef lpLow = makeLowPass(250.0);
+    LpCoef lpHigh = makeLowPass(4500.0);
+
+    // Per-channel filter states: [x1, x2, y1, y2] for each of the two low-passes.
+    const int maxCh = 2;
+    double stLow[maxCh][4] = {};
+    double stHigh[maxCh][4] = {};
+
+    const int windowSamples = (int)(fs * 0.05);          // 50 ms
+    const int bytesPerFrame = _audioChannels * (int)sizeof(int16_t);
+
+    std::vector<double> lowAcc, midAcc, highAcc, envAcc, peakAcc;
+
+    double lowSum = 0, midSum = 0, highSum = 0, envSum = 0, peakMax = 0;
+    int windowCount = 0;
+
+    libvlc_media_player_set_rate((libvlc_media_player_t*)_ctx->vlcPlayer, 16.0f);
+    libvlc_media_player_play((libvlc_media_player_t*)_ctx->vlcPlayer);
+
+    libvlc_time_t startTick = libvlc_clock();
+    libvlc_time_t lastDataTick = libvlc_clock();
+    bool finished = false;
+
+    while (!finished)
+    {
+        {
+            std::lock_guard<std::mutex> lock(*mtx);
+            while (_ctx->audioRingCount >= bytesPerFrame)
+            {
+                for (int ch = 0; ch < maxCh && ch < _audioChannels; ch++)
+                {
+                    int16_t sample = (int16_t)((uint8_t)_ctx->audioRingBuffer[_ctx->audioRingRead] |
+                        ((uint8_t)_ctx->audioRingBuffer[(_ctx->audioRingRead + 1) % _ctx->audioRingSize] << 8));
+                    _ctx->audioRingRead = (_ctx->audioRingRead + 2) % _ctx->audioRingSize;
+                    _ctx->audioRingCount -= 2;
+
+                    double x = (double)sample / 32768.0;
+
+                    // low-pass 250
+                    double& lx1 = stLow[ch][0]; double& lx2 = stLow[ch][1];
+                    double& ly1 = stLow[ch][2]; double& ly2 = stLow[ch][3];
+                    double yL = lpLow.b0 * x + lpLow.b1 * lx1 + lpLow.b2 * lx2
+                              - lpLow.a1 * ly1 - lpLow.a2 * ly2;
+                    lx2 = lx1; lx1 = x; ly2 = ly1; ly1 = yL;
+
+                    // low-pass 4500
+                    double& hx1 = stHigh[ch][0]; double& hx2 = stHigh[ch][1];
+                    double& hy1 = stHigh[ch][2]; double& hy2 = stHigh[ch][3];
+                    double yH = lpHigh.b0 * x + lpHigh.b1 * hx1 + lpHigh.b2 * hx2
+                              - lpHigh.a1 * hy1 - lpHigh.a2 * hy2;
+                    hx2 = hx1; hx1 = x; hy2 = hy1; hy1 = yH;
+
+                    double low = yL;
+                    double mid = yH - yL;
+                    double high = x - yH;
+
+                    lowSum += low * low;
+                    midSum += mid * mid;
+                    highSum += high * high;
+                    envSum += x * x;
+                    if (fabs(x) > peakMax) peakMax = fabs(x);
+
+                    windowCount++;
+                    if (windowCount >= windowSamples)
+                    {
+                        double n = (double)windowSamples;
+                        lowAcc.push_back(sqrt(lowSum / n));
+                        midAcc.push_back(sqrt(midSum / n));
+                        highAcc.push_back(sqrt(highSum / n));
+                        envAcc.push_back(sqrt(envSum / n));
+                        peakAcc.push_back(peakMax);
+                        lowSum = midSum = highSum = envSum = 0;
+                        peakMax = 0;
+                        windowCount = 0;
+                    }
+                }
+                lastDataTick = libvlc_clock();
+            }
+        }
+
+        if (libvlc_media_player_get_state((libvlc_media_player_t*)_ctx->vlcPlayer) == libvlc_Ended)
+        {
+            // Drain whatever is left in the ring (stops when < one frame remains)
+            while (true)
+            {
+                std::lock_guard<std::mutex> lock(*mtx);
+                if (_ctx->audioRingCount < bytesPerFrame) break;
+                for (int ch = 0; ch < maxCh && ch < _audioChannels; ch++)
+                {
+                    int16_t sample = (int16_t)((uint8_t)_ctx->audioRingBuffer[_ctx->audioRingRead] |
+                        ((uint8_t)_ctx->audioRingBuffer[(_ctx->audioRingRead + 1) % _ctx->audioRingSize] << 8));
+                    _ctx->audioRingRead = (_ctx->audioRingRead + 2) % _ctx->audioRingSize;
+                    _ctx->audioRingCount -= 2;
+
+                    double x = (double)sample / 32768.0;
+                    double& lx1 = stLow[ch][0]; double& lx2 = stLow[ch][1];
+                    double& ly1 = stLow[ch][2]; double& ly2 = stLow[ch][3];
+                    double yL = lpLow.b0 * x + lpLow.b1 * lx1 + lpLow.b2 * lx2
+                              - lpLow.a1 * ly1 - lpLow.a2 * ly2;
+                    lx2 = lx1; lx1 = x; ly2 = ly1; ly1 = yL;
+
+                    double& hx1 = stHigh[ch][0]; double& hx2 = stHigh[ch][1];
+                    double& hy1 = stHigh[ch][2]; double& hy2 = stHigh[ch][3];
+                    double yH = lpHigh.b0 * x + lpHigh.b1 * hx1 + lpHigh.b2 * hx2
+                              - lpHigh.a1 * hy1 - lpHigh.a2 * hy2;
+                    hx2 = hx1; hx1 = x; hy2 = hy1; hy1 = yH;
+
+                    lowSum += yL * yL;
+                    midSum += (yH - yL) * (yH - yL);
+                    highSum += (x - yH) * (x - yH);
+                    envSum += x * x;
+                    if (fabs(x) > peakMax) peakMax = fabs(x);
+
+                    windowCount++;
+                    if (windowCount >= windowSamples)
+                    {
+                        double n = (double)windowSamples;
+                        lowAcc.push_back(sqrt(lowSum / n));
+                        midAcc.push_back(sqrt(midSum / n));
+                        highAcc.push_back(sqrt(highSum / n));
+                        envAcc.push_back(sqrt(envSum / n));
+                        peakAcc.push_back(peakMax);
+                        lowSum = midSum = highSum = envSum = 0;
+                        peakMax = 0;
+                        windowCount = 0;
+                    }
+                }
+            }
+            if (windowCount > 0)
+            {
+                double n = (double)windowCount;
+                lowAcc.push_back(sqrt(lowSum / n));
+                midAcc.push_back(sqrt(midSum / n));
+                highAcc.push_back(sqrt(highSum / n));
+                envAcc.push_back(sqrt(envSum / n));
+                peakAcc.push_back(peakMax);
+            }
+            finished = true;
+            break;
+        }
+
+        libvlc_time_t now = libvlc_clock();
+        // Give up on silence (ring stopped growing for 3s) or timeout
+        if (now - lastDataTick > 3000000)
+            finished = true;
+        if (now - startTick > (libvlc_time_t)((_duration + 20.0) * 1000000))
+            finished = true;
+
+        ::Sleep(10);
+    }
+
+    libvlc_media_player_set_rate((libvlc_media_player_t*)_ctx->vlcPlayer, 1.0f);
+    libvlc_media_player_pause((libvlc_media_player_t*)_ctx->vlcPlayer);
+
+    if (envAcc.empty()) return nullptr;
+
+    // Normalize every band against the peak envelope so bars stay in 0..1
+    double envMax = 0;
+    for (size_t i = 0; i < envAcc.size(); i++)
+        if (envAcc[i] > envMax) envMax = envAcc[i];
+    if (envMax <= 0.0) return nullptr;
+
+    auto result = ref new Platform::Array<float>((int)envAcc.size() * 4);
+    for (size_t i = 0; i < envAcc.size(); i++)
+    {
+        auto clamp01 = [](double v) { return v < 0.0 ? 0.0f : (v > 1.0 ? 1.0f : (float)v); };
+        result[(int)i * 4 + 0] = clamp01(lowAcc[i] / envMax);
+        result[(int)i * 4 + 1] = clamp01(midAcc[i] / envMax);
+        result[(int)i * 4 + 2] = clamp01(highAcc[i] / envMax);
+        result[(int)i * 4 + 3] = clamp01(envAcc[i] / envMax);
+    }
+    return result;
+#else
+    return nullptr;
+#endif
+}
+
 void LibVlcDecoder::SeekTo(double seconds)
 {
 #if HYPERMEDIA_HAS_LIBVLC

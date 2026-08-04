@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
@@ -22,6 +23,7 @@ using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Animation;
+using Windows.UI.Xaml.Media.Imaging;
 using Windows.UI.Xaml.Navigation;
 using libVLCX;
 
@@ -121,7 +123,8 @@ namespace HyperMedia
         private const string KEY_LAST_INDEX = "Resume_LastIndex";
 
         // Settings navigation flag
-        private bool _navigatingToSettings = false;
+        private SettingsFlyout _settingsFlyout;
+        private CharmSettingsControl _charmSettings;
 
         // Screenshot
         private string _lastScreenshotPath;
@@ -143,6 +146,34 @@ namespace HyperMedia
         private int _currentLyricIndex = -1;
         private DispatcherTimer _lyricTimer;
 
+        // Visualizer (music animation)
+        private SpectrumEngine _spectrumEngine;
+        private readonly IVisualizerRenderer[] _visRenderers =
+        {
+            new BarsRenderer(),
+            new SymmetryRenderer(),
+            new RingRenderer(),
+            new ParticlesRenderer(),
+            new NebulaRenderer(),
+            new AlbumHueRenderer(),
+            new WaveRenderer()
+        };
+        private readonly string[] _visStyleKeys =
+        {
+            "VisBars", "VisSymmetry", "VisRing", "VisParticles", "VisNebula", "VisAlbumHue", "VisWave"
+        };
+        private int _visStyleIndex = 0;
+        private bool _lyricsVisible = true;
+        private Color _albumThemeColor = Color.FromArgb(255, 224, 64, 251);
+        private WriteableBitmap _visBitmap;
+        private byte[] _visPixels;
+        private WriteableBitmap _miniVisBitmap;
+        private byte[] _miniVisPixels;
+        private readonly BarsRenderer _miniVisRenderer = new BarsRenderer();
+        private readonly Stopwatch _visClock = new Stopwatch();
+        private bool _visTicking;
+        private const string KEY_LYRICS_VISIBLE = "Settings_LyricsVisible";
+
         // External subtitle pending
         private string _pendingExternalSubPath;
 
@@ -158,6 +189,12 @@ namespace HyperMedia
         public MainPage()
         {
             this.InitializeComponent();
+
+            // The player must survive navigation to Settings and back. In Windows 8.1
+            // a Disabled cache destroys the page instance on navigate-away, which would
+            // strand the live VLC playback (audio keeps playing, UI is gone). 'Required'
+            // keeps this instance cached and reuses it on GoBack.
+            NavigationCacheMode = NavigationCacheMode.Required;
 
             _autoHideTimer = new DispatcherTimer();
             _autoHideTimer.Interval = TimeSpan.FromSeconds(SettingsPage.GetAutoHideDelay());
@@ -195,6 +232,16 @@ namespace HyperMedia
                 ApplyPlayerLanguage();
             };
             ShowControls();
+
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                object ly = settings.Values[KEY_LYRICS_VISIBLE];
+                _lyricsVisible = (ly == null) || ((string)ly != "0");
+                _visClock.Start();
+                CompositionTarget.Rendering += OnRenderTick;
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         private void ApplyPlayerLanguage()
@@ -447,6 +494,16 @@ namespace HyperMedia
         protected override async void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+
+            // Coming back via GoBack (Settings page): live playback must never be
+            // reloaded, regardless of any activation payload in the parameter.
+            if (e.NavigationMode == NavigationMode.Back &&
+                (_vlcPlayer != null || _isPlaying || _playlist.Count > 0))
+            {
+                Debug.WriteLine("[HyperMedia] OnNavigatedTo: back-nav with active playback, skip restore");
+                return;
+            }
+
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
 
             // Register for suspension/resumption for SMTC
@@ -527,8 +584,18 @@ namespace HyperMedia
                 }
             }
 
-            // Try FutureAccessList first (in-session navigation)
-            if (StorageApplicationPermissions.FutureAccessList.ContainsItem("PlaybackFile"))
+            // Returning from the Settings page (or reactivating in-session): playback
+            // must continue unchanged — do not re-run the restore/reload chain.
+            if (_vlcPlayer != null || _isPlaying || _playlist != null && _playlist.Count > 0)
+            {
+                Debug.WriteLine("[HyperMedia] OnNavigatedTo: in-session playback active, skip restore");
+                return;
+            }
+
+            // Try FutureAccessList first (cold start / fresh activation only — a
+            // GoBack return from Settings must never re-open the saved file).
+            if (e.NavigationMode != NavigationMode.Back &&
+                StorageApplicationPermissions.FutureAccessList.ContainsItem("PlaybackFile"))
             {
                 try
                 {
@@ -566,52 +633,56 @@ namespace HyperMedia
                 catch (Exception ex) { LogUnhandled(ex); }
             }
 
-            // Fallback: restore from LocalSettings (survives app restart)
-            try
+            // Fallback: restore from LocalSettings (cold start only — skip on Back
+            // navigation so returning from Settings never reloads the last playlist)
+            if (e.NavigationMode != NavigationMode.Back)
             {
-                var settings = ApplicationData.Current.LocalSettings;
-                if (settings.Values.ContainsKey(KEY_LAST_PLAYLIST))
+                try
                 {
-                    string playlistStr = settings.Values[KEY_LAST_PLAYLIST] as string;
-                    int savedIndex = settings.Values.ContainsKey(KEY_LAST_INDEX)
-                        ? (int)settings.Values[KEY_LAST_INDEX] : 0;
-
-                    if (!string.IsNullOrEmpty(playlistStr))
+                    var settings = ApplicationData.Current.LocalSettings;
+                    if (settings.Values.ContainsKey(KEY_LAST_PLAYLIST))
                     {
-                        string[] paths = playlistStr.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
-                        _playlist.Clear();
-                        foreach (string path in paths)
+                        string playlistStr = settings.Values[KEY_LAST_PLAYLIST] as string;
+                        int savedIndex = settings.Values.ContainsKey(KEY_LAST_INDEX)
+                            ? (int)settings.Values[KEY_LAST_INDEX] : 0;
+
+                        if (!string.IsNullOrEmpty(playlistStr))
                         {
-                            try
+                            string[] paths = playlistStr.Split(new[] { '|' }, StringSplitOptions.RemoveEmptyEntries);
+                            _playlist.Clear();
+                            foreach (string path in paths)
                             {
-                                var file = await StorageFile.GetFileFromPathAsync(path);
-                                _playlist.Add(file);
+                                try
+                                {
+                                    var file = await StorageFile.GetFileFromPathAsync(path);
+                                    _playlist.Add(file);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine("[HyperMedia] Restore file failed ({0}): {1}", path, ex.Message);
+                                }
                             }
-                            catch (Exception ex)
+
+                            if (_playlist.Count > 0)
                             {
-                                Debug.WriteLine("[HyperMedia] Restore file failed ({0}): {1}", path, ex.Message);
+                                _playlistIndex = savedIndex < _playlist.Count ? savedIndex : 0;
+                                Debug.WriteLine("[HyperMedia] Restored from LocalSettings: {0} files, index={1}", _playlist.Count, _playlistIndex);
+
+                                settings.Values.Remove(KEY_LAST_PLAYLIST);
+                                settings.Values.Remove(KEY_LAST_INDEX);
+                                settings.Values.Remove(KEY_LAST_FILE_PATH);
+
+                                RestoreStateAfterSettings();
+                                OpenFile(_playlist[_playlistIndex]);
+                                return;
                             }
-                        }
-
-                        if (_playlist.Count > 0)
-                        {
-                            _playlistIndex = savedIndex < _playlist.Count ? savedIndex : 0;
-                            Debug.WriteLine("[HyperMedia] Restored from LocalSettings: {0} files, index={1}", _playlist.Count, _playlistIndex);
-
-                            settings.Values.Remove(KEY_LAST_PLAYLIST);
-                            settings.Values.Remove(KEY_LAST_INDEX);
-                            settings.Values.Remove(KEY_LAST_FILE_PATH);
-
-                            RestoreStateAfterSettings();
-                            OpenFile(_playlist[_playlistIndex]);
-                            return;
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("[HyperMedia] Restore from LocalSettings FAILED: {0}", ex.Message);
+                catch (Exception ex)
+                {
+                    Debug.WriteLine("[HyperMedia] Restore from LocalSettings FAILED: {0}", ex.Message);
+                }
             }
         }
 
@@ -654,13 +725,6 @@ namespace HyperMedia
         protected override void OnNavigatedFrom(NavigationEventArgs e)
         {
             base.OnNavigatedFrom(e);
-
-            if (_navigatingToSettings)
-            {
-                Debug.WriteLine("[HyperMedia] OnNavigatedFrom: navigating to settings, skipping save");
-                _navigatingToSettings = false;
-                return;
-            }
 
             Debug.WriteLine("[HyperMedia] OnNavigatedFrom: saving resume position");
             SaveResumePosition();
@@ -2234,6 +2298,11 @@ namespace HyperMedia
                 _isMusicMode = isAudio;
                 MusicOverlay.Visibility = isAudio ? Visibility.Visible : Visibility.Collapsed;
                 UpdateVideoControlsForMode(isAudio);
+                if (!isAudio)
+                {
+                    StopVisualizer();
+                    UpdateLyricsVisLayout();
+                }
                 if (isAudio)
                     UpdateLyricSourceButtons(SettingsPage.GetLyricSource());
 
@@ -2262,6 +2331,12 @@ namespace HyperMedia
 
                     await LoadAlbumArtAsync();
                     LoadLyrics();
+
+                    // Kick off the analyser on the temp copy shared with libVLC
+                    string analyserPath = _tempFile != null ? _tempFile.Path : _currentMusicFilePath;
+                    UpdateVisStyleLabel();
+                    StartVisualizer(analyserPath);
+                    UpdateLyricsVisLayout();
                 }
             }
             catch (Exception ex)
@@ -2283,6 +2358,11 @@ namespace HyperMedia
                 RotateBtn.Visibility = v;
                 CropBtn.Visibility = v;
                 RecordBtn.Visibility = v;
+
+                // Lyrics + visualizer style buttons are music-only
+                Visibility mv = isMusic ? Visibility.Visible : Visibility.Collapsed;
+                if (LyricsToggleBtn != null) LyricsToggleBtn.Visibility = mv;
+                if (VisStyleBtn != null) VisStyleBtn.Visibility = mv;
             }
             catch (Exception ex) { LogUnhandled(ex); }
         }
@@ -2301,6 +2381,11 @@ namespace HyperMedia
                     await bitmap.SetSourceAsync(thumb);
                     AlbumArtImage.Source = bitmap;
                     AlbumArtPlaceholder.Visibility = Visibility.Collapsed;
+
+                    // Keep the mini player art in sync
+                    try { MiniPlayerArt.Source = bitmap; } catch { }
+
+                    _albumThemeColor = await ExtractThemeColorAsync(thumb);
                     Debug.WriteLine("[HyperMedia] Album art loaded from thumbnail");
                 }
                 else
@@ -2312,6 +2397,42 @@ namespace HyperMedia
             {
                 Debug.WriteLine("[HyperMedia] LoadAlbumArtAsync FAILED: {0}", ex.Message);
             }
+        }
+
+        private async System.Threading.Tasks.Task<Color> ExtractThemeColorAsync(Windows.Storage.Streams.IRandomAccessStream stream)
+        {
+            try
+            {
+                stream.Seek(0);
+                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                var data = await decoder.GetPixelDataAsync(
+                    Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                    Windows.Graphics.Imaging.BitmapAlphaMode.Ignore,
+                    new Windows.Graphics.Imaging.BitmapTransform { ScaledWidth = 24, ScaledHeight = 24 },
+                    Windows.Graphics.Imaging.ExifOrientationMode.IgnoreExifOrientation,
+                    Windows.Graphics.Imaging.ColorManagementMode.DoNotColorManage);
+                byte[] px = data.DetachPixelData();
+                long r = 0, g = 0, b = 0, n = 0;
+                for (int i = 0; i + 3 < px.Length; i += 4)
+                {
+                    r += px[i + 2]; g += px[i + 1]; b += px[i];
+                    n++;
+                }
+                if (n > 0)
+                {
+                    int avgR = (int)(r / n), avgG = (int)(g / n), avgB = (int)(b / n);
+                    // keep colors vivid: boost saturation a bit toward the midtones
+                    return Color.FromArgb(255,
+                        (byte)Math.Min(255, (avgR + 60)),
+                        (byte)Math.Min(255, (avgG + 40)),
+                        (byte)Math.Min(255, (avgB + 80)));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ExtractThemeColor FAILED: {0}", ex.Message);
+            }
+            return Color.FromArgb(255, 224, 64, 251);
         }
 
         private async void LoadLyrics()
@@ -2804,10 +2925,10 @@ namespace HyperMedia
                 {
                     Text = rawText,
                     FontFamily = new FontFamily("Segoe UI"),
-                    FontSize = 15,
+                    FontSize = 17,
                     Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF)),
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 4, 0, 4)
+                    Margin = new Thickness(0, 6, 0, 6)
                 };
                 LyricsLines.Children.Add(tb);
                 return;
@@ -2819,7 +2940,7 @@ namespace HyperMedia
                 {
                     Text = line.Text,
                     FontFamily = new FontFamily("Segoe UI"),
-                    FontSize = 15,
+                    FontSize = 17,
                     Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
                     TextWrapping = TextWrapping.Wrap,
                     VerticalAlignment = VerticalAlignment.Center
@@ -2828,7 +2949,7 @@ namespace HyperMedia
                 var accentBar = new Border
                 {
                     Width = 3,
-                    Height = 24,
+                    Height = 30,
                     Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB)),
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 12, 0)
@@ -2838,7 +2959,7 @@ namespace HyperMedia
                 {
                     Text = FormatTime(line.TimeMs / 1000.0),
                     FontFamily = new FontFamily("Segoe UI"),
-                    FontSize = 11,
+                    FontSize = 13,
                     Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF)),
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 10, 0),
@@ -2848,7 +2969,7 @@ namespace HyperMedia
                 var row = new StackPanel
                 {
                     Orientation = Windows.UI.Xaml.Controls.Orientation.Horizontal,
-                    Margin = new Thickness(0, 5, 0, 5)
+                    Margin = new Thickness(0, 7, 0, 7)
                 };
                 row.Children.Add(accentBar);
                 row.Children.Add(timeTb);
@@ -2857,7 +2978,7 @@ namespace HyperMedia
                 var container = new Border
                 {
                     Child = row,
-                    Padding = new Thickness(8, 2, 8, 2),
+                    Padding = new Thickness(10, 4, 10, 4),
                     CornerRadius = new Windows.UI.Xaml.CornerRadius(0),
                     Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E))
                 };
@@ -2890,7 +3011,7 @@ namespace HyperMedia
             {
                 Text = "暂无歌词",
                 FontFamily = new FontFamily("Segoe UI"),
-                FontSize = 15,
+                FontSize = 17,
                 Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
                 Margin = new Thickness(0, 4, 0, 4)
             };
@@ -2982,7 +3103,7 @@ namespace HyperMedia
                 if (i == idx)
                 {
                     line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
-                    line.UiElement.FontSize = 17;
+                    line.UiElement.FontSize = 19;
                     line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
                     line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
                     line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
@@ -2995,7 +3116,7 @@ namespace HyperMedia
                 else
                 {
                     line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
-                    line.UiElement.FontSize = 15;
+                    line.UiElement.FontSize = 17;
                     line.UiElement.FontWeight = Windows.UI.Text.FontWeights.Normal;
                     line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
                     line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
@@ -3496,6 +3617,7 @@ namespace HyperMedia
             if (length > 0)
             {
                 _duration = length / 1000.0;
+                if (_spectrumEngine != null) _spectrumEngine.NotifyDuration(_duration);
                 Debug.WriteLine("[HyperMedia] OnVlcLengthChanged: {0}ms ({1}s)", length, _duration);
                 BeginInvokeOnUI(() =>
                 {
@@ -3560,6 +3682,7 @@ namespace HyperMedia
 
         private DispatcherTimer _volumeFadeTimer;
         private int _volumeFadeCurrent;
+        private int _pausedVolume = -1;
 
         private void ApplyVolumeFadeIn()
         {
@@ -3663,9 +3786,16 @@ namespace HyperMedia
 
             _isPlaying = true;
             _vlcPlayer.play();
+            if (_pausedVolume > 0)
+            {
+                int v = _pausedVolume;
+                _pausedVolume = -1;
+                try { _vlcPlayer.setVolume(v); } catch (Exception ex) { LogUnhandled(ex); }
+            }
             _positionTimer.Start();
             UpdatePlayPauseIcon(true);
             ResetAutoHide();
+            if (_spectrumEngine != null) _spectrumEngine.SetPlaying(true);
         }
 
         private void PausePlayback()
@@ -3673,10 +3803,21 @@ namespace HyperMedia
             if (!_isPlaying) return;
 
             _isPlaying = false;
-            _vlcPlayer?.pause();
+            if (_vlcPlayer != null)
+            {
+                // Kill the output buffer immediately so the pause is instant;
+                // libVLC would otherwise keep playing ~100-250ms of buffered audio.
+                try { _pausedVolume = _vlcPlayer.volume(); } catch { _pausedVolume = -1; }
+                if (_pausedVolume > 0)
+                {
+                    try { _vlcPlayer.setVolume(0); } catch { }
+                }
+                try { _vlcPlayer.pause(); } catch (Exception ex) { LogUnhandled(ex); }
+            }
             _positionTimer.Stop();
             UpdatePlayPauseIcon(false);
             ShowControls();
+            if (_spectrumEngine != null) _spectrumEngine.SetPlaying(false);
         }
 
         private void TogglePlayPause()
@@ -3696,8 +3837,11 @@ namespace HyperMedia
             _isPlaying = false;
             _isSeeking = false;
             _pendingResumePos = 0;
+            _pausedVolume = -1;
 
             StopSmtcSync();
+
+            StopVisualizer();
 
             if (_vlcPlayer != null)
             {
@@ -3719,6 +3863,12 @@ namespace HyperMedia
             UpdatePlayPauseIcon(false);
             HideOverlay();
             MusicOverlay.Visibility = Visibility.Collapsed;
+            try
+            {
+                if (LyricsBorder != null) LyricsBorder.Visibility = Visibility.Collapsed;
+                if (VisualizerHost != null) VisualizerHost.Visibility = Visibility.Collapsed;
+            }
+            catch { }
             _isMusicMode = false;
             _currentMusicFilePath = "";
             _currentMusicOriginalDir = "";
@@ -3728,6 +3878,157 @@ namespace HyperMedia
         private void UpdatePlayPauseIcon(bool playing)
         {
             PlayPauseIcon.Text = playing ? "\u23F8" : "\u25B6";
+        }
+
+        #endregion
+
+        #region Visualizer
+
+        private void StartVisualizer(string path)
+        {
+            try
+            {
+                StopVisualizer();
+                _visTicking = true;
+                _spectrumEngine = new SpectrumEngine();
+                _spectrumEngine.BeginTrack(path, _duration);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void StopVisualizer()
+        {
+            _visTicking = false;
+            if (_spectrumEngine != null)
+            {
+                try { _spectrumEngine.EndTrack(); } catch { }
+                _spectrumEngine = null;
+            }
+            try
+            {
+                if (VisualizerHost != null) VisualizerHost.Visibility = Visibility.Collapsed;
+            }
+            catch { }
+        }
+
+        private void UpdateLyricsVisLayout()
+        {
+            // Video playback shows neither lyrics nor the visualizer: force both hidden.
+            if (!_isMusicMode)
+            {
+                if (LyricsBorder != null) LyricsBorder.Visibility = Visibility.Collapsed;
+                if (VisualizerHost != null) VisualizerHost.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var data = _spectrumEngine != null;
+            if (data && !_lyricsVisible)
+            {
+                LyricsBorder.Visibility = Visibility.Collapsed;
+                VisualizerHost.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                LyricsBorder.Visibility = Visibility.Visible;
+                VisualizerHost.Visibility = Visibility.Collapsed;
+            }
+
+            if (LyricsToggleText != null)
+                LyricsToggleText.Text = _lyricsVisible ? L("LyricsHide") : L("LyricsShow");
+
+            bool visOn = _isMusicMode && _visTicking;
+            if (MiniPlayerOverlay != null && MiniPlayerOverlay.Visibility == Visibility.Visible)
+                MiniVisImage.Visibility = visOn ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        private void LyricsToggleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _lyricsVisible = !_lyricsVisible;
+            try
+            {
+                ApplicationData.Current.LocalSettings.Values[KEY_LYRICS_VISIBLE] = _lyricsVisible ? "1" : "0";
+            }
+            catch { }
+            UpdateLyricsVisLayout();
+        }
+
+        private void VisStyleBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _visStyleIndex = (_visStyleIndex + 1) % _visRenderers.Length;
+            UpdateVisStyleLabel();
+        }
+
+        private void UpdateVisStyleLabel()
+        {
+            if (VisStyleText == null) return;
+            VisStyleText.Text = L(_visStyleKeys[_visStyleIndex]);
+        }
+
+        private void OnRenderTick(object sender, object e)
+        {
+            if (!_visTicking || _spectrumEngine == null) return;
+            if (!_isPlaying) return; // paused: freeze the last rendered frame
+            var data = _spectrumEngine.Current;
+            if (data == null) return;
+            float beat = _spectrumEngine.BeatPulse;
+            double ms = _visClock.ElapsedMilliseconds;
+
+            try
+            {
+                _renderFrameCount++;
+                if (((_renderFrameCount & 1) == 0) &&
+                    VisualizerHost.Visibility == Visibility.Visible && VisualizerHost.ActualWidth > 10)
+                {
+                    // Render at half width and let Stretch=Fill upscale: halves the
+                    // per-frame pixel write + CPU render cost without losing vertical
+                    // (peak/curve) resolution.
+                    int w = Math.Max(2, (int)VisualizerHost.ActualWidth / 2);
+                    int h = (int)VisualizerHost.ActualHeight;
+                    if (EnsureBitmap(ref _visBitmap, ref _visPixels, w, h))
+                    {
+                        VisualizerImage.Source = _visBitmap;
+                        _visRenderers[_visStyleIndex].Render(_visPixels, w, h, data, beat, _albumThemeColor, ms);
+                        WritePixels(_visBitmap, _visPixels);
+                    }
+                }
+
+                if (MiniVisImage.Visibility == Visibility.Visible && MiniVisImage.ActualWidth > 10)
+                {
+                    int w = (int)MiniVisImage.ActualWidth;
+                    int h = (int)MiniVisImage.ActualHeight;
+                    if (EnsureBitmap(ref _miniVisBitmap, ref _miniVisPixels, w, h))
+                    {
+                        MiniVisImage.Source = _miniVisBitmap;
+                        _miniVisRenderer.Render(_miniVisPixels, w, h, data, beat, _albumThemeColor, ms);
+                        WritePixels(_miniVisBitmap, _miniVisPixels);
+                    }
+                }
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private static void WritePixels(WriteableBitmap bmp, byte[] pixels)
+        {
+            try
+            {
+                using (var stream = bmp.PixelBuffer.AsStream())
+                {
+                    stream.Seek(0, SeekOrigin.Begin);
+                    stream.Write(pixels, 0, pixels.Length);
+                }
+                bmp.Invalidate();
+            }
+            catch { }
+        }
+
+        private bool EnsureBitmap(ref WriteableBitmap bmp, ref byte[] pixels, int width, int height)
+        {
+            if (bmp == null || pixels == null || bmp.PixelWidth != width || bmp.PixelHeight != height)
+            {
+                bmp = new WriteableBitmap(width, height);
+                pixels = new byte[width * height * 4];
+            }
+            return true;
         }
 
         #endregion
@@ -3751,6 +4052,7 @@ namespace HyperMedia
                 {
                     PositionSlider.Value = sec;
                     CurrentTimeText.Text = FormatTime(sec);
+                    if (_spectrumEngine != null) _spectrumEngine.NotifyPosition(sec);
                 }
                 else
                 {
@@ -3791,6 +4093,7 @@ namespace HyperMedia
             if (_duration <= 0) return;
             _vlcPlayer?.setTime((long)(seconds * 1000));
             CurrentTimeText.Text = FormatTime(seconds);
+            if (_spectrumEngine != null) _spectrumEngine.NotifySeek(seconds);
         }
 
         private const string KEY_SKIP_INTRO = "SkipIntro_";
@@ -4511,9 +4814,18 @@ namespace HyperMedia
 
         private void SettingsButton_Click(object sender, RoutedEventArgs e)
         {
-            SaveStateForRestore();
-            _navigatingToSettings = true;
-            Frame.Navigate(typeof(SettingsPage));
+            // Host Settings in the system Settings charm (SettingsFlyout) instead of
+            // navigating away: the page instance (and its SwapChainPanel/video surface,
+            // VLC stream, MusicOverlay) must never be torn down when opening Settings.
+            if (_charmSettings == null)
+                _charmSettings = new CharmSettingsControl();
+            _settingsFlyout = new SettingsFlyout
+            {
+                Title = "设置",
+                RequestedTheme = ElementTheme.Light,
+                Content = _charmSettings
+            };
+            _settingsFlyout.ShowIndependent();
         }
 
         private void SaveStateForRestore()
@@ -5475,6 +5787,7 @@ namespace HyperMedia
         #region Mini Player
 
         private bool _miniPlayerMode = false;
+        private int _renderFrameCount;
 
         private void ToggleMiniPlayer()
         {
@@ -5484,12 +5797,15 @@ namespace HyperMedia
                 MiniPlayerTitle.Text = _originalFileName ?? "";
                 UpdateMiniPlayerIcon();
                 MiniPlayerOverlay.Visibility = Visibility.Visible;
+                MiniVisImage.Visibility = (_isMusicMode && _visTicking)
+                    ? Visibility.Visible : Visibility.Collapsed;
                 HideControls();
                 _autoHideTimer.Stop();
             }
             else
             {
                 MiniPlayerOverlay.Visibility = Visibility.Collapsed;
+                MiniVisImage.Visibility = Visibility.Collapsed;
                 ShowControls();
             }
         }
