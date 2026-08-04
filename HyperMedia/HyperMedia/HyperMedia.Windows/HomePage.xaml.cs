@@ -532,6 +532,12 @@ namespace HyperMedia
                     }
                 }
                 catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+
+                try
+                {
+                    await new Windows.UI.Popups.MessageDialog(L("FileOpenFailed")).ShowAsync();
+                }
+                catch { }
             }
         }
 
@@ -770,63 +776,9 @@ namespace HyperMedia
                 filesList.Items.Add(empty);
             }
 
-            // Network devices (UPnP/DLNA discovery — Win 8.1 has no content-browse API, only device discovery)
-            var netTitle = new TextBlock();
-            netTitle.Text = L("NetworkDevices");
-            netTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netTitle.FontSize = 11;
-            netTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-            netTitle.Margin = new Thickness(0, 14, 0, 6);
-            panel.Children.Add(netTitle);
-
-            var netList = new ListBox();
-            netList.MaxHeight = 160;
-            netList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-            netList.BorderThickness = new Thickness(0);
-            netList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netList.FontSize = 13;
-            netList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-            try
-            {
-                netList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-            panel.Children.Add(netList);
-
-            var netLoading = new TextBlock();
-            netLoading.Text = L("Scanning");
-            netLoading.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netLoading.FontSize = 12;
-            netLoading.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-            netLoading.Margin = new Thickness(10, 6, 0, 6);
-            netList.Items.Add(new ListBoxItem { Content = netLoading.Text, IsEnabled = false, FontSize = 12 });
-
-            var netDevices = await DiscoverNetworkDevices();
-            netList.Items.Clear();
-            if (netDevices.Count == 0)
-            {
-                var empty = new ListBoxItem();
-                empty.Content = L("NoDevices");
-                empty.IsEnabled = false;
-                empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                empty.FontSize = 12;
-                empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-                netList.Items.Add(empty);
-            }
-            else
-            {
-                foreach (var dev in netDevices)
-                {
-                    var item = new ListBoxItem();
-                    item.Content = "\uD83D\uDDA5\uFE0F " + dev.Item1;
-                    item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                    item.FontSize = 12;
-                    item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
-                    item.Padding = new Thickness(10, 6, 10, 6);
-                    item.IsEnabled = false;
-                    netList.Items.Add(item);
-                }
-            }
+            // Network device browsing was removed: Win 8.1 offers no
+            // content-browse API and DeviceClass.All only surfaces local
+            // adapters, so a "network devices" list would be misleading.
 
             var closeBtn = new Button();
             closeBtn.Content = L("Close");
@@ -850,39 +802,6 @@ namespace HyperMedia
             StatusText.Text = text;
         }
 
-        private async System.Threading.Tasks.Task<List<Tuple<string, string>>> DiscoverNetworkDevices()
-        {
-            var result = new List<Tuple<string, string>>();
-            try
-            {
-                var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(
-                    Windows.Devices.Enumeration.DeviceClass.All);
-                foreach (var d in devices)
-                {
-                    if (d == null) continue;
-                    string name = d.Name ?? "";
-                    string id = d.Id ?? "";
-                    if (string.IsNullOrEmpty(name)) continue;
-
-                    // Skip local hardware (GUID-based ids) and common local interface names
-                    if (id.Contains("{")) continue;
-                    if (name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Virtual", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("WAN", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Realtek", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Monitor", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-
-                    result.Add(Tuple.Create(name, "网络设备"));
-                    if (result.Count >= 30) break;
-                }
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] DiscoverNetworkDevices failed: {0}", ex.Message); }
-            return result;
-        }
 
         #endregion
 

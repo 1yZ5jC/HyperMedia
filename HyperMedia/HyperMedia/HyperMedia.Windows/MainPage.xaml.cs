@@ -732,6 +732,11 @@ namespace HyperMedia
                 HideOverlay();
                 StatusText.Text = "Error: " + ex.Message;
                 Debug.WriteLine("[HyperMedia] ERROR: {0}", ex);
+                try
+                {
+                    await new Windows.UI.Popups.MessageDialog(L("FileOpenFailed")).ShowAsync();
+                }
+                catch { }
             }
         }
 
@@ -4483,6 +4488,8 @@ namespace HyperMedia
 
         private void ToggleFullscreen()
         {
+            // Windows 8.1 has no system full-screen API for Store apps, so this
+            // maximizes usable space by hiding the chrome and keeping playback on.
             _isFullscreen = !_isFullscreen;
             FullscreenIcon.Text = _isFullscreen ? "\u2716" : "\u26F6";
 
@@ -5945,8 +5952,35 @@ namespace HyperMedia
             {
                 var file = _playlist[_playlistIndex];
                 var folder = await file.GetParentAsync();
+                // Windows 8.1 offers no API to reveal a folder in File Explorer
+                // (LaunchFolderAsync is Win10+), so hand the path over instead.
                 if (folder != null)
-                    await Launcher.LaunchUriAsync(new Uri(folder.Path));
+                    await ShowFolderPathFallback(folder.Path);
+                else
+                    await ShowFolderPathFallback(file.Path);
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private async System.Threading.Tasks.Task ShowFolderPathFallback(string path)
+        {
+            try
+            {
+                var dialog = new Windows.UI.Popups.MessageDialog(L("FolderLaunchFailed") + "\n\n" + path, L("FolderCopyTitle"));
+                var copyCmd = new Windows.UI.Popups.UICommand(L("CopyPathCmd"), async (cmd) =>
+                {
+                    try
+                    {
+                        var dataPackage = new Windows.ApplicationModel.DataTransfer.DataPackage();
+                        dataPackage.SetText(path);
+                        Windows.ApplicationModel.DataTransfer.Clipboard.SetContent(dataPackage);
+                        await new Windows.UI.Popups.MessageDialog(L("PathCopiedMsg")).ShowAsync();
+                    }
+                    catch (Exception ex2) { LogUnhandled(ex2); }
+                });
+                dialog.Commands.Add(copyCmd);
+                dialog.Commands.Add(new Windows.UI.Popups.UICommand(L("Cancel")));
+                await dialog.ShowAsync();
             }
             catch (Exception ex) { LogUnhandled(ex); }
         }

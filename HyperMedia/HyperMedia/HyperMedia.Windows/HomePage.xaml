@@ -110,9 +110,6 @@
                                                FontSize="13" VerticalAlignment="Center" CharacterSpacing="40"/>
                                 </StackPanel>
                             </Button>
-                            <TextBlock Text="或将文件拖入窗口"
-                                       FontFamily="Segoe UI" FontSize="13" Foreground="#55FFFFFF"
-                                       VerticalAlignment="Center"/>
                         </StackPanel>
                     </StackPanel>
 

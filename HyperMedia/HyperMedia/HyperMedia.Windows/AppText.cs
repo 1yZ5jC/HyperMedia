@@ -80,7 +80,6 @@ namespace HyperMedia
             Add("Music", "音乐", "Music");
             Add("Photos", "图片", "Photos");
             Add("RecentPlayed", "最近播放", "Recent");
-            Add("DragHint", "或将文件拖入窗口", "or drag files here");
             Add("ScrollHint", "滚动浏览", "Scroll to explore");
             Add("Tagline1", "全部播放", "PLAY ALL");
             Add("Tagline2", "随心所欲", "YOUR WAY");
@@ -92,9 +91,6 @@ namespace HyperMedia
             Add("TopRated", "★ 高评分", "★ Top Rated");
             Add("MostPlayed", "🔥 播放最多", "🔥 Most Played");
             Add("RecentlyPlayedSmart", "🕘 最近播放", "🕘 Recent");
-            Add("NetworkDevices", "局域网设备 (DLNA/UPnP)", "Network Devices (DLNA/UPnP)");
-            Add("Scanning", "正在扫描局域网...", "Scanning network...");
-            Add("NoDevices", "未发现设备", "No devices found");
             Add("BrowseFolder", "浏览文件夹媒体", "Browse folder media");
             Add("AddFolder", "添加文件夹浏览", "Add a folder");
             Add("SaveAsPlaylist", "保存为歌单", "Save as Playlist");
@@ -389,6 +385,11 @@ namespace HyperMedia
             Add("PinnedToStart", "已固定到开始屏幕: ", "Pinned to Start: ");
             Add("AboutCharm", "关于", "About");
             Add("AboutPoweredBy", "基于 libVLC 驱动", "Powered by libVLC");
+            Add("FileOpenFailed", "无法打开此文件。文件可能已被移动或删除，或受系统 API 访问限制。\n请通过「打开」按钮重新打开文件。", "Cannot open this file. It may have been moved or deleted, or access is restricted by the system API.\nPlease reopen it with the Open button.");
+            Add("FolderLaunchFailed", "无法在资源管理器中打开此文件夹（系统 API 限制）。\n你可以复制下面的路径，在资源管理器中手动打开：", "Unable to open this folder in File Explorer (system API restriction).\nYou can copy the path below and open it manually:");
+            Add("FolderCopyTitle", "文件夹路径", "Folder Path");
+            Add("CopyPathCmd", "复制路径", "Copy Path");
+            Add("PathCopiedMsg", "路径已复制到剪贴板", "Path copied to clipboard");
             Add("PerfLevel", "设备性能等级", "Device Performance Level");
             Add("PerfLow", "低性能", "Low");
             Add("PerfMedium", "中性能", "Medium");
