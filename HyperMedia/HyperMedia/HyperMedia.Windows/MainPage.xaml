@@ -103,12 +103,20 @@
                     <TextBlock Text="&#x1F4D6;" FontFamily="Segoe UI Symbol" FontSize="14"
                                Foreground="#66FFFFFF"/>
                 </Button>
-                <Button x:Name="StatsBtn" Click="StatsBtn_Click"
-                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+<Button x:Name="StatsBtn" Click="StatsBtn_Click"
+                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                     <ToolTipService.ToolTip>
                         <ToolTip Content="播放统计 (Ctrl+I)"/>
                     </ToolTipService.ToolTip>
                     <TextBlock Text="&#x1F4CA;" FontFamily="Segoe UI Symbol" FontSize="14"
+                               Foreground="#66FFFFFF"/>
+                </Button>
+                <Button x:Name="ExportM3uBtn" Click="ExportM3uBtn_Click"
+                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                    <ToolTipService.ToolTip>
+                        <ToolTip Content="导出播放列表 (.m3u)"/>
+                    </ToolTipService.ToolTip>
+                    <TextBlock Text="&#x1F4E4;" FontFamily="Segoe UI Symbol" FontSize="14"
                                Foreground="#66FFFFFF"/>
                 </Button>
                 <Button x:Name="OpenFolderBtn" Click="OpenFolderBtn_Click"
@@ -540,6 +548,14 @@
                                     <TextBlock Text="&#x21BB;" FontFamily="Segoe UI Symbol" FontSize="16"
                                                Foreground="#FFFFFFFF"/>
                                 </Button>
+                                <Button x:Name="PhotoFilterBtn" Click="PhotoFilterBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="滤镜"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock x:Name="PhotoFilterIcon" Text="&#x1F3A8;" FontFamily="Segoe UI Symbol" FontSize="15"
+                                               Foreground="#66FFFFFF"/>
+                                </Button>
                                 <Button x:Name="PhotoSlideshowBtn" Click="PhotoSlideshowBtn_Click"
                                         Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
                                     <ToolTipService.ToolTip>
@@ -548,6 +564,15 @@
                                     <TextBlock x:Name="PhotoSlideshowIcon" Text="&#x25B6;"
                                                FontFamily="Segoe UI Symbol" FontSize="14"
                                                Foreground="#66FFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoIntervalBtn" Click="PhotoIntervalBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="幻灯片间隔"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock x:Name="PhotoIntervalText" Text="3s"
+                                               FontFamily="Segoe UI Semibold" FontSize="12"
+                                               Foreground="#66FFFFFF" MinWidth="28" TextAlignment="Center"/>
                                 </Button>
                                 <Button x:Name="PhotoCloseBtn" Click="PhotoCloseBtn_Click"
                                         Style="{StaticResource ZunePrimaryStyle}">
@@ -599,10 +624,14 @@
                                 <TextBlock Text="&#x23EE;" FontFamily="Segoe UI Symbol" FontSize="18"
                                            Foreground="#FFFFFFFF"/>
                             </Button>
-                            <TextBlock x:Name="PhotoCounter" Text=""
-                                       Grid.Column="1" FontFamily="Segoe UI" FontSize="13"
-                                       Foreground="#66FFFFFF" HorizontalAlignment="Center"
-                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <TextBlock x:Name="PhotoCounter" Text=""
+                                           FontFamily="Segoe UI" FontSize="13"
+                                           Foreground="#66FFFFFF" HorizontalAlignment="Center"/>
+                                <TextBlock x:Name="PhotoInfoText" Text=""
+                                           FontFamily="Segoe UI" FontSize="11"
+                                           Foreground="#44FFFFFF" HorizontalAlignment="Center"/>
+                            </StackPanel>
                             <Button x:Name="PhotoNextBtn" Click="PhotoNextBtn_Click"
                                     Grid.Column="2"
                                     Style="{StaticResource ZunePrimaryStyle}">

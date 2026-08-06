@@ -42,7 +42,10 @@ namespace HyperMedia
         private const double POSITION_TIMER_INTERVAL_MS = 250;
         private const int SMTC_SYNC_INTERVAL_MS = 1000;
         private const int OVERLAY_HIDE_DELAY_MS = 2000;
-        private const int SLIDESHOW_INTERVAL_SECONDS = 3;
+        private static readonly int[] SLIDESHOW_INTERVALS = { 2, 3, 5, 10 };
+        private int _slideshowIntervalSeconds = 3;
+        private int _slideshowIntervalIdx = 1;
+        private int _photoFilterIndex = 0;
 
         private DispatcherTimer _autoHideTimer;
         private DispatcherTimer _positionTimer;
@@ -778,6 +781,7 @@ namespace HyperMedia
                 await TryQueueSameFolder(file);
 
             ShowOverlay(L("LoadingPrefix") + file.Name + "...");
+            UpdatePlaylistSelection();
 
             try
             {
@@ -1198,11 +1202,58 @@ namespace HyperMedia
             PlaylistListBox.ItemsSource = items;
             PlaylistEmptyText.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
 
-            // Restore selection on the currently playing item
-            if (_playlistIndex >= 0 && _playlistIndex < _playlist.Count &&
-                (string.IsNullOrEmpty(filter) || _playlist[_playlistIndex].Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0))
+            UpdatePlaylistSelection();
+        }
+
+        /// <summary>Select and scroll the playlist to the currently playing item.</summary>
+        private void UpdatePlaylistSelection()
+        {
+            if (PlaylistListBox == null) return;
+            if (PlaylistListBox.ItemsSource == null) return;
+            try
             {
-                PlaylistListBox.SelectedIndex = items.FindIndex(it => it.Index - 1 == _playlistIndex);
+                var items = PlaylistListBox.ItemsSource as List<PlaylistItem>;
+                if (items == null) return;
+                int sel = items.FindIndex(it => it.Index - 1 == _playlistIndex);
+                PlaylistListBox.SelectedIndex = sel;
+                if (sel >= 0)
+                    PlaylistListBox.ScrollIntoView(items[sel]);
+            }
+            catch { }
+        }
+
+        private async void ExportM3uBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (_playlist.Count == 0) return;
+                var picker = new Windows.Storage.Pickers.FileSavePicker();
+                picker.SuggestedStartLocation = Windows.Storage.Pickers.PickerLocationId.MusicLibrary;
+                picker.FileTypeChoices.Add("M3U 播放列表", new List<string> { ".m3u" });
+                picker.SuggestedFileName = "HyperMedia 播放列表";
+                var file = await picker.PickSaveFileAsync();
+                if (file == null) return;
+
+                var lines = new List<string> { "#EXTM3U" };
+                for (int i = 0; i < _playlist.Count; i++)
+                {
+                    try
+                    {
+                        string ext = System.IO.Path.GetExtension(_playlist[i].Name ?? "");
+                        if (ext.Length > 1) ext = ext.Substring(1);
+                        lines.Add("#EXTINF:" + (-1) + "," + _playlist[i].Name);
+                        lines.Add(_playlist[i].Path);
+                    }
+                    catch { }
+                }
+                await FileIO.WriteLinesAsync(file, lines);
+                ShowOverlay("已导出 " + file.Name);
+                HideOverlayDelayed();
+            }
+            catch (Exception ex)
+            {
+                ShowOverlay("导出失败: " + ex.Message);
+                HideOverlayDelayed();
             }
         }
 
@@ -3739,6 +3790,11 @@ namespace HyperMedia
             if (_sleepRemainingSeconds <= 0)
             {
                 _sleepTimer.Stop();
+                if (_vlcPlayer != null)
+                {
+                    try { _vlcPlayer.setVolume(SettingsPage.GetDefaultVolume()); }
+                    catch { }
+                }
                 SaveResumePosition();
                 StopPlayback();
                 WelcomeScreen.Visibility = Visibility.Visible;
@@ -3746,6 +3802,13 @@ namespace HyperMedia
                 ShowOverlay(L("SleepTimerStopped"));
                 HideOverlayDelayed();
                 ShowToast(L("SleepTimer"), L("PlaybackStoppedToast"));
+            }
+            else if (_sleepRemainingSeconds <= 10 && _vlcPlayer != null && _isPlaying)
+            {
+                // Fade volume down over the last 10 seconds before stopping
+                int target = (int)(SettingsPage.GetDefaultVolume() * (_sleepRemainingSeconds / 10.0));
+                try { _vlcPlayer.setVolume(Math.Max(0, target)); }
+                catch { }
             }
         }
 
@@ -4406,6 +4469,7 @@ namespace HyperMedia
         private bool _isPhotoMode;
         private bool _isSlideshow;
         private DispatcherTimer _slideshowTimer;
+        private StorageFile _photoFile;
         private double _photoZoom = 1.0;
         private double _photoRotation = 0;
 
@@ -4426,6 +4490,9 @@ namespace HyperMedia
             try
             {
                 _isPhotoMode = true;
+                this.BottomAppBar = null;
+                _photoFile = file;
+                _photoFilterIndex = 0;
                 WelcomeScreen.Visibility = Visibility.Collapsed;
                 VlcVideoPanel.Visibility = Visibility.Collapsed;
                 TopBar.Visibility = Visibility.Collapsed;
@@ -4442,13 +4509,18 @@ namespace HyperMedia
                 FileNameText.Text = file.Name;
                 PhotoFileName.Text = file.Name;
                 UpdatePhotoCounter();
+                LoadPhotoInfo(file);
 
                 _photoZoom = 1.0;
                 _photoRotation = 0;
+                PhotoImage.Stretch = Stretch.Uniform;
                 PhotoTransform.ScaleX = 1;
                 PhotoTransform.ScaleY = 1;
                 PhotoTransform.Rotation = 0;
                 PhotoZoomText.Text = "100%";
+                if (PhotoFilterIcon != null)
+                    PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                        Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
             }
             catch (Exception ex)
             {
@@ -4463,6 +4535,7 @@ namespace HyperMedia
             _isPhotoMode = false;
             StopSlideshow();
             PhotoViewerOverlay.Visibility = Visibility.Collapsed;
+            this.BottomAppBar = ToolsAppBar;
             VlcVideoPanel.Visibility = Visibility.Visible;
             PhotoImage.Source = null;
         }
@@ -4473,6 +4546,153 @@ namespace HyperMedia
             WelcomeScreen.Visibility = Visibility.Visible;
             FileNameText.Text = "";
             StatusText.Text = "";
+        }
+
+        private void PhotoIntervalBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _slideshowIntervalIdx = (_slideshowIntervalIdx + 1) % SLIDESHOW_INTERVALS.Length;
+            _slideshowIntervalSeconds = SLIDESHOW_INTERVALS[_slideshowIntervalIdx];
+            if (PhotoIntervalText != null)
+                PhotoIntervalText.Text = _slideshowIntervalSeconds + "s";
+            if (_isSlideshow && _slideshowTimer != null)
+            {
+                _slideshowTimer.Stop();
+                _slideshowTimer.Interval = TimeSpan.FromSeconds(_slideshowIntervalSeconds);
+                _slideshowTimer.Start();
+            }
+        }
+
+        private async void LoadPhotoInfo(StorageFile file)
+        {
+            try
+            {
+                if (PhotoInfoText == null) return;
+                var imgProps = await file.Properties.GetImagePropertiesAsync();
+                var basic = await file.GetBasicPropertiesAsync();
+
+                string info = "";
+                if (imgProps.Width > 0 && imgProps.Height > 0)
+                    info += imgProps.Width + "\u00D7" + imgProps.Height;
+                if (basic.Size > 0)
+                {
+                    double mb = basic.Size / (1024.0 * 1024.0);
+                    string size = mb >= 1 ? mb.ToString("0.00") + " MB" : (basic.Size / 1024.0).ToString("0") + " KB";
+                    info += (info.Length > 0 ? "  \u00B7  " : "") + size;
+                }
+                if (imgProps.DateTaken != null && imgProps.DateTaken.Year > 2000)
+                {
+                    info += (info.Length > 0 ? "  \u00B7  " : "") +
+                        imgProps.DateTaken.Year + "-" + imgProps.DateTaken.Month.ToString("00") + "-" + imgProps.DateTaken.Day.ToString("00");
+                }
+                PhotoInfoText.Text = info;
+            }
+            catch { }
+        }
+
+        private void PhotoFilterBtn_Click(object sender, RoutedEventArgs e)
+        {
+            _photoFilterIndex = (_photoFilterIndex + 1) % 4;
+            if (_photoFilterIndex == 0)
+            {
+                ReloadPhotoImage();
+                if (PhotoFilterIcon != null)
+                    PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                        Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+                return;
+            }
+            if (PhotoFilterIcon != null)
+                PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            ApplyPhotoFilter();
+        }
+
+        private async void ApplyPhotoFilter()
+        {
+            if (_photoFile == null) return;
+            try
+            {
+                var stream = await _photoFile.OpenReadAsync();
+                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                var data = await decoder.GetPixelDataAsync();
+                byte[] src = data.DetachPixelData();
+                int w = (int)decoder.PixelWidth;
+                int h = (int)decoder.PixelHeight;
+
+                if (w * h > 20000000)
+                {
+                    ShowOverlay("图片过大，跳过滤镜");
+                    HideOverlayDelayed();
+                    return;
+                }
+
+                byte[] dst = (byte[])src.Clone();
+                await Task.Run(() => FilterImage(src, dst, w, h, _photoFilterIndex));
+
+                var wb = new WriteableBitmap(w, h);
+                using (var s = wb.PixelBuffer.AsStream())
+                {
+                    s.Seek(0, SeekOrigin.Begin);
+                    s.Write(dst, 0, dst.Length);
+                }
+                wb.Invalidate();
+                PhotoImage.Source = wb;
+                PhotoImage.Stretch = Stretch.Uniform;
+                PhotoTransform.ScaleX = 1;
+                PhotoTransform.ScaleY = 1;
+                _photoZoom = 1.0;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ApplyPhotoFilter failed: {0}", ex.Message);
+            }
+        }
+
+        private async void ReloadPhotoImage()
+        {
+            if (_photoFile == null) return;
+            try
+            {
+                var s = await _photoFile.OpenReadAsync();
+                var bmp = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
+                await bmp.SetSourceAsync(s);
+                PhotoImage.Source = bmp;
+                PhotoImage.Stretch = Stretch.Uniform;
+                PhotoTransform.ScaleX = 1;
+                PhotoTransform.ScaleY = 1;
+                _photoZoom = 1.0;
+            }
+            catch { }
+        }
+
+        private static void FilterImage(byte[] src, byte[] dst, int w, int h, int filter)
+        {
+            int n = w * h;
+            for (int i = 0, p = 0; i < n; i++, p += 4)
+            {
+                byte r = src[p], g = src[p + 1], b = src[p + 2];
+                int nr = r, ng = g, nb = b;
+                switch (filter)
+                {
+                    case 1: // grayscale
+                        int lum = (r * 299 + g * 587 + b * 114) / 1000;
+                        nr = lum; ng = lum; nb = lum;
+                        break;
+                    case 2: // sepia
+                        nr = Math.Min(255, (int)(r * 0.393 + g * 0.769 + b * 0.189));
+                        ng = Math.Min(255, (int)(r * 0.349 + g * 0.686 + b * 0.168));
+                        nb = Math.Min(255, (int)(r * 0.272 + g * 0.534 + b * 0.131));
+                        break;
+                    case 3: // cool
+                        nr = (int)(r * 0.9);
+                        ng = (int)(g * 0.96);
+                        nb = Math.Min(255, (int)(b * 1.12));
+                        break;
+                }
+                dst[p] = (byte)nr;
+                dst[p + 1] = (byte)ng;
+                dst[p + 2] = (byte)nb;
+                dst[p + 3] = src[p + 3];
+            }
         }
 
         private void UpdatePhotoCounter()
@@ -4540,9 +4760,9 @@ namespace HyperMedia
             if (_slideshowTimer == null)
             {
                 _slideshowTimer = new DispatcherTimer();
-                _slideshowTimer.Interval = TimeSpan.FromSeconds(SLIDESHOW_INTERVAL_SECONDS);
                 _slideshowTimer.Tick += SlideshowTimer_Tick;
             }
+            _slideshowTimer.Interval = TimeSpan.FromSeconds(_slideshowIntervalSeconds);
             _slideshowTimer.Start();
         }
 
@@ -4601,19 +4821,23 @@ namespace HyperMedia
 
         private void PhotoScrollViewer_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
-            if (_photoZoom > 1.0)
+            // Toggle between "fit screen" and "100% actual pixels"
+            if (PhotoImage.Stretch == Stretch.Uniform)
             {
+                PhotoImage.Stretch = Stretch.None;
                 _photoZoom = 1.0;
                 PhotoTransform.ScaleX = 1;
                 PhotoTransform.ScaleY = 1;
+                PhotoZoomText.Text = "100%";
             }
             else
             {
-                _photoZoom = 2.0;
-                PhotoTransform.ScaleX = 2;
-                PhotoTransform.ScaleY = 2;
+                PhotoImage.Stretch = Stretch.Uniform;
+                _photoZoom = 1.0;
+                PhotoTransform.ScaleX = 1;
+                PhotoTransform.ScaleY = 1;
+                PhotoZoomText.Text = "适应";
             }
-            PhotoZoomText.Text = ((int)(_photoZoom * 100)) + "%";
         }
 
         #endregion
