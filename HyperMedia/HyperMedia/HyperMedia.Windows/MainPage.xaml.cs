@@ -125,10 +125,6 @@ namespace HyperMedia
         private const string KEY_LAST_PLAYLIST = "Resume_LastPlaylist";
         private const string KEY_LAST_INDEX = "Resume_LastIndex";
 
-        // Settings navigation flag
-        private SettingsFlyout _settingsFlyout;
-        private CharmSettingsControl _charmSettings;
-
         // Screenshot
         private string _lastScreenshotPath;
         private string _lastScreenshotFileName;
@@ -507,12 +503,17 @@ namespace HyperMedia
                 return;
             }
 
+            // Unsubscribe before subscribing so repeated/second-opens of this
+            // cached page never accumulate duplicate handlers.
+            Window.Current.CoreWindow.PointerEntered -= CoreWindow_PointerEntered;
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
 
             // Register for suspension/resumption for SMTC
             try
             {
+                Application.Current.Suspending -= OnSmtcAppSuspended;
                 Application.Current.Suspending += OnSmtcAppSuspended;
+                Application.Current.Resuming -= OnSmtcAppResumed;
                 Application.Current.Resuming += OnSmtcAppResumed;
             }
             catch (Exception ex) { LogUnhandled(ex); }
@@ -897,6 +898,8 @@ namespace HyperMedia
 
             FileNameText.Text = _originalFileName ?? System.IO.Path.GetFileName(mediaPath);
             UpdatePlaylistCounter();
+
+            ReleaseVlcPlayback();
 
             try
             {
@@ -3906,12 +3909,7 @@ namespace HyperMedia
 
             StopVisualizer();
 
-            if (_vlcPlayer != null)
-            {
-                _vlcPlayer.stop();
-                _vlcPlayer = null;
-            }
-            _vlcMedia = null;
+            ReleaseVlcPlayback();
 
             if (_tempFile != null)
             {
@@ -3936,6 +3934,40 @@ namespace HyperMedia
             _currentMusicFilePath = "";
             _currentMusicOriginalDir = "";
             _duration = 0;
+        }
+
+        // Fully tear down any live libVLC player/media before (re)creating new ones.
+        // Opening a file a second time over a still-live player used to leave two
+        // MediaPlayer instances alive on the same libvlc instance, which could crash.
+        private void ReleaseVlcPlayback()
+        {
+            try
+            {
+                if (_vlcPlayer != null)
+                {
+                    try { _vlcPlayer.stop(); } catch { }
+
+                    var em = _vlcPlayer.eventManager();
+                    if (em != null)
+                    {
+                        try
+                        {
+                            em.OnPlaying -= OnVlcPlaying;
+                            em.OnPaused -= OnVlcPaused;
+                            em.OnStopped -= OnVlcStopped;
+                            em.OnEndReached -= OnVlcEndReached;
+                            em.OnEncounteredError -= OnVlcEncounteredError;
+                            em.OnLengthChanged -= OnVlcLengthChanged;
+                            em.OnSnapshotTaken -= OnSnapshotTaken;
+                        }
+                        catch { }
+                    }
+
+                    _vlcPlayer = null;
+                    _vlcMedia = null;
+                }
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
         }
 
         private void UpdatePlayPauseIcon(bool playing)
@@ -4502,8 +4534,18 @@ namespace HyperMedia
                 PhotoViewerOverlay.Visibility = Visibility.Visible;
 
                 var stream = await file.OpenReadAsync();
+                if (_photoFile != file)
+                {
+                    stream.Dispose();
+                    return;
+                }
                 var bitmap = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
                 await bitmap.SetSourceAsync(stream);
+                if (_photoFile != file)
+                {
+                    stream.Dispose();
+                    return;
+                }
                 PhotoImage.Source = bitmap;
 
                 FileNameText.Text = file.Name;
@@ -5041,15 +5083,15 @@ namespace HyperMedia
             // Host Settings in the system Settings charm (SettingsFlyout) instead of
             // navigating away: the page instance (and its SwapChainPanel/video surface,
             // VLC stream, MusicOverlay) must never be torn down when opening Settings.
-            if (_charmSettings == null)
-                _charmSettings = new CharmSettingsControl();
-            _settingsFlyout = new SettingsFlyout
+            // A fresh control instance is created each time: reusing the same UIElement
+            // as a SettingsFlyout Content across opens can crash on the second open.
+            var flyout = new SettingsFlyout
             {
                 Title = "设置",
                 RequestedTheme = ElementTheme.Light,
-                Content = _charmSettings
+                Content = new CharmSettingsControl()
             };
-            _settingsFlyout.ShowIndependent();
+            flyout.ShowIndependent();
         }
 
         private void SaveStateForRestore()
