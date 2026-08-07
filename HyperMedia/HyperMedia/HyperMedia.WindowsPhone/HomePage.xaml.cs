@@ -261,10 +261,15 @@ namespace HyperMedia
 
         #region Panorama Snap & Wheel
 
-        private const double SECTION_HERO = 580;
-        private const double SECTION_WIDTH = 480;
-        private const double SECTION_GUTTER = 40;
-        private static readonly double[] SnapOffsets = { 0, SECTION_HERO + SECTION_GUTTER, SECTION_HERO + SECTION_GUTTER * 2 + SECTION_WIDTH, SECTION_HERO + SECTION_GUTTER * 3 + SECTION_WIDTH * 2 };
+        private double SnapPitch
+        {
+            get
+            {
+                double w = PanoramaScroll?.ActualWidth ?? 0;
+                return w > 0 ? w + 24 : 0;
+            }
+        }
+
         private bool _snapPending = false;
 
         // Semantic zoom: shrinking below this factor opens the overview; the
@@ -310,13 +315,15 @@ namespace HyperMedia
 
         private void SnapToNearest()
         {
-            // Vertical single-column layout: no horizontal sections to snap to.
-            if (PanoramaScroll == null || PanoramaScroll.ScrollableWidth <= 0) return;
+            if (PanoramaScroll == null) return;
             double current = PanoramaScroll.HorizontalOffset;
+            double pitch = SnapPitch;
+            if (pitch <= 0) return;
             double best = 0;
             double bestDist = double.MaxValue;
-            foreach (double off in SnapOffsets)
+            for (int i = 0; i < 4; i++)
             {
+                double off = pitch * i;
                 double dist = Math.Abs(current - off);
                 if (dist < bestDist)
                 {
@@ -340,9 +347,9 @@ namespace HyperMedia
             var transform = target.TransformToVisual(PanoramaScroll);
             if (transform == null) return;
             var point = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
-            double targetY = Math.Max(0, point.Y + PanoramaScroll.VerticalOffset);
-            targetY = Math.Min(targetY, PanoramaScroll.ScrollableHeight);
-            PanoramaScroll.ChangeView(null, targetY, null, true);
+            double targetX = Math.Max(0, point.X + PanoramaScroll.HorizontalOffset);
+            targetX = Math.Min(targetX, PanoramaScroll.ScrollableWidth);
+            PanoramaScroll.ChangeView(targetX, null, null, true);
         }
 
         private void PanoramaScroll_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
@@ -356,9 +363,9 @@ namespace HyperMedia
             }
 
             int delta = e.GetCurrentPoint(PanoramaScroll).Properties.MouseWheelDelta;
-            double newOffset = PanoramaScroll.VerticalOffset + (delta > 0 ? -180 : 180);
-            newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableHeight));
-            PanoramaScroll.ChangeView(null, newOffset, null, true);
+            double newOffset = PanoramaScroll.HorizontalOffset + (delta > 0 ? -180 : 180);
+            newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
+            PanoramaScroll.ChangeView(newOffset, null, null, true);
             e.Handled = true;
         }
 
@@ -1108,7 +1115,8 @@ private bool _pickerOpen;
 
             if (e.Key == VirtualKey.Left || e.Key == VirtualKey.Right)
             {
-                double newOffset = PanoramaScroll.HorizontalOffset + (e.Key == VirtualKey.Right ? SECTION_HERO : -SECTION_HERO);
+                double step = PanoramaScroll.ActualWidth + 24;
+                double newOffset = PanoramaScroll.HorizontalOffset + (e.Key == VirtualKey.Right ? step : -step);
                 newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
                 PanoramaScroll.ChangeView(newOffset, null, null, true);
                 e.Handled = true;
@@ -1417,8 +1425,7 @@ private bool _pickerOpen;
             OverviewScroll.Opacity = 0;
             OverviewScroll.Visibility = Visibility.Visible;
             PanoramaScroll.Visibility = Visibility.Collapsed;
-            OverviewBtnText.Text = L("Back");
-            OverviewBtnGlyph.Text = "\u21A9";
+            if (OverviewBtn != null) OverviewBtn.Label = L("Back");
 
             FadeIn(OverviewScroll);
         }
@@ -1434,8 +1441,7 @@ private bool _pickerOpen;
                 PanoramaScroll.ChangeView(null, null, 1.0f, true);
                 OverviewScroll.ChangeView(null, null, 1.0f, true);
                 OverviewScroll.Visibility = Visibility.Collapsed;
-                OverviewBtnText.Text = L("Overview");
-                OverviewBtnGlyph.Text = "\uD83D\uDDD4";
+                if (OverviewBtn != null) OverviewBtn.Label = L("Overview");
             });
         }
 
