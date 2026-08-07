@@ -1018,30 +1018,47 @@ namespace HyperMedia
             Debug.WriteLine("[HyperMedia] libVLC playback started: {0}ms", sw.ElapsedMilliseconds);
         }
 
+        private bool _pickerOpen;
+
         private async void OpenFileFromPicker()
         {
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
-            string[] extensions = {
-                ".mp4", ".avi", ".mkv", ".webm", ".flv", ".mov", ".wmv",
-                ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a",
-                ".3gp", ".ts", ".mka", ".opus"
-            };
-            foreach (var ext in extensions)
-                picker.FileTypeFilter.Add(ext);
-
-            var files = await picker.PickMultipleFilesAsync();
-            if (files != null && files.Count > 0)
+            // Guard against double-invoke (clicking Open again while the picker
+            // is still up) - and a Win8.1 bug where re-showing a FileOpenPicker
+            // immediately after the user cancels/closes one can crash. Deferring
+            // the next launch keeps the two picker sessions from overlapping.
+            if (_pickerOpen) return;
+            _pickerOpen = true;
+            try
             {
-                _playlist.Clear();
-                foreach (var f in files)
-                    _playlist.Add(f);
-                _playlistIndex = 0;
+                await Task.Delay(150);
 
-                if (_shuffleOn)
-                    ShufflePlaylistFromCurrent();
+                var picker = new FileOpenPicker();
+                picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                string[] extensions = {
+                    ".mp4", ".avi", ".mkv", ".webm", ".flv", ".mov", ".wmv",
+                    ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a",
+                    ".3gp", ".ts", ".mka", ".opus"
+                };
+                foreach (var ext in extensions)
+                    picker.FileTypeFilter.Add(ext);
 
-                OpenFile(_playlist[0]);
+                var files = await picker.PickMultipleFilesAsync();
+                if (files != null && files.Count > 0)
+                {
+                    _playlist.Clear();
+                    foreach (var f in files)
+                        _playlist.Add(f);
+                    _playlistIndex = 0;
+
+                    if (_shuffleOn)
+                        ShufflePlaylistFromCurrent();
+
+                    OpenFile(_playlist[0]);
+                }
+            }
+            finally
+            {
+                _pickerOpen = false;
             }
         }
 
@@ -2640,7 +2657,7 @@ namespace HyperMedia
                 if (file == null) return null;
 
                 // Extract a few seconds of audio and ask Shazam
-                var samples = await ShazamAudioExtractor.Extract16kMonoAsync(file.Path, 6.0);
+                var samples = await ShazamAudioExtractor.Extract16kMonoAsync(file, 6.0);
                 if (samples == null || samples.Length < 16000 * 2) return null;
 
                 return await ShazamRecognizer.RecognizeAsync(samples);
@@ -3546,6 +3563,10 @@ namespace HyperMedia
             _isPlaying = false;
             BeginInvokeOnUI(() =>
             {
+                // Ignore a stale stop event when a restart (played-to-end ->
+                // replay) is already in progress; otherwise the stop callback
+                // queued by stop() would kill the freshly restarted timers.
+                if (_isPlaying) return;
                 _lyricTimer.Stop();
                 _positionTimer.Stop();
             });
@@ -3849,6 +3870,32 @@ namespace HyperMedia
         {
             if (_isPlaying) return;
             if (_vlcPlayer == null) return;
+
+            // Played-to-completion state: the player sits at the end. play() alone
+            // would restart from the tail and instantly re-trigger EndReached, so
+            // seek back to the beginning first.
+            bool restartFromStart = false;
+            try
+            {
+                long len = _vlcPlayer.length();
+                long pos = _vlcPlayer.time();
+                if (len > 0 && pos >= len - 400)
+                    restartFromStart = true;
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+
+            if (restartFromStart)
+            {
+                try
+                {
+                    _vlcPlayer.stop();
+                    _vlcPlayer.setTime(0);
+                }
+                catch (Exception ex) { LogUnhandled(ex); }
+                PositionSlider.Value = 0;
+                CurrentTimeText.Text = "00:00";
+                _pendingResumePos = 0;
+            }
 
             _isPlaying = true;
             _vlcPlayer.play();

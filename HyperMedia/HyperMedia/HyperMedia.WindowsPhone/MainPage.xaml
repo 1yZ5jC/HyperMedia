@@ -1,14 +1,105 @@
-﻿<Page
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Page
     x:Class="HyperMedia.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="using:HyperMedia"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    mc:Ignorable="d"
-    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+    mc:Ignorable="d">
 
-    <Grid>
+    <Page.Resources>
+        <Style x:Key="MainActionBtn" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontFamily" Value="Segoe UI Symbol"/>
+            <Setter Property="FontSize" Value="24"/>
+            <Setter Property="Margin" Value="8,0,8,0"/>
+            <Setter Property="MinWidth" Value="56"/>
+            <Setter Property="MinHeight" Value="48"/>
+        </Style>
+    </Page.Resources>
 
+    <Grid Background="#FF000000" Tapped="Root_Tapped">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Video / audio surface -->
+        <MediaElement x:Name="VideoPlayer" Grid.RowSpan="2"
+                      AutoPlay="False" Stretch="Uniform"
+                      AreTransportControlsEnabled="False"
+                      IsTapEnabled="False"
+                      MediaOpened="VideoPlayer_MediaOpened"
+                      MediaEnded="VideoPlayer_MediaEnded"
+                      MediaFailed="VideoPlayer_MediaFailed"/>
+
+        <!-- Photo viewer surface -->
+        <Image x:Name="PhotoImage" Grid.RowSpan="2" Visibility="Collapsed"
+               Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+            <Image.RenderTransform>
+                <CompositeTransform x:Name="PhotoTransform" ScaleX="1" ScaleY="1" Rotation="0"/>
+            </Image.RenderTransform>
+        </Image>
+
+        <!-- Unsupported-format notice -->
+        <TextBlock x:Name="NoSupportText" Grid.RowSpan="2"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"
+                   Text="此格式不受支持" Foreground="#88FFFFFF"
+                   FontFamily="Segoe UI" FontSize="15" Visibility="Collapsed"/>
+
+        <!-- Top bar: back + filename -->
+        <Border x:Name="TopBar" Grid.RowSpan="2" VerticalAlignment="Top"
+                Background="#B0000000" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal" Margin="8,4,8,4">
+                <Button x:Name="BackBtn" Click="BackBtn_Click"
+                        Content="←" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" MinWidth="48" MinHeight="40"/>
+                <TextBlock x:Name="FileNameText" Foreground="White"
+                           FontFamily="Segoe UI" FontSize="16"
+                           VerticalAlignment="Center" Margin="8,0,0,0"
+                           TextTrimming="CharacterEllipsis"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Bottom controls -->
+        <Border x:Name="BottomBar" Grid.Row="1" Background="#D0000000"
+                Visibility="Collapsed">
+            <StackPanel Margin="12,8,12,12">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock x:Name="CurrentTimeText" Text="00:00" Foreground="#AAFFFFFF"
+                               FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center"/>
+                    <Slider x:Name="PositionSlider" Minimum="0" Maximum="100" Value="0"
+                            Margin="8,0,8,0" VerticalAlignment="Center"
+                            ValueChanged="PositionSlider_ValueChanged"/>
+                    <TextBlock x:Name="DurationText" Text="00:00" Foreground="#AAFFFFFF"
+                               FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
+                    <Button x:Name="RepeatBtn" Click="RepeatBtn_Click" Content="⇄"
+                            Style="{StaticResource MainActionBtn}" FontSize="20"/>
+                    <Button x:Name="PrevBtn" Click="PrevBtn_Click" Content="⏮"
+                            Style="{StaticResource MainActionBtn}"/>
+                    <Button x:Name="PlayPauseBtn" Click="PlayPauseBtn_Click" Content="▶"
+                            Style="{StaticResource MainActionBtn}" FontSize="32"/>
+                    <Button x:Name="NextBtn" Click="NextBtn_Click" Content="⏭"
+                            Style="{StaticResource MainActionBtn}"/>
+                    <Button x:Name="StopBtn" Click="StopBtn_Click" Content="⏹"
+                            Style="{StaticResource MainActionBtn}"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
+                    <TextBlock Text="音量" Foreground="#AAFFFFFF" FontFamily="Segoe UI"
+                               FontSize="12" VerticalAlignment="Center"/>
+                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" Value="100"
+                            Width="160" Margin="8,0,0,0"
+                            ValueChanged="VolumeSlider_ValueChanged"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
     </Grid>
 </Page>

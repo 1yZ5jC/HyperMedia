@@ -361,7 +361,11 @@ namespace HyperMedia
         private void LightThemeToggle_Toggled(object sender, RoutedEventArgs e)
         {
             if (_isLoading) return;
-            try { SaveSetting(KEY_LIGHT_THEME, LightThemeToggle.IsOn); }
+            try
+            {
+                SaveSetting(KEY_LIGHT_THEME, LightThemeToggle.IsOn);
+                App.NotifyLightThemeChanged();
+            }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] LightThemeToggle failed: {0}", ex.Message); }
         }
 

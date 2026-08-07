@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Storage;
@@ -43,11 +44,21 @@ namespace HyperMedia
         {
             this.InitializeComponent();
             Window.Current.CoreWindow.PointerEntered += CoreWindow_PointerEntered;
+            // Live light-theme: unsubscribe before subscribing (page is rebuilt on
+            // every return navigation, so this keeps handlers from accumulating).
+            App.LightThemeChanged -= Home_LightThemeChanged;
+            App.LightThemeChanged += Home_LightThemeChanged;
             this.Loaded += (s, e) =>
             {
                 ApplyTheme();
                 ApplyHomeLanguage();
             };
+        }
+
+        private void Home_LightThemeChanged(object sender, EventArgs e)
+        {
+            try { ApplyTheme(); }
+            catch { }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -299,7 +310,8 @@ namespace HyperMedia
 
         private void SnapToNearest()
         {
-            if (PanoramaScroll == null) return;
+            // Vertical single-column layout: no horizontal sections to snap to.
+            if (PanoramaScroll == null || PanoramaScroll.ScrollableWidth <= 0) return;
             double current = PanoramaScroll.HorizontalOffset;
             double best = 0;
             double bestDist = double.MaxValue;
@@ -316,6 +328,23 @@ namespace HyperMedia
                 PanoramaScroll.ChangeView(best, null, null, true);
         }
 
+        private void ScrollToSection(int idx)
+        {
+            if (PanoramaScroll == null) return;
+            FrameworkElement target = null;
+            if (idx == 1) target = VideosSection;
+            else if (idx == 2) target = MusicSection;
+            else if (idx == 3) target = PhotosSection;
+            if (target == null) return;
+
+            var transform = target.TransformToVisual(PanoramaScroll);
+            if (transform == null) return;
+            var point = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
+            double targetY = Math.Max(0, point.Y + PanoramaScroll.VerticalOffset);
+            targetY = Math.Min(targetY, PanoramaScroll.ScrollableHeight);
+            PanoramaScroll.ChangeView(null, targetY, null, true);
+        }
+
         private void PanoramaScroll_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
         {
             // Ctrl+wheel = zoom (semantic zoom); let the ScrollViewer handle it
@@ -327,9 +356,9 @@ namespace HyperMedia
             }
 
             int delta = e.GetCurrentPoint(PanoramaScroll).Properties.MouseWheelDelta;
-            double newOffset = PanoramaScroll.HorizontalOffset + (delta > 0 ? -180 : 180);
-            newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableWidth));
-            PanoramaScroll.ChangeView(newOffset, null, null, true);
+            double newOffset = PanoramaScroll.VerticalOffset + (delta > 0 ? -180 : 180);
+            newOffset = Math.Max(0, Math.Min(newOffset, PanoramaScroll.ScrollableHeight));
+            PanoramaScroll.ChangeView(null, newOffset, null, true);
             e.Handled = true;
         }
 
@@ -621,20 +650,30 @@ namespace HyperMedia
             addBtn.Margin = new Thickness(0, 4, 0, 12);
             addBtn.Click += async (s, ev) =>
             {
-                var picker = new FolderPicker();
-                picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
-                picker.FileTypeFilter.Add("*");
-                var folder = await picker.PickSingleFolderAsync();
-                if (folder != null)
+                if (_pickerOpen) return;
+                _pickerOpen = true;
+                try
                 {
-                    try
+                    await Task.Delay(150);
+                    var picker = new FolderPicker();
+                    picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                    picker.FileTypeFilter.Add("*");
+                    var folder = await picker.PickSingleFolderAsync();
+                    if (folder != null)
                     {
-                        string token = StorageApplicationPermissions.FutureAccessList.Add(folder);
-                        ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_FOLDER] = token;
-                        ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_PATH] = folder.Path;
-                        ShowOverlay("已添加媒体库: " + folder.Name);
+                        try
+                        {
+                            string token = StorageApplicationPermissions.FutureAccessList.Add(folder);
+                            ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_FOLDER] = token;
+                            ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_PATH] = folder.Path;
+                            ShowOverlay("已添加媒体库: " + folder.Name);
+                        }
+                        catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library add failed: {0}", ex.Message); }
                     }
-                    catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library add failed: {0}", ex.Message); }
+                }
+                finally
+                {
+                    _pickerOpen = false;
                 }
             };
             panel.Children.Add(addBtn);
@@ -957,53 +996,80 @@ namespace HyperMedia
 
         #region File Open
 
+private bool _pickerOpen;
+
         private async void OpenFilesWithFilter(string filterExtensions, PickerLocationId location)
         {
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = location;
-            foreach (var ext in filterExtensions.Split(','))
-                picker.FileTypeFilter.Add(ext.Trim());
-
-            var files = await picker.PickMultipleFilesAsync();
-            if (files != null && files.Count > 0)
+            // Win8/8.1 bug: re-showing a picker right after the user cancels/closes
+            // one can crash. Guard against double-invoke and defer the next launch
+            // so two picker sessions never overlap (same fix as the desktop build).
+            if (_pickerOpen) return;
+            _pickerOpen = true;
+            try
             {
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
-                if (files.Count > 1)
+                await Task.Delay(150);
+
+                var picker = new FileOpenPicker();
+                picker.SuggestedStartLocation = location;
+                foreach (var ext in filterExtensions.Split(','))
+                    picker.FileTypeFilter.Add(ext.Trim());
+
+                var files = await picker.PickMultipleFilesAsync();
+                if (files != null && files.Count > 0)
                 {
-                    var extras = new List<string>();
-                    for (int i = 1; i < files.Count; i++)
-                        extras.Add(files[i].Path);
-                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                    if (files.Count > 1)
+                    {
+                        var extras = new List<string>();
+                        for (int i = 1; i < files.Count; i++)
+                            extras.Add(files[i].Path);
+                        ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                    }
+                    Frame.Navigate(typeof(MainPage));
                 }
-                Frame.Navigate(typeof(MainPage));
+            }
+            finally
+            {
+                _pickerOpen = false;
             }
         }
 
         private async void OpenButton_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new FileOpenPicker();
-            picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
-            string[] extensions = {
-                ".mp4", ".avi", ".mkv", ".webm", ".flv", ".mov", ".wmv",
-                ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a",
-                ".3gp", ".ts", ".mka", ".opus",
-                ".jpg", ".jpeg", ".png", ".bmp", ".gif"
-            };
-            foreach (var ext in extensions)
-                picker.FileTypeFilter.Add(ext);
-
-            var files = await picker.PickMultipleFilesAsync();
-            if (files != null && files.Count > 0)
+            if (_pickerOpen) return;
+            _pickerOpen = true;
+            try
             {
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
-                if (files.Count > 1)
+                await Task.Delay(150);
+
+                var picker = new FileOpenPicker();
+                picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
+                string[] extensions = {
+                    ".mp4", ".avi", ".mkv", ".webm", ".flv", ".mov", ".wmv",
+                    ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a",
+                    ".3gp", ".ts", ".mka", ".opus",
+                    ".jpg", ".jpeg", ".png", ".bmp", ".gif"
+                };
+                foreach (var ext in extensions)
+                    picker.FileTypeFilter.Add(ext);
+
+                var files = await picker.PickMultipleFilesAsync();
+                if (files != null && files.Count > 0)
                 {
-                    var extras = new List<string>();
-                    for (int i = 1; i < files.Count; i++)
-                        extras.Add(files[i].Path);
-                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                    if (files.Count > 1)
+                    {
+                        var extras = new List<string>();
+                        for (int i = 1; i < files.Count; i++)
+                            extras.Add(files[i].Path);
+                        ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                    }
+                    Frame.Navigate(typeof(MainPage));
                 }
-                Frame.Navigate(typeof(MainPage));
+            }
+            finally
+            {
+                _pickerOpen = false;
             }
         }
 
@@ -1496,8 +1562,7 @@ namespace HyperMedia
                 if (int.TryParse(action.Substring("category:".Length), out idx))
                 {
                     ToggleOverview();
-                    if (idx < SnapOffsets.Length)
-                        PanoramaScroll.ChangeView(SnapOffsets[idx], null, null, true);
+                    ScrollToSection(idx);
                 }
                 return;
             }

@@ -11,6 +11,23 @@ namespace HyperMedia
 {
     public sealed partial class App : Application
     {
+        /// <summary>
+        /// Raised when the light-theme setting changes (e.g. from the Settings
+        /// page) so live pages can re-theme immediately. Mirrors the desktop
+        /// build's App.LightThemeChanged.
+        /// </summary>
+        public static event EventHandler LightThemeChanged;
+
+        public static void NotifyLightThemeChanged()
+        {
+            try
+            {
+                var h = LightThemeChanged;
+                if (h != null) h(null, EventArgs.Empty);
+            }
+            catch { }
+        }
+
         private static string L(string key)
         {
             try

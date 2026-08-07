@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using HyperMedia.MediaCore;
+using Windows.Storage;
 
 namespace HyperMedia
 {
@@ -16,55 +17,89 @@ namespace HyperMedia
         /// Collect up to the given duration (seconds) of audio from a file.
         /// Returns 16 kHz mono samples, or null on failure.
         /// </summary>
-        public static async Task<short[]> Extract16kMonoAsync(string filePath, double seconds = 6.0)
+        public static async Task<short[]> Extract16kMonoAsync(StorageFile file, double seconds = 6.0)
+        {
+            if (file == null) return null;
+
+            // The MediaCore decoder opens audio via a raw filesystem path
+            // (libvlc_media_new_path). In the 8.1 sandbox that only works for
+            // paths the app owns directly - files picked from the Music/Videos
+            // library (e.g. most MP3s) have no direct-path access and would
+            // fail fopen. Mirror the player: copy to our own temp dir first.
+            StorageFile tmp = null;
+            string path = file.Path;
+            try
+            {
+                tmp = await file.CopyAsync(ApplicationData.Current.TemporaryFolder,
+                    "identify_" + Guid.NewGuid().ToString("N") + System.IO.Path.GetExtension(file.Name),
+                    NameCollisionOption.FailIfExists);
+                path = tmp.Path;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: temp copy FAILED ({0}), falling back to file.Path", ex.Message);
+                path = file.Path;
+            }
+
+            try
+            {
+                return await Task.Run<short[]>(() => DecodeTo16kMono(path, seconds));
+            }
+            finally
+            {
+                if (tmp != null)
+                {
+                    try { await tmp.DeleteAsync(); } catch { }
+                }
+            }
+        }
+
+        private static short[] DecodeTo16kMono(string filePath, double seconds)
         {
             System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: file='{0}' target={1:F0}s", filePath, seconds);
-            return await Task.Run<short[]>(() =>
+            try
             {
-                try
+                var decoder = new LibVlcDecoder();
+                if (!decoder.OpenFile(filePath))
                 {
-                    var decoder = new LibVlcDecoder();
-                    if (!decoder.OpenFile(filePath))
-                    {
-                        decoder.Close();
-                        System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: LibVlcDecoder.OpenFile FAILED");
-                        return null;
-                    }
-                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: decoder opened (rate={0} ch={1})",
-                        decoder.AudioSampleRate, decoder.AudioChannels);
-
-                    // CollectAudioPcm returns interleaved S16N (44100 Hz stereo)
-                    // Capture rate/channels BEFORE Close() resets them to 0.
-                    int rate = decoder.AudioSampleRate;
-                    int channels = decoder.AudioChannels;
-                    var pcm = decoder.CollectAudioPcm(seconds);
                     decoder.Close();
-                    if (pcm == null || pcm.Length == 0)
-                    {
-                        System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: collected no PCM");
-                        return null;
-                    }
-                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: collected {0} samples ({1:F1}s)",
-                        pcm.Length, pcm.Length / (rate * (double)channels));
-
-                    // Downsample to 16k mono
-                    var mono = DownsampleTo16kMono(pcm, rate, channels);
-                    if (mono == null)
-                    {
-                        System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: downsampling FAILED (rate={0} ch={1})",
-                            rate, channels);
-                        return null;
-                    }
-                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: 16k mono {0} samples ({1:F1}s)",
-                        mono.Length, mono.Length / 16000.0);
-                    return mono;
-                }
-                catch (Exception ex)
-                {
-                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ShazamAudioExtractor FAILED: {0}", ex.Message);
+                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: LibVlcDecoder.OpenFile FAILED");
                     return null;
                 }
-            });
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: decoder opened (rate={0} ch={1})",
+                    decoder.AudioSampleRate, decoder.AudioChannels);
+
+                // CollectAudioPcm returns interleaved S16N (44100 Hz stereo)
+                // Capture rate/channels BEFORE Close() resets them to 0.
+                int rate = decoder.AudioSampleRate;
+                int channels = decoder.AudioChannels;
+                var pcm = decoder.CollectAudioPcm(seconds);
+                decoder.Close();
+                if (pcm == null || pcm.Length == 0)
+                {
+                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: collected no PCM");
+                    return null;
+                }
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: collected {0} samples ({1:F1}s)",
+                    pcm.Length, pcm.Length / (rate * (double)channels));
+
+                // Downsample to 16k mono
+                var mono = DownsampleTo16kMono(pcm, rate, channels);
+                if (mono == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: downsampling FAILED (rate={0} ch={1})",
+                        rate, channels);
+                    return null;
+                }
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ExtractAudio: 16k mono {0} samples ({1:F1}s)",
+                    mono.Length, mono.Length / 16000.0);
+                return mono;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("[HyperMedia] ShazamAudioExtractor FAILED: {0}", ex.Message);
+                return null;
+            }
         }
 
         private static short[] DownsampleTo16kMono(short[] interleavedStereo, int sampleRate, int channels)

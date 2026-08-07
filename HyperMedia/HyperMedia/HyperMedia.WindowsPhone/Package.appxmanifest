@@ -26,7 +26,7 @@
     <Application Id="App"
         Executable="$targetnametoken$.exe"
         EntryPoint="HyperMedia.WindowsPhone.App">
-        <m3:VisualElements
+<m3:VisualElements
             DisplayName="HyperMedia.WindowsPhone"
             Square150x150Logo="Assets\Logo.png"
             Square44x44Logo="Assets\SmallLogo.png"
@@ -36,6 +36,37 @@
             <m3:DefaultTile Wide310x150Logo="Assets\WideLogo.png" Square71x71Logo="Assets\Square71x71Logo.png"/>
             <m3:SplashScreen Image="Assets\SplashScreen.png"/>
         </m3:VisualElements>
+        <Extensions>
+          <Extension Category="windows.protocol">
+            <Protocol Name="hypermedia">
+              <Logo>Assets\StoreLogo.png</Logo>
+              <DisplayName>HyperMedia</DisplayName>
+            </Protocol>
+          </Extension>
+          <Extension Category="windows.fileTypeAssociation">
+            <FileTypeAssociation Name="hypermedia.media">
+              <DisplayName>HyperMedia 媒体</DisplayName>
+              <Logo>Assets\StoreLogo.png</Logo>
+              <SupportedFileTypes>
+                <FileType ContentType="video/mp4">.mp4</FileType>
+                <FileType ContentType="video/mp4">.m4v</FileType>
+                <FileType ContentType="video/x-ms-wmv">.wmv</FileType>
+                <FileType ContentType="video/3gpp">.3gp</FileType>
+                <FileType ContentType="audio/mpeg">.mp3</FileType>
+                <FileType ContentType="audio/wav">.wav</FileType>
+                <FileType ContentType="audio/x-ms-wma">.wma</FileType>
+                <FileType ContentType="audio/m4a">.m4a</FileType>
+                <FileType ContentType="audio/aac">.aac</FileType>
+                <FileType ContentType="audio/ogg">.ogg</FileType>
+                <FileType ContentType="image/jpeg">.jpg</FileType>
+                <FileType ContentType="image/jpeg">.jpeg</FileType>
+                <FileType ContentType="image/png">.png</FileType>
+                <FileType ContentType="image/bmp">.bmp</FileType>
+                <FileType ContentType="image/gif">.gif</FileType>
+              </SupportedFileTypes>
+            </FileTypeAssociation>
+          </Extension>
+        </Extensions>
     </Application>
   </Applications>
   <Capabilities>

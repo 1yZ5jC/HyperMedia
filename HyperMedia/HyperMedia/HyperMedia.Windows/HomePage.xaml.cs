@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Storage;
@@ -990,10 +991,18 @@ namespace HyperMedia
 
         #endregion
 
+        private bool _identifyPicking;
+
         private async void IdentifyButton_Click(object sender, RoutedEventArgs e)
         {
+            if (_identifyPicking) return;
+            _identifyPicking = true;
             try
             {
+                // Win8.1: re-showing a picker right after a cancel/close can crash.
+                // Defer the launch so two picker sessions never overlap.
+                await Task.Delay(150);
+
                 var picker = new FileOpenPicker();
                 picker.SuggestedStartLocation = PickerLocationId.MusicLibrary;
                 string[] audioExts = { ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a", ".opus", ".ape", ".alac", ".aiff" };
@@ -1006,7 +1015,7 @@ namespace HyperMedia
                 string origText = IdentifyBtnText != null ? IdentifyBtnText.Text : "";
                 if (IdentifyBtnText != null) IdentifyBtnText.Text = "识别中...";
 
-                var samples = await ShazamAudioExtractor.Extract16kMonoAsync(file.Path, 8.0);
+                var samples = await ShazamAudioExtractor.Extract16kMonoAsync(file, 8.0);
                 if (samples == null || samples.Length < 16000 * 2)
                 {
                     if (IdentifyBtnText != null) IdentifyBtnText.Text = origText;
@@ -1023,6 +1032,10 @@ namespace HyperMedia
             {
                 Debug.WriteLine("[HyperMedia] IdentifyButton_Click FAILED: {0}", ex.Message);
                 try { await new Windows.UI.Popups.MessageDialog(L("IdentifyFailed"), L("IdentifyTitle")).ShowAsync(); } catch { }
+            }
+            finally
+            {
+                _identifyPicking = false;
             }
         }
 
