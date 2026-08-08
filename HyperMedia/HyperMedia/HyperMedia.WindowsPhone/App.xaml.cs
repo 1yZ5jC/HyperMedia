@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
 using Windows.Phone.UI.Input;
@@ -11,6 +12,15 @@ namespace HyperMedia
 {
     public sealed partial class App : Application
     {
+        /// <summary>
+        /// Routed to the calling page when a file open action completes. WP 8.1
+        /// has no synchronous picker APIs (they throw 0x80070032 on Phone), so
+        /// the app re-activates via OnActivated and we hand results back here.
+        /// </summary>
+        public static Action<IReadOnlyList<StorageFile>> PendingFileOpen;
+
+        public static Action<StorageFolder> PendingFolderOpen;
+
         /// <summary>
         /// Raised when the light-theme setting changes (e.g. from the Settings
         /// page) so live pages can re-theme immediately. Mirrors the desktop
@@ -112,6 +122,34 @@ namespace HyperMedia
         protected override void OnActivated(IActivatedEventArgs args)
         {
             base.OnActivated(args);
+
+            if (args.Kind == ActivationKind.PickFileContinuation)
+            {
+                // File open picker result (WP 8.1: no synchronous picker APIs).
+                var fileArgs = args as FileOpenPickerContinuationEventArgs;
+                var handler = PendingFileOpen;
+                PendingFileOpen = null;
+                if (handler != null)
+                {
+                    var files = fileArgs != null ? fileArgs.Files : null;
+                    handler(files != null ? files : new List<StorageFile>());
+                }
+                return;
+            }
+
+            if (args.Kind == ActivationKind.PickFolderContinuation)
+            {
+                // Folder picker result.
+                var folderArgs = args as FolderPickerContinuationEventArgs;
+                var folderHandler = PendingFolderOpen;
+                PendingFolderOpen = null;
+                if (folderHandler != null)
+                {
+                    StorageFolder folder = folderArgs != null ? folderArgs.Folder : null;
+                    folderHandler(folder);
+                }
+                return;
+            }
 
             if (args.Kind == ActivationKind.File)
             {

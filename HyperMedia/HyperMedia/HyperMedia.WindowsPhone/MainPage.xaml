@@ -29,20 +29,70 @@
 
         <!-- Video / audio surface -->
         <MediaElement x:Name="VideoPlayer" Grid.RowSpan="2"
-                      AutoPlay="False" Stretch="Uniform"
+                      AutoPlay="True" Stretch="Uniform"
                       AreTransportControlsEnabled="False"
                       IsTapEnabled="False"
                       MediaOpened="VideoPlayer_MediaOpened"
                       MediaEnded="VideoPlayer_MediaEnded"
                       MediaFailed="VideoPlayer_MediaFailed"/>
 
+        <!-- Tap surface: catches taps on the media area so the control bars
+             can be toggled even over the video surface (hidden in photo mode). -->
+        <Rectangle x:Name="TapSurface" Grid.RowSpan="2" Fill="Transparent"
+                   IsHitTestVisible="True"
+                   Tapped="TapSurface_Tapped"
+                   DoubleTapped="TapSurface_DoubleTapped"/>
+
+        <!-- Visualizer overlay (audio-only, decorative animation; MediaElement
+             exposes no real spectrum data on WP 8.1) -->
+        <Image x:Name="VisualizerImage" Grid.RowSpan="2"
+               Visibility="Collapsed" Stretch="UniformToFill"
+               Tapped="VisualizerImage_Tapped"
+               DoubleTapped="TapSurface_DoubleTapped">
+            <Image.RenderTransform>
+                <CompositeTransform x:Name="VisTransform"/>
+            </Image.RenderTransform>
+        </Image>
+        <TextBlock x:Name="VisHintText" Grid.RowSpan="2"
+                   Text="动态可视化 (模拟)" VerticalAlignment="Bottom"
+                   HorizontalAlignment="Center" Margin="0,0,0,24"
+                   Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="15"
+                   Visibility="Collapsed"/>
+
         <!-- Photo viewer surface -->
         <Image x:Name="PhotoImage" Grid.RowSpan="2" Visibility="Collapsed"
-               Stretch="Uniform" RenderTransformOrigin="0.5,0.5">
+               Stretch="Uniform" RenderTransformOrigin="0.5,0.5"
+               ManipulationStarted="PhotoImage_ManipulationStarted"
+               ManipulationDelta="PhotoImage_ManipulationDelta"
+               ManipulationCompleted="PhotoImage_ManipulationCompleted">
             <Image.RenderTransform>
                 <CompositeTransform x:Name="PhotoTransform" ScaleX="1" ScaleY="1" Rotation="0"/>
             </Image.RenderTransform>
         </Image>
+
+        <!-- Photo toolbar: zoom / rotate -->
+        <Border x:Name="PhotoBar" Grid.RowSpan="2" VerticalAlignment="Bottom"
+                HorizontalAlignment="Center" Margin="0,0,0,96"
+                Background="#B0000000" CornerRadius="4" Visibility="Collapsed">
+            <StackPanel Orientation="Horizontal">
+                <Button x:Name="PhotoZoomOutBtn" Click="PhotoZoomOutBtn_Click"
+                        Content="−" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" MinWidth="48" MinHeight="48"/>
+                <Button x:Name="PhotoZoomInBtn" Click="PhotoZoomInBtn_Click"
+                        Content="+" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" MinWidth="48" MinHeight="48"/>
+                <Button x:Name="PhotoRotateBtn" Click="PhotoRotateBtn_Click"
+                        Content="↻" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" MinWidth="48" MinHeight="48"/>
+                <Button x:Name="PhotoResetBtn" Click="PhotoResetBtn_Click"
+                        Content="↩" FontFamily="Segoe UI Symbol" FontSize="20"
+                        Foreground="White" Background="Transparent"
+                        BorderThickness="0" MinWidth="48" MinHeight="48"/>
+            </StackPanel>
+        </Border>
 
         <!-- Unsupported-format notice -->
         <TextBlock x:Name="NoSupportText" Grid.RowSpan="2"
@@ -55,9 +105,9 @@
                 Background="#B0000000" Visibility="Collapsed">
             <StackPanel Orientation="Horizontal" Margin="8,4,8,4">
                 <Button x:Name="BackBtn" Click="BackBtn_Click"
-                        Content="←" FontFamily="Segoe UI Symbol" FontSize="22"
+                        Content="←" FontFamily="Segoe UI Symbol" FontSize="16"
                         Foreground="White" Background="Transparent"
-                        BorderThickness="0" MinWidth="48" MinHeight="40"/>
+                        BorderThickness="0" MinWidth="34" MinHeight="32"/>
                 <TextBlock x:Name="FileNameText" Foreground="White"
                            FontFamily="Segoe UI" FontSize="16"
                            VerticalAlignment="Center" Margin="8,0,0,0"
@@ -69,35 +119,54 @@
         <Border x:Name="BottomBar" Grid.Row="1" Background="#D0000000"
                 Visibility="Collapsed">
             <StackPanel Margin="12,8,12,12">
-                <StackPanel Orientation="Horizontal">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
                     <TextBlock x:Name="CurrentTimeText" Text="00:00" Foreground="#AAFFFFFF"
-                               FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center"/>
-                    <Slider x:Name="PositionSlider" Minimum="0" Maximum="100" Value="0"
-                            Margin="8,0,8,0" VerticalAlignment="Center"
-                            ValueChanged="PositionSlider_ValueChanged"/>
-                    <TextBlock x:Name="DurationText" Text="00:00" Foreground="#AAFFFFFF"
-                               FontFamily="Segoe UI" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
+                               FontFamily="Segoe UI" FontSize="15" VerticalAlignment="Center"/>
+                    <Grid Grid.Column="1" VerticalAlignment="Center" Margin="8,0,8,0">
+                        <ProgressBar x:Name="PositionProgress" Minimum="0" Maximum="100" Value="0"
+                                     Height="4" VerticalAlignment="Center"
+                                     Background="#55FFFFFF" Foreground="#FFE040FB"/>
+                        <Slider x:Name="PositionSlider" Minimum="0" Maximum="100" Value="0"
+                                VerticalAlignment="Center"
+                                Foreground="#FFE040FB" Background="#55FFFFFF"
+                                ValueChanged="PositionSlider_ValueChanged"/>
+                    </Grid>
+                    <TextBlock x:Name="DurationText" Grid.Column="2" Text="00:00" Foreground="#AAFFFFFF"
+                               FontFamily="Segoe UI" FontSize="15" VerticalAlignment="Center"/>
+                </Grid>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
                     <Button x:Name="RepeatBtn" Click="RepeatBtn_Click" Content="⇄"
                             Style="{StaticResource MainActionBtn}" FontSize="20"/>
-                    <Button x:Name="PrevBtn" Click="PrevBtn_Click" Content="⏮"
+                    <Button x:Name="PrevBtn" Click="PrevBtn_Click" Content="◀◀"
                             Style="{StaticResource MainActionBtn}"/>
                     <Button x:Name="PlayPauseBtn" Click="PlayPauseBtn_Click" Content="▶"
                             Style="{StaticResource MainActionBtn}" FontSize="32"/>
-                    <Button x:Name="NextBtn" Click="NextBtn_Click" Content="⏭"
+                    <Button x:Name="NextBtn" Click="NextBtn_Click" Content="▶▶"
                             Style="{StaticResource MainActionBtn}"/>
-                    <Button x:Name="StopBtn" Click="StopBtn_Click" Content="⏹"
+                    <Button x:Name="StopBtn" Click="StopBtn_Click" Content="■"
                             Style="{StaticResource MainActionBtn}"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
                     <TextBlock Text="音量" Foreground="#AAFFFFFF" FontFamily="Segoe UI"
-                               FontSize="12" VerticalAlignment="Center"/>
-                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" Value="100"
-                            Width="160" Margin="8,0,0,0"
-                            ValueChanged="VolumeSlider_ValueChanged"/>
+                               FontSize="15" VerticalAlignment="Center"/>
+                    <Grid VerticalAlignment="Center" Width="130" Margin="8,0,0,0">
+                        <ProgressBar x:Name="VolumeProgress" Minimum="0" Maximum="100" Value="100"
+                                     Height="4" VerticalAlignment="Center"
+                                     Background="#55FFFFFF" Foreground="#FF00BCD4"/>
+                        <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" Value="100"
+                                Foreground="#FF00BCD4" Background="#55FFFFFF"
+                                ValueChanged="VolumeSlider_ValueChanged"/>
+                    </Grid>
+                    <Button x:Name="SpeedBtn" Click="SpeedBtn_Click" Content="1.0x"
+                            Style="{StaticResource MainActionBtn}" FontSize="16"
+                            MinWidth="56" Margin="12,0,0,0"/>
                 </StackPanel>
             </StackPanel>
         </Border>

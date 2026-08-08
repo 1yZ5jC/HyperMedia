@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Storage;
 using Windows.Storage.AccessCache;
+using Windows.UI;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Media;
@@ -23,17 +25,29 @@ namespace HyperMedia
     {
         private static readonly string[] PHOTO_EXTS =
             { ".jpg", ".jpeg", ".png", ".bmp", ".gif", ".tif", ".tiff" };
+        private static readonly double[] SPEEDS = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
+        private static readonly string[] AUDIO_EXTS =
+            { ".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".oga", ".wma", ".opus", ".amr" };
+        private static readonly Color VIS_THEME =
+            Color.FromArgb(255, 224, 64, 251); // Zune purple, matches desktop
 
         private List<StorageFile> _playlist = new List<StorageFile>();
         private string _networkUrl;
         private int _playlistIndex = -1;
         private bool _isPlaying;
+        private bool _mediaEnded;
         private bool _isPhotoMode;
         private bool _seeking;
         private int _repeatMode; // 0 = off, 1 = list, 2 = single
+        private int _speedIndex = 2;
         private string _originalFileName;
         private string _originalPath;
         private double _pendingResumePos;
+
+        // Photo gesture state (WP 8.1 Image has no built-in pinch/pan).
+        private bool _photoGesturing;
+        private double _photoStartScaleX, _photoStartScaleY;
+        private double _photoStartRotation;
 
         private readonly DispatcherTimer _positionTimer = new DispatcherTimer
         { Interval = TimeSpan.FromMilliseconds(500) };
@@ -42,6 +56,25 @@ namespace HyperMedia
         private DispatcherTimer _sleepTimer;
         private TimeSpan _sleepRemaining;
 
+        // Visualizer state (audio only; MediaElement exposes no PCM on WP8.1).
+        private readonly DispatcherTimer _visTimer = new DispatcherTimer
+        { Interval = TimeSpan.FromMilliseconds(33) };
+        private SpectrumEngine _spectrum;
+        private IVisualizerRenderer _renderer;
+        private WriteableBitmap _visBitmap;
+        private byte[] _visPixels;
+        private int _visIndex;
+        private readonly IVisualizerRenderer[] _visStyles =
+        {
+            new BarsRenderer(),
+            new SymmetryRenderer(),
+            new RingRenderer(),
+            new ParticlesRenderer(),
+            new NebulaRenderer(),
+            new AlbumHueRenderer(),
+            new WaveRenderer(),
+        };
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -49,6 +82,12 @@ namespace HyperMedia
 
             _positionTimer.Tick += PositionTimer_Tick;
             _autoHideTimer.Tick += AutoHideTimer_Tick;
+            _visTimer.Tick += VisTimer_Tick;
+
+            PositionSlider.AddHandler(UIElement.PointerPressedEvent,
+                new Windows.UI.Xaml.Input.PointerEventHandler(PositionSlider_PointerPressed), true);
+            PositionSlider.AddHandler(UIElement.PointerReleasedEvent,
+                new Windows.UI.Xaml.Input.PointerEventHandler(PositionSlider_PointerReleased), true);
 
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
         }
@@ -112,6 +151,10 @@ namespace HyperMedia
                 await LoadFromLocalStorage();
 
             _playlistIndex = 0;
+            _repeatMode = 0;
+            _speedIndex = 2;
+            SpeedBtn.Content = "1.0x";
+            PhotoBar.Visibility = Visibility.Collapsed;
 
             if (_networkUrl != null)
             {
@@ -174,6 +217,7 @@ namespace HyperMedia
             string ext = file.FileType.ToLowerInvariant();
             if (PHOTO_EXTS.Contains(ext))
             {
+                StopVisualizer();
                 OpenPhoto(file);
                 return;
             }
@@ -184,21 +228,37 @@ namespace HyperMedia
         private async void OpenMedia(StorageFile file)
         {
             _isPhotoMode = false;
+            _mediaEnded = false;
+            _seeking = false;
+            HidePhotoBar();
             PhotoImage.Visibility = Visibility.Collapsed;
             PhotoImage.Source = null;
             VideoPlayer.Visibility = Visibility.Visible;
+
+            // Audio files have no picture to show; put the faux visualizer behind
+            // the (blank) video surface instead of solid black.
+            if (AUDIO_EXTS.Contains(file.FileType.ToLowerInvariant()))
+            {
+                StartVisualizer();
+                VideoPlayer.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                StopVisualizer();
+            }
 
             try
             {
                 VideoPlayer.Source = null;
                 var stream = await file.OpenReadAsync();
                 VideoPlayer.SetSource(stream, "");
+                VideoPlayer.PlaybackRate = SPEEDS[_speedIndex];
                 VideoPlayer.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
                 PlayHistory.Add(file.Path, file.Name);
                 StartPositionTimer();
-                ResetAutoHide();
+                ShowControls();
             }
             catch (Exception ex)
             {
@@ -210,6 +270,10 @@ namespace HyperMedia
         private void OpenNetworkStream()
         {
             _isPhotoMode = false;
+            _mediaEnded = false;
+            _seeking = false;
+            HidePhotoBar();
+            StopVisualizer();
             PhotoImage.Visibility = Visibility.Collapsed;
             VideoPlayer.Visibility = Visibility.Visible;
             _originalFileName = _networkUrl;
@@ -219,11 +283,12 @@ namespace HyperMedia
             try
             {
                 VideoPlayer.Source = new Uri(_networkUrl);
+                VideoPlayer.PlaybackRate = SPEEDS[_speedIndex];
                 VideoPlayer.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
                 StartPositionTimer();
-                ResetAutoHide();
+                ShowControls();
             }
             catch (Exception ex)
             {
@@ -250,11 +315,17 @@ namespace HyperMedia
                 PhotoTransform.ScaleX = 1;
                 PhotoTransform.ScaleY = 1;
                 PhotoTransform.Rotation = 0;
+                PhotoBar.Visibility = Visibility.Visible;
             }
             catch (Exception ex)
             {
                 DebugLog("OpenPhoto failed: " + ex.Message);
             }
+        }
+
+        private void HidePhotoBar()
+        {
+            PhotoBar.Visibility = Visibility.Collapsed;
         }
 
         private void ShowMediaUnsupported()
@@ -274,6 +345,7 @@ namespace HyperMedia
                     double total = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                     DurationText.Text = FormatTime(total);
                     PositionSlider.Maximum = Math.Max(1, total);
+                    if (PositionProgress != null) PositionProgress.Maximum = PositionSlider.Maximum;
                 }
 
                 if (_pendingResumePos > 0)
@@ -311,9 +383,11 @@ namespace HyperMedia
             }
             else
             {
+                _mediaEnded = true;
                 _positionTimer.Stop();
                 CurrentTimeText.Text = DurationText.Text;
                 PositionSlider.Value = PositionSlider.Maximum;
+                SyncPositionProgress();
             }
         }
 
@@ -330,19 +404,50 @@ namespace HyperMedia
                 if (VideoPlayer.NaturalDuration.HasTimeSpan && VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds > 0)
                 {
                     double total = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
+                    if (Math.Abs(PositionSlider.Maximum - total) > 0.5)
+                        PositionSlider.Maximum = total;
                     double pos = VideoPlayer.Position.TotalSeconds;
                     PositionSlider.Value = Math.Min(total, Math.Max(0, pos));
                 }
                 CurrentTimeText.Text = FormatTime(VideoPlayer.Position.TotalSeconds);
+                SyncPositionProgress();
             }
             catch (Exception ex) { DebugLog("PositionTimer failed: " + ex.Message); }
         }
 
+        private void SyncPositionProgress()
+        {
+            if (PositionProgress == null || PositionSlider == null) return;
+            try
+            {
+                PositionProgress.Maximum = Math.Max(1, PositionSlider.Maximum);
+                PositionProgress.Value = Math.Min(PositionSlider.Value, PositionProgress.Maximum);
+            }
+            catch { }
+        }
+
         private void PositionSlider_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
         {
+            SyncPositionProgress();
             if (!_seeking) return;
             CurrentTimeText.Text = FormatTime(e.NewValue);
             try { VideoPlayer.Position = TimeSpan.FromSeconds(e.NewValue); }
+            catch (Exception ex) { DebugLog("seek failed: " + ex.Message); }
+        }
+
+        private void PositionSlider_PointerPressed(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            _seeking = true;
+        }
+
+        private void PositionSlider_PointerReleased(object sender, Windows.UI.Xaml.Input.PointerRoutedEventArgs e)
+        {
+            _seeking = false;
+            try
+            {
+                VideoPlayer.Position = TimeSpan.FromSeconds(PositionSlider.Value);
+                CurrentTimeText.Text = FormatTime(PositionSlider.Value);
+            }
             catch (Exception ex) { DebugLog("seek failed: " + ex.Message); }
         }
 
@@ -350,6 +455,8 @@ namespace HyperMedia
         {
             try { VideoPlayer.Volume = Math.Max(0, Math.Min(1.0, e.NewValue / 100.0)); }
             catch (Exception ex) { DebugLog("volume failed: " + ex.Message); }
+            try { if (VolumeProgress != null) VolumeProgress.Value = e.NewValue; }
+            catch { }
         }
 
         private void PlayPauseBtn_Click(object sender, RoutedEventArgs e)
@@ -371,23 +478,35 @@ namespace HyperMedia
             if (_isPlaying || _networkUrl == null && _playlist.Count == 0) return;
 
             // Played-to-completion state: restart from the beginning.
-            try
+            if (_mediaEnded)
             {
-                if (VideoPlayer.NaturalDuration.HasTimeSpan &&
-                    VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds > 0 &&
-                    VideoPlayer.Position >= VideoPlayer.NaturalDuration.TimeSpan)
-                {
-                    VideoPlayer.Position = TimeSpan.Zero;
-                    CurrentTimeText.Text = "00:00";
-                    PositionSlider.Value = 0;
-                }
+                _mediaEnded = false;
+                try { VideoPlayer.Position = TimeSpan.Zero; } catch { }
+                CurrentTimeText.Text = "00:00";
+                PositionSlider.Value = 0;
             }
-            catch { }
+            else
+            {
+                try
+                {
+                    if (VideoPlayer.NaturalDuration.HasTimeSpan &&
+                        VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds > 0 &&
+                        VideoPlayer.Position >= VideoPlayer.NaturalDuration.TimeSpan)
+                    {
+                        VideoPlayer.Position = TimeSpan.Zero;
+                        CurrentTimeText.Text = "00:00";
+                        PositionSlider.Value = 0;
+                    }
+                }
+                catch { }
+            }
 
             VideoPlayer.Play();
             _isPlaying = true;
+            if (_spectrum != null) _spectrum.SetPlaying(true);
             UpdatePlayPauseIcon();
             StartPositionTimer();
+            SyncPositionProgress();
             ResetAutoHide();
         }
 
@@ -396,6 +515,7 @@ namespace HyperMedia
             if (!_isPlaying) return;
             VideoPlayer.Pause();
             _isPlaying = false;
+            if (_spectrum != null) _spectrum.SetPlaying(false);
             UpdatePlayPauseIcon();
             ShowControls();
         }
@@ -403,9 +523,11 @@ namespace HyperMedia
         private void StopBtn_Click(object sender, RoutedEventArgs e)
         {
             SaveResumePosition();
+            _mediaEnded = false;
             VideoPlayer.Stop();
             _isPlaying = false;
             _positionTimer.Stop();
+            StopVisualizer();
             CurrentTimeText.Text = "00:00";
             PositionSlider.Value = 0;
             UpdatePlayPauseIcon();
@@ -490,6 +612,71 @@ namespace HyperMedia
             ResetAutoHide();
         }
 
+        private void SpeedBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isPhotoMode) return;
+            _speedIndex = (_speedIndex + 1) % SPEEDS.Length;
+            SpeedBtn.Content = SPEEDS[_speedIndex].ToString("0.0#x");
+            try { VideoPlayer.PlaybackRate = SPEEDS[_speedIndex]; }
+            catch (Exception ex) { DebugLog("set speed failed: " + ex.Message); }
+            ResetAutoHide();
+        }
+
+        #region Photo gestures / toolbar
+
+        private void PhotoImage_ManipulationStarted(object sender, Windows.UI.Xaml.Input.ManipulationStartedRoutedEventArgs e)
+        {
+            _photoGesturing = true;
+            _photoStartScaleX = PhotoTransform.ScaleX;
+            _photoStartScaleY = PhotoTransform.ScaleY;
+            _photoStartRotation = PhotoTransform.Rotation;
+        }
+
+        private void PhotoImage_ManipulationDelta(object sender, Windows.UI.Xaml.Input.ManipulationDeltaRoutedEventArgs e)
+        {
+            if (!_photoGesturing) return;
+            PhotoTransform.ScaleX = Math.Max(0.4, _photoStartScaleX * e.Cumulative.Scale);
+            PhotoTransform.ScaleY = Math.Max(0.4, _photoStartScaleY * e.Cumulative.Scale);
+            if (e.Cumulative.Rotation != 0)
+                PhotoTransform.Rotation = _photoStartRotation + e.Cumulative.Rotation;
+        }
+
+        private void PhotoImage_ManipulationCompleted(object sender, Windows.UI.Xaml.Input.ManipulationCompletedRoutedEventArgs e)
+        {
+            _photoGesturing = false;
+            ResetAutoHide();
+        }
+
+        private void PhotoZoomInBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PhotoTransform.ScaleX = Math.Min(8, PhotoTransform.ScaleX * 1.25);
+            PhotoTransform.ScaleY = Math.Min(8, PhotoTransform.ScaleY * 1.25);
+            ResetAutoHide();
+        }
+
+        private void PhotoZoomOutBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PhotoTransform.ScaleX = Math.Max(0.4, PhotoTransform.ScaleX / 1.25);
+            PhotoTransform.ScaleY = Math.Max(0.4, PhotoTransform.ScaleY / 1.25);
+            ResetAutoHide();
+        }
+
+        private void PhotoRotateBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PhotoTransform.Rotation = (PhotoTransform.Rotation + 90) % 360;
+            ResetAutoHide();
+        }
+
+        private void PhotoResetBtn_Click(object sender, RoutedEventArgs e)
+        {
+            PhotoTransform.ScaleX = 1;
+            PhotoTransform.ScaleY = 1;
+            PhotoTransform.Rotation = 0;
+            ResetAutoHide();
+        }
+
+        #endregion
+
         private void BackBtn_Click(object sender, RoutedEventArgs e)
         {
             SaveResumePosition();
@@ -508,6 +695,7 @@ namespace HyperMedia
             _isPlaying = false;
             _positionTimer.Stop();
             _autoHideTimer.Stop();
+            _visTimer.Stop();
             if (_sleepTimer != null) _sleepTimer.Stop();
         }
 
@@ -602,7 +790,20 @@ namespace HyperMedia
 
         private void Root_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
+            if (IsInBars(e.OriginalSource)) return;
             ToggleControls();
+        }
+
+        private bool IsInBars(object source)
+        {
+            var el = source as FrameworkElement;
+            while (el != null && el != this)
+            {
+                if (el == TopBar || el == BottomBar || el == PhotoBar || el == NoSupportText)
+                    return true;
+                el = el.Parent as FrameworkElement;
+            }
+            return false;
         }
 
         private void ToggleControls()
@@ -617,6 +818,8 @@ namespace HyperMedia
         {
             BottomBar.Visibility = Visibility.Visible;
             TopBar.Visibility = Visibility.Visible;
+            SyncPositionProgress();
+            if (VolumeProgress != null) VolumeProgress.Value = VolumeSlider.Value;
             ResetAutoHide();
         }
 
@@ -654,7 +857,7 @@ namespace HyperMedia
                 PlayPauseBtn.Content = "▶";
                 return;
             }
-            PlayPauseBtn.Content = _isPlaying ? "⏸" : "▶";
+            PlayPauseBtn.Content = _isPlaying ? "❚❚" : "▶";
         }
 
         #endregion
@@ -667,6 +870,99 @@ namespace HyperMedia
                 ? string.Format("{0}:{1:D2}:{2:D2}", t.Hours, t.Minutes, t.Seconds)
                 : string.Format("{0}:{1:D2}", t.Minutes, t.Seconds);
         }
+
+        #region Visualizer
+
+        private void StartVisualizer()
+        {
+            try
+            {
+                if (_spectrum == null) _spectrum = new SpectrumEngine();
+                if (_renderer == null) _renderer = _visStyles[0];
+
+                VisualizerImage.Visibility = Visibility.Visible;
+                VisHintText.Visibility = Visibility.Visible;
+                _spectrum.SetPlaying(true);
+                _visTimer.Start();
+            }
+            catch (Exception ex) { DebugLog("StartVisualizer failed: " + ex.Message); }
+        }
+
+        private void StopVisualizer()
+        {
+            _visTimer.Stop();
+            VisualizerImage.Visibility = Visibility.Collapsed;
+            VisHintText.Visibility = Visibility.Collapsed;
+            _visPixels = null;
+            _visBitmap = null;
+        }
+
+        private void VisTimer_Tick(object sender, object e)
+        {
+            try
+            {
+                if (_spectrum == null) return;
+                int w = (int)Math.Max(1, Math.Round(Window.Current.Bounds.Width / 2));
+                int h = (int)Math.Max(1, Math.Round(Window.Current.Bounds.Height / 2));
+
+                if (_visBitmap == null || _visBitmap.PixelWidth != w || _visBitmap.PixelHeight != h)
+                {
+                    _visBitmap = new WriteableBitmap(w, h);
+                    _visPixels = new byte[w * h * 4];
+                    VisualizerImage.Source = _visBitmap;
+                }
+
+                var data = _spectrum.Next(0);
+                if (_spectrum != null)
+                {
+                    float drive = _isPlaying
+                        ? (float)(0.35 + VideoPlayer.Volume * 0.65)
+                        : 0.08f;
+                    _spectrum.SetDrive(drive);
+                }
+                var px = _visPixels;
+                _renderer.Render(px, w, h, data, data.BeatPulse, VIS_THEME, DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond);
+
+                using (var stream = _visBitmap.PixelBuffer.AsStream())
+                {
+                    stream.Seek(0, System.IO.SeekOrigin.Begin);
+                    stream.Write(px, 0, px.Length);
+                }
+                _visBitmap.Invalidate();
+            }
+            catch (Exception ex) { DebugLog("VisTimer_Tick failed: " + ex.Message); }
+        }
+
+        private void CycleVisualizer()
+        {
+            _visIndex = (_visIndex + 1) % _visStyles.Length;
+            _renderer = _visStyles[_visIndex];
+        }
+
+        private void VisualizerImage_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            e.Handled = true;
+            ToggleControls();
+        }
+
+        private void TapSurface_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            if (IsInBars(e.OriginalSource)) return;
+            e.Handled = true;
+            ToggleControls();
+        }
+
+        private void TapSurface_DoubleTapped(object sender, Windows.UI.Xaml.Input.DoubleTappedRoutedEventArgs e)
+        {
+            if (VisualizerImage.Visibility == Visibility.Visible)
+            {
+                e.Handled = true;
+                CycleVisualizer();
+                ResetAutoHide();
+            }
+        }
+
+        #endregion
 
         private static void DebugLog(string message)
         {

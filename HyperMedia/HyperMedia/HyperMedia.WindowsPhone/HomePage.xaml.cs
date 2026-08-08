@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -37,8 +37,8 @@ namespace HyperMedia
         private bool _musicTileView;
         private bool _photosTileView;
 
-        private const string ICON_LIST = "\u25A1";
-        private const string ICON_TILE = "\u25A3";
+        private const string ICON_LIST = "\u2630";
+        private const string ICON_TILE = "\u25A6";
 
         public HomePage()
         {
@@ -622,258 +622,10 @@ namespace HyperMedia
 
         #region Media Library
 
-        private const string KEY_LIBRARY_FOLDER = "LibraryFolderToken";
-        private const string KEY_LIBRARY_PATH = "LibraryFolderPath";
 
-        private static readonly string[] LibraryExtensions = {
-            ".mp4", ".avi", ".mkv", ".webm", ".flv", ".mov", ".wmv", ".3gp", ".ts", ".mpg", ".mpeg", ".m4v",
-            ".mp3", ".flac", ".wav", ".aac", ".ogg", ".wma", ".m4a", ".opus",
-            ".jpg", ".jpeg", ".png", ".bmp", ".gif"
-        };
-
-        private async void LibraryButton_Click(object sender, RoutedEventArgs e)
+        private void LibraryButton_Click(object sender, RoutedEventArgs e)
         {
-            var popup = new Popup();
-            popup.Width = 520;
-            popup.Height = 620;
-
-            var border = new Border();
-            border.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xF0, 0x0A, 0x0A, 0x0F));
-            border.Width = 520;
-            border.Padding = new Thickness(24);
-
-            var panel = new StackPanel();
-
-            var title = new TextBlock();
-            title.Text = L("Library");
-            title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            title.FontSize = 16;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
-            title.Margin = new Thickness(0, 0, 0, 8);
-            panel.Children.Add(title);
-
-            var addBtn = new Button();
-            addBtn.Content = L("AddFolderBtn");
-            addBtn.Margin = new Thickness(0, 4, 0, 12);
-            addBtn.Click += async (s, ev) =>
-            {
-                if (_pickerOpen) return;
-                _pickerOpen = true;
-                try
-                {
-                    await Task.Delay(150);
-                    var picker = new FolderPicker();
-                    picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
-                    picker.FileTypeFilter.Add("*");
-                    var folder = await picker.PickSingleFolderAsync();
-                    if (folder != null)
-                    {
-                        try
-                        {
-                            string token = StorageApplicationPermissions.FutureAccessList.Add(folder);
-                            ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_FOLDER] = token;
-                            ApplicationData.Current.LocalSettings.Values[KEY_LIBRARY_PATH] = folder.Path;
-                            ShowOverlay("已添加媒体库: " + folder.Name);
-                        }
-                        catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library add failed: {0}", ex.Message); }
-                    }
-                }
-                finally
-                {
-                    _pickerOpen = false;
-                }
-            };
-            panel.Children.Add(addBtn);
-
-            var filesList = new ListBox();
-            filesList.MaxHeight = 300;
-            filesList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-            filesList.BorderThickness = new Thickness(0);
-            filesList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            filesList.FontSize = 13;
-            filesList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-            try
-            {
-                filesList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-            panel.Children.Add(filesList);
-
-            var settings = ApplicationData.Current.LocalSettings;
-            string token2 = settings.Values.ContainsKey(KEY_LIBRARY_FOLDER) ? settings.Values[KEY_LIBRARY_FOLDER] as string : null;
-            if (!string.IsNullOrEmpty(token2))
-            {
-                try
-                {
-                    var folder = await StorageApplicationPermissions.FutureAccessList.GetFolderAsync(token2);
-                    var files = await folder.GetFilesAsync();
-                    int count = 0;
-                    foreach (var f in files)
-                    {
-                        string ext = f.FileType.ToLowerInvariant();
-                        if (Array.IndexOf(LibraryExtensions, ext) >= 0)
-                        {
-                            string path = f.Path;
-                            var item = new ListBoxItem();
-                            item.Content = f.Name;
-                            item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                            item.FontSize = 13;
-                            item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-                            item.Padding = new Thickness(10, 8, 10, 8);
-                            item.Margin = new Thickness(0, 2, 0, 2);
-                            item.Tapped += async (s, ev) =>
-                            {
-                                popup.IsOpen = false;
-                                try
-                                {
-                                    var storageFile = await StorageFile.GetFileFromPathAsync(path);
-                                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", storageFile);
-                                    Frame.Navigate(typeof(MainPage));
-                                }
-                                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library open failed: {0}", ex.Message); }
-                            };
-                            filesList.Items.Add(item);
-                            count++;
-                        }
-                    }
-                    if (count == 0)
-                    {
-                        var empty = new ListBoxItem();
-                        empty.Content = L("FolderEmpty");
-                        empty.IsEnabled = false;
-                        empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                        empty.FontSize = 13;
-                        empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-                        empty.Padding = new Thickness(10, 8, 10, 8);
-                        filesList.Items.Add(empty);
-                    }
-                }
-                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library load failed: {0}", ex.Message); }
-            }
-            else
-            {
-                var empty = new ListBoxItem();
-                empty.Content = L("NoFolderYet");
-                empty.IsEnabled = false;
-                empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                empty.FontSize = 13;
-                empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-                empty.Padding = new Thickness(10, 8, 10, 8);
-                filesList.Items.Add(empty);
-            }
-
-            // Network devices (UPnP/DLNA discovery — Win 8.1 has no content-browse API, only device discovery)
-            var netTitle = new TextBlock();
-            netTitle.Text = L("NetworkDevices");
-            netTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netTitle.FontSize = 11;
-            netTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-            netTitle.Margin = new Thickness(0, 14, 0, 6);
-            panel.Children.Add(netTitle);
-
-            var netList = new ListBox();
-            netList.MaxHeight = 160;
-            netList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-            netList.BorderThickness = new Thickness(0);
-            netList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netList.FontSize = 13;
-            netList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-            try
-            {
-                netList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-            panel.Children.Add(netList);
-
-            var netLoading = new TextBlock();
-            netLoading.Text = L("Scanning");
-            netLoading.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            netLoading.FontSize = 12;
-            netLoading.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-            netLoading.Margin = new Thickness(10, 6, 0, 6);
-            netList.Items.Add(new ListBoxItem { Content = netLoading.Text, IsEnabled = false, FontSize = 12 });
-
-            var netDevices = await DiscoverNetworkDevices();
-            netList.Items.Clear();
-            if (netDevices.Count == 0)
-            {
-                var empty = new ListBoxItem();
-                empty.Content = L("NoDevices");
-                empty.IsEnabled = false;
-                empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                empty.FontSize = 12;
-                empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-                netList.Items.Add(empty);
-            }
-            else
-            {
-                foreach (var dev in netDevices)
-                {
-                    var item = new ListBoxItem();
-                    item.Content = "\uD83D\uDDA5\uFE0F " + dev.Item1;
-                    item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                    item.FontSize = 12;
-                    item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
-                    item.Padding = new Thickness(10, 6, 10, 6);
-                    item.IsEnabled = false;
-                    netList.Items.Add(item);
-                }
-            }
-
-            var closeBtn = new Button();
-            closeBtn.Content = L("Close");
-            closeBtn.HorizontalAlignment = HorizontalAlignment.Right;
-            closeBtn.Margin = new Thickness(0, 12, 0, 0);
-            closeBtn.Click += (s, ev) => { popup.IsOpen = false; };
-            panel.Children.Add(closeBtn);
-
-            border.Child = panel;
-            popup.Child = border;
-
-            var bounds = Window.Current.Bounds;
-            popup.HorizontalOffset = (bounds.Width - 520) / 2;
-            popup.VerticalOffset = (bounds.Height - 620) / 2;
-
-            popup.IsOpen = true;
-        }
-
-        private void ShowOverlay(string text)
-        {
-            StatusText.Text = text;
-        }
-
-        private async System.Threading.Tasks.Task<List<Tuple<string, string>>> DiscoverNetworkDevices()
-        {
-            var result = new List<Tuple<string, string>>();
-            try
-            {
-                var devices = await Windows.Devices.Enumeration.DeviceInformation.FindAllAsync(
-                    Windows.Devices.Enumeration.DeviceClass.All);
-                foreach (var d in devices)
-                {
-                    if (d == null) continue;
-                    string name = d.Name ?? "";
-                    string id = d.Id ?? "";
-                    if (string.IsNullOrEmpty(name)) continue;
-
-                    // Skip local hardware (GUID-based ids) and common local interface names
-                    if (id.Contains("{")) continue;
-                    if (name.IndexOf("Ethernet", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Wi-Fi", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Bluetooth", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Virtual", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("WAN", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Microsoft", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Realtek", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Intel", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                        name.IndexOf("Monitor", StringComparison.OrdinalIgnoreCase) >= 0) continue;
-
-                    result.Add(Tuple.Create(name, "网络设备"));
-                    if (result.Count >= 30) break;
-                }
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] DiscoverNetworkDevices failed: {0}", ex.Message); }
-            return result;
+            Frame.Navigate(typeof(MediaLibraryPage));
         }
 
         #endregion
@@ -882,122 +634,9 @@ namespace HyperMedia
 
         private void OpenUrlButton_Click(object sender, RoutedEventArgs e)
         {
-            ShowUrlInputOverlay();
+            Frame.Navigate(typeof(OpenUrlPage));
         }
 
-        private void ShowUrlInputOverlay()
-        {
-            var popup = new Popup();
-
-            var border = new Border();
-            border.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xF0, 0x0A, 0x0A, 0x0F));
-            border.Width = 500;
-            border.Padding = new Thickness(24);
-
-            var panel = new StackPanel();
-
-            var title = new TextBlock();
-            title.Text = L("OpenNetworkMedia");
-            title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            title.FontSize = 14;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
-            title.Margin = new Thickness(0, 0, 0, 16);
-            panel.Children.Add(title);
-
-            var textBox = new TextBox();
-            textBox.PlaceholderText = L("UrlPlaceholder");
-            textBox.Width = 450;
-            textBox.Height = 36;
-            textBox.FontSize = 14;
-            textBox.KeyDown += (s, ev) =>
-            {
-                if (ev.Key == VirtualKey.Enter)
-                {
-                    string url = textBox.Text.Trim();
-                    popup.IsOpen = false;
-                    if (!string.IsNullOrEmpty(url))
-                        LaunchUrl(url);
-                }
-            };
-            panel.Children.Add(textBox);
-
-            var history = PlayHistory.GetUrlHistory();
-            if (history.Count > 0)
-            {
-                var historyTitle = new TextBlock();
-                historyTitle.Text = L("RecentOpened");
-                historyTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                historyTitle.FontSize = 11;
-                historyTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-                historyTitle.Margin = new Thickness(0, 14, 0, 6);
-                panel.Children.Add(historyTitle);
-
-                var historyList = new ListBox();
-                historyList.MaxHeight = 160;
-                historyList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF));
-                historyList.BorderThickness = new Thickness(0);
-                historyList.Width = 450;
-                try
-                {
-                    historyList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-                }
-                catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-                foreach (var url in history)
-                {
-                    var item = new ListBoxItem();
-                    item.Content = url;
-                    item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                    item.FontSize = 12;
-                    item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xFF, 0xFF, 0xFF));
-                    item.Padding = new Thickness(8, 6, 8, 6);
-                    item.Tapped += (s, ev) => { textBox.Text = url; };
-                    historyList.Items.Add(item);
-                }
-                panel.Children.Add(historyList);
-            }
-
-            var btnPanel = new StackPanel();
-            btnPanel.Orientation = Windows.UI.Xaml.Controls.Orientation.Horizontal;
-            btnPanel.HorizontalAlignment = HorizontalAlignment.Right;
-            btnPanel.Margin = new Thickness(0, 16, 0, 0);
-
-            var cancelBtn = new Button();
-            cancelBtn.Content = L("Cancel");
-            cancelBtn.Margin = new Thickness(0, 0, 8, 0);
-            cancelBtn.Click += (s, ev) => { popup.IsOpen = false; };
-            btnPanel.Children.Add(cancelBtn);
-
-            var playBtn = new Button();
-            playBtn.Content = L("Play");
-            playBtn.Click += (s, ev) =>
-            {
-                string url = textBox.Text.Trim();
-                popup.IsOpen = false;
-                if (!string.IsNullOrEmpty(url))
-                    LaunchUrl(url);
-            };
-            btnPanel.Children.Add(playBtn);
-
-            panel.Children.Add(btnPanel);
-            border.Child = panel;
-
-            popup.Child = border;
-            popup.Width = 500;
-            popup.Height = 340;
-
-            var bounds = Window.Current.Bounds;
-            popup.HorizontalOffset = (bounds.Width - 500) / 2;
-            popup.VerticalOffset = (bounds.Height - 340) / 2;
-
-            popup.IsOpen = true;
-            textBox.Focus(FocusState.Programmatic);
-        }
-
-        private void LaunchUrl(string url)
-        {
-            if (string.IsNullOrEmpty(url)) return;
-            Frame.Navigate(typeof(MainPage), url);
-        }
 
         #endregion
 
@@ -1005,7 +644,7 @@ namespace HyperMedia
 
 private bool _pickerOpen;
 
-        private async void OpenFilesWithFilter(string filterExtensions, PickerLocationId location)
+        private void OpenFilesWithFilter(string filterExtensions, PickerLocationId location)
         {
             // Win8/8.1 bug: re-showing a picker right after the user cancels/closes
             // one can crash. Guard against double-invoke and defer the next launch
@@ -1014,41 +653,45 @@ private bool _pickerOpen;
             _pickerOpen = true;
             try
             {
-                await Task.Delay(150);
-
                 var picker = new FileOpenPicker();
                 picker.SuggestedStartLocation = location;
                 foreach (var ext in filterExtensions.Split(','))
                     picker.FileTypeFilter.Add(ext.Trim());
 
-                var files = await picker.PickMultipleFilesAsync();
-                if (files != null && files.Count > 0)
+                // WP 8.1 has no synchronous picker API (throws 0x80070032);
+                // result arrives async through App.OnActivated.
+                App.PendingFileOpen = (files) =>
                 {
-                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
-                    if (files.Count > 1)
+                    _pickerOpen = false;
+                    if (files != null && files.Count > 0)
                     {
-                        var extras = new List<string>();
-                        for (int i = 1; i < files.Count; i++)
-                            extras.Add(files[i].Path);
-                        ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                        StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                        if (files.Count > 1)
+                        {
+                            var extras = new List<string>();
+                            for (int i = 1; i < files.Count; i++)
+                                extras.Add(files[i].Path);
+                            ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                        }
+                        Frame.Navigate(typeof(MainPage));
                     }
-                    Frame.Navigate(typeof(MainPage));
-                }
+                };
+                picker.ContinuationData["picker"] = "media";
+                picker.PickMultipleFilesAndContinue();
             }
-            finally
+            catch
             {
                 _pickerOpen = false;
+                App.PendingFileOpen = null;
             }
         }
 
-        private async void OpenButton_Click(object sender, RoutedEventArgs e)
+        private void OpenButton_Click(object sender, RoutedEventArgs e)
         {
             if (_pickerOpen) return;
             _pickerOpen = true;
             try
             {
-                await Task.Delay(150);
-
                 var picker = new FileOpenPicker();
                 picker.SuggestedStartLocation = PickerLocationId.VideosLibrary;
                 string[] extensions = {
@@ -1060,23 +703,30 @@ private bool _pickerOpen;
                 foreach (var ext in extensions)
                     picker.FileTypeFilter.Add(ext);
 
-                var files = await picker.PickMultipleFilesAsync();
-                if (files != null && files.Count > 0)
+                // WP 8.1: no synchronous picker API — continuation via App.OnActivated.
+                App.PendingFileOpen = (files) =>
                 {
-                    StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
-                    if (files.Count > 1)
+                    _pickerOpen = false;
+                    if (files != null && files.Count > 0)
                     {
-                        var extras = new List<string>();
-                        for (int i = 1; i < files.Count; i++)
-                            extras.Add(files[i].Path);
-                        ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                        StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", files[0]);
+                        if (files.Count > 1)
+                        {
+                            var extras = new List<string>();
+                            for (int i = 1; i < files.Count; i++)
+                                extras.Add(files[i].Path);
+                            ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
+                        }
+                        Frame.Navigate(typeof(MainPage));
                     }
-                    Frame.Navigate(typeof(MainPage));
-                }
+                };
+                picker.ContinuationData["picker"] = "all";
+                picker.PickMultipleFilesAndContinue();
             }
-            finally
+            catch
             {
                 _pickerOpen = false;
+                App.PendingFileOpen = null;
             }
         }
 
@@ -1095,7 +745,7 @@ private bool _pickerOpen;
             }
             if (ctrl && e.Key == VirtualKey.U)
             {
-                ShowUrlInputOverlay();
+                OpenUrlButton_Click(null, null);
                 e.Handled = true;
                 return;
             }
@@ -1134,245 +784,15 @@ private bool _pickerOpen;
 
         private void PlaylistsButton_Click(object sender, RoutedEventArgs e)
         {
-            var popup = new Popup();
-            popup.Width = 560;
-            popup.Height = 460;
-
-            var border = new Border();
-            border.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xF0, 0x0A, 0x0A, 0x0F));
-            border.Width = 560;
-            border.Padding = new Thickness(24);
-
-            var panel = new StackPanel();
-
-            var title = new TextBlock();
-            title.Text = L("MyPlaylists");
-            title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            title.FontSize = 16;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
-            title.Margin = new Thickness(0, 0, 0, 4);
-            panel.Children.Add(title);
-
-            var hint = new TextBlock();
-            hint.Text = L("PlaylistHint");
-            hint.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            hint.FontSize = 11;
-            hint.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
-            hint.Margin = new Thickness(0, 0, 0, 12);
-            hint.TextWrapping = TextWrapping.Wrap;
-            panel.Children.Add(hint);
-
-            // Smart playlists (auto-generated from history metadata)
-            var smartTitle = new TextBlock();
-            smartTitle.Text = L("SmartPlaylists");
-            smartTitle.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            smartTitle.FontSize = 11;
-            smartTitle.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
-            smartTitle.Margin = new Thickness(0, 0, 0, 6);
-            panel.Children.Add(smartTitle);
-
-            var smartList = new ListBox();
-            smartList.MaxHeight = 150;
-            smartList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-            smartList.BorderThickness = new Thickness(0);
-            smartList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            smartList.FontSize = 13;
-            smartList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-            try
-            {
-                smartList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-            panel.Children.Add(smartList);
-
-            AddSmartItem(smartList, popup, L("TopRated"), "toprated");
-            AddSmartItem(smartList, popup, L("MostPlayed"), "mostplayed");
-            AddSmartItem(smartList, popup, L("RecentlyPlayedSmart"), "recent");
-
-            var names = PlaylistLibrary.GetPlaylistNames();
-            if (names.Count == 0)
-            {
-                var empty = new TextBlock();
-                empty.Text = L("NoPlaylistYet");
-                empty.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                empty.FontSize = 13;
-                empty.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
-                empty.Margin = new Thickness(0, 20, 0, 0);
-                empty.HorizontalAlignment = HorizontalAlignment.Center;
-                panel.Children.Add(empty);
-            }
-            else
-            {
-                var playlistList = new ListBox();
-                playlistList.MaxHeight = 380;
-                playlistList.Background = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x14, 0xFF, 0xFF, 0xFF));
-                playlistList.BorderThickness = new Thickness(0);
-                playlistList.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                playlistList.FontSize = 14;
-                playlistList.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-                try
-                {
-                    playlistList.ItemContainerStyle = Application.Current.Resources["ZuneListBoxItemStyle"] as Style;
-                }
-                catch (Exception ex) { Debug.WriteLine("[HyperMedia] ItemContainerStyle failed: {0}", ex.Message); }
-                panel.Children.Add(playlistList);
-
-                foreach (var name in names)
-                {
-                    var files = PlaylistLibrary.GetPlaylistFiles(name);
-                    var item = new ListBoxItem();
-                    item.Padding = new Thickness(10, 10, 10, 10);
-                    item.Margin = new Thickness(0, 2, 0, 2);
-                    item.Content = name + "  (" + files.Count + " 首)";
-                    item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-                    item.FontSize = 14;
-                    item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-                    item.Tapped += async (s, ev) =>
-                    {
-                        await PlayPlaylist(popup, name);
-                    };
-                    item.RightTapped += async (s, ev) =>
-                    {
-                        var menu = new Windows.UI.Popups.PopupMenu();
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("Play"), async (cmd) => { await PlayPlaylist(popup, name); }));
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("PinToStart"), async (cmd) =>
-                        {
-                            try
-                            {
-                                var tile = new Windows.UI.StartScreen.SecondaryTile();
-                                tile.TileId = "HyperMediaPlaylist_" + name;
-                                tile.DisplayName = name;
-                                tile.Arguments = "playlist:" + name;
-                                tile.VisualElements.Square150x150Logo = new Uri("ms-appx:///Assets/Logo.png");
-                                tile.VisualElements.ShowNameOnSquare150x150Logo = true;
-                                tile.VisualElements.ForegroundText = Windows.UI.StartScreen.ForegroundText.Light;
-                                bool created = await tile.RequestCreateAsync();
-                                if (created)
-                                    ShowOverlay(L("PinnedToStart") + name);
-                            }
-                            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Pin tile failed: {0}", ex.Message); }
-                        }));
-                        menu.Commands.Add(new Windows.UI.Popups.UICommand(L("DeletePlaylist"), (cmd) =>
-                        {
-                            PlaylistLibrary.DeletePlaylist(name);
-                            popup.IsOpen = false;
-                            ShowOverlay(L("PlaylistDeleted") + name);
-                        }));
-                        await menu.ShowForSelectionAsync(new Rect(ev.GetPosition(null), new Size(1, 1)), Windows.UI.Popups.Placement.Above);
-                    };
-                    playlistList.Items.Add(item);
-                }
-            }
-
-            var closeBtn = new Button();
-            closeBtn.Content = L("Close");
-            closeBtn.HorizontalAlignment = HorizontalAlignment.Right;
-            closeBtn.Margin = new Thickness(0, 12, 0, 0);
-            closeBtn.Click += (s, ev) => { popup.IsOpen = false; };
-            panel.Children.Add(closeBtn);
-
-            border.Child = panel;
-            popup.Child = border;
-
-            var bounds = Window.Current.Bounds;
-            popup.HorizontalOffset = (bounds.Width - 560) / 2;
-            popup.VerticalOffset = (bounds.Height - 460) / 2;
-
-            popup.IsOpen = true;
-        }
-
-        private void AddSmartItem(ListBox smartList, Popup popup, string label, string kind)
-        {
-            var item = new ListBoxItem();
-            item.Content = label;
-            item.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
-            item.FontSize = 13;
-            item.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xE6, 0xFF, 0xFF, 0xFF));
-            item.Padding = new Thickness(10, 8, 10, 8);
-            item.Tapped += async (s, ev) =>
-            {
-                var paths = PlaylistLibrary.GetSmartPlaylist(kind);
-                if (paths == null || paths.Count == 0)
-                {
-                    ShowOverlay(L("SmartPlaylistEmpty"));
-                    return;
-                }
-                popup.IsOpen = false;
-                await PlayPaths(paths);
-            };
-            smartList.Items.Add(item);
-        }
-
-        private async System.Threading.Tasks.Task PlayPaths(System.Collections.Generic.List<string> paths)
-        {
-            try
-            {
-                StorageFile first = null;
-                var extras = new List<string>();
-                for (int i = 0; i < paths.Count; i++)
-                {
-                    try
-                    {
-                        var f = await StorageFile.GetFileFromPathAsync(paths[i]);
-                        if (i == 0) first = f;
-                        else extras.Add(paths[i]);
-                    }
-                    catch (Exception ex) { Debug.WriteLine("[HyperMedia] Path missing: {0}: {1}", paths[i], ex.Message); }
-                }
-                if (first == null)
-                {
-                    ShowOverlay(L("FileUnavailable"));
-                    return;
-                }
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", first);
-                if (extras.Count > 0)
-                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
-                Frame.Navigate(typeof(MainPage));
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] PlayPaths failed: {0}", ex.Message); }
-        }
-
-        private async System.Threading.Tasks.Task PlayPlaylist(Popup popup, string name)
-        {
-            var files = PlaylistLibrary.GetPlaylistFiles(name);
-            if (files == null || files.Count == 0)
-            {
-                ShowOverlay(L("PlaylistEmpty"));
-                return;
-            }
-
-            try
-            {
-                StorageFile first = null;
-                var extras = new List<string>();
-                for (int i = 0; i < files.Count; i++)
-                {
-                    try
-                    {
-                        var f = await StorageFile.GetFileFromPathAsync(files[i]);
-                        if (i == 0) first = f;
-                        else extras.Add(files[i]);
-                    }
-                    catch (Exception ex) { Debug.WriteLine("[HyperMedia] Playlist file missing: {0}: {1}", files[i], ex.Message); }
-                }
-
-                if (first == null)
-                {
-                    ShowOverlay(L("PlaylistUnavailable"));
-                    return;
-                }
-
-                StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", first);
-                if (extras.Count > 0)
-                    ApplicationData.Current.LocalSettings.Values["PlaylistExtras"] = string.Join("|", extras);
-
-                popup.IsOpen = false;
-                Frame.Navigate(typeof(MainPage));
-            }
-            catch (Exception ex) { Debug.WriteLine("[HyperMedia] PlayPlaylist failed: {0}", ex.Message); }
+            Frame.Navigate(typeof(PlaylistsPage));
         }
 
         #endregion
+
+        private void ShowOverlay(string text)
+        {
+            StatusText.Text = text;
+        }
 
         private string L(string key)
         {
