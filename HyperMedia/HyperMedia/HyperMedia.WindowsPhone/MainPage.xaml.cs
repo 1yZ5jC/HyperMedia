@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices.WindowsRuntime;
@@ -39,6 +40,7 @@ namespace HyperMedia
         private bool _isPhotoMode;
         private bool _seeking;
         private int _repeatMode; // 0 = off, 1 = list, 2 = single
+        private IPlayerBackend _player;
         private int _speedIndex = 2;
         private string _originalFileName;
         private string _originalPath;
@@ -55,6 +57,7 @@ namespace HyperMedia
         { Interval = TimeSpan.FromSeconds(3) };
         private DispatcherTimer _sleepTimer;
         private TimeSpan _sleepRemaining;
+        private DispatcherTimer _engineNoticeTimer;
 
         // Visualizer state (audio only; MediaElement exposes no PCM on WP8.1).
         private readonly DispatcherTimer _visTimer = new DispatcherTimer
@@ -89,7 +92,82 @@ namespace HyperMedia
             PositionSlider.AddHandler(UIElement.PointerReleasedEvent,
                 new Windows.UI.Xaml.Input.PointerEventHandler(PositionSlider_PointerReleased), true);
 
+            #if USE_LIBVLC
+            if (PlaybackEngineSettings.Current == PlaybackEngine.Vlc
+                && PlaybackEngineSettings.IsEngineAvailable(PlaybackEngine.Vlc))
+            {
+                var vlc = new VlcBackend(VlcVideoPanel);
+                vlc.Init();
+                if (vlc.IsReady)
+                {
+                    _player = vlc;
+                    VlcVideoPanel.Visibility = Visibility.Visible;
+                    VideoPlayer.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    _player = new MediaElementBackend(VideoPlayer);
+                    ShowEngineNotice(vlc.InitError);
+                }
+            }
+            else
+#endif
+            {
+                _player = new MediaElementBackend(VideoPlayer);
+            }
+            Debug.WriteLine("[HyperMedia] PlaybackBackend: " +
+                (_player is VlcBackend ? "VlcBackend (libVLCX)" : "MediaElementBackend (system)"));
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
+
+            _player.MediaOpened += VideoPlayer_MediaOpened;
+            _player.MediaEnded += VideoPlayer_MediaEnded;
+            _player.PlaybackFailed += VideoPlayer_MediaFailed;
+        }
+
+        // Visible fallback notice: prevents silently ignoring VLC init failure.
+        private void ShowEngineNotice(string detail)
+        {
+            try
+            {
+                if (EngineNoticeText == null) return;
+                string msg = L("VlcFallback");
+                if (!string.IsNullOrEmpty(detail))
+                {
+                    Debug.WriteLine("[HyperMedia] VlcBackend init detail: " + detail);
+                    if (detail.Length > 220) detail = detail.Substring(0, 220) + "...";
+                    msg += "\n" + detail;
+                }
+                EngineNoticeText.Text = msg;
+                EngineNoticeText.Visibility = Visibility.Visible;
+                if (_engineNoticeTimer == null)
+                {
+                    _engineNoticeTimer = new DispatcherTimer
+                    { Interval = TimeSpan.FromSeconds(20) };
+                    _engineNoticeTimer.Tick += (s, e) =>
+                    {
+                        _engineNoticeTimer.Stop();
+                        if (EngineNoticeText != null)
+                            EngineNoticeText.Visibility = Visibility.Collapsed;
+                    };
+                }
+                _engineNoticeTimer.Stop();
+                _engineNoticeTimer.Start();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ShowEngineNotice failed: {0}", ex.Message);
+            }
+        }
+
+        private static string L(string key)
+        {
+            try
+            {
+                var appText = Application.Current.Resources["AppText"] as AppText;
+                if (appText != null) return appText.T(key);
+            }
+            catch { }
+            return key;
         }
 
         protected override async void OnNavigatedTo(NavigationEventArgs e)
@@ -233,14 +311,14 @@ namespace HyperMedia
             HidePhotoBar();
             PhotoImage.Visibility = Visibility.Collapsed;
             PhotoImage.Source = null;
-            VideoPlayer.Visibility = Visibility.Visible;
+            SetVideoSurfaceVisible(true);
 
             // Audio files have no picture to show; put the faux visualizer behind
             // the (blank) video surface instead of solid black.
             if (AUDIO_EXTS.Contains(file.FileType.ToLowerInvariant()))
             {
                 StartVisualizer();
-                VideoPlayer.Visibility = Visibility.Collapsed;
+                SetVideoSurfaceVisible(false);
             }
             else
             {
@@ -249,11 +327,10 @@ namespace HyperMedia
 
             try
             {
-                VideoPlayer.Source = null;
-                var stream = await file.OpenReadAsync();
-                VideoPlayer.SetSource(stream, "");
-                VideoPlayer.PlaybackRate = SPEEDS[_speedIndex];
-                VideoPlayer.Play();
+                _player.Close();
+                await OpenMediaFile(file);
+                _player.Rate = SPEEDS[_speedIndex];
+                _player.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
                 PlayHistory.Add(file.Path, file.Name);
@@ -275,16 +352,16 @@ namespace HyperMedia
             HidePhotoBar();
             StopVisualizer();
             PhotoImage.Visibility = Visibility.Collapsed;
-            VideoPlayer.Visibility = Visibility.Visible;
+            SetVideoSurfaceVisible(true);
             _originalFileName = _networkUrl;
             _originalPath = _networkUrl;
             FileNameText.Text = _networkUrl;
 
             try
             {
-                VideoPlayer.Source = new Uri(_networkUrl);
-                VideoPlayer.PlaybackRate = SPEEDS[_speedIndex];
-                VideoPlayer.Play();
+                _player.OpenUrl(_networkUrl);
+                _player.Rate = SPEEDS[_speedIndex];
+                _player.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
                 StartPositionTimer();
@@ -300,7 +377,7 @@ namespace HyperMedia
         private async void OpenPhoto(StorageFile file)
         {
             _isPhotoMode = true;
-            VideoPlayer.Visibility = Visibility.Collapsed;
+            SetVideoSurfaceVisible(false);
             PhotoImage.Visibility = Visibility.Visible;
             _positionTimer.Stop();
             UpdatePlayPauseIcon();
@@ -328,6 +405,43 @@ namespace HyperMedia
             PhotoBar.Visibility = Visibility.Collapsed;
         }
 
+        // Shows/hides whichever video surface is active (MediaElement or, when
+        // the VLC engine is selected, the SwapChainPanel that libVLC draws into).
+        private void SetVideoSurfaceVisible(bool visible)
+        {
+            VideoPlayer.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+#if USE_LIBVLC
+            if (VlcVideoPanel != null)
+                VlcVideoPanel.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+#endif
+        }
+
+        // libVLCX on WP8.1 cannot consume IRandomAccessStream directly, so local
+        // files are staged into the app's TemporaryFolder and opened by path.
+        private async Task OpenMediaFile(StorageFile file)
+        {
+#if USE_LIBVLC
+            if (_player is VlcBackend)
+            {
+                try
+                {
+                    var temp = ApplicationData.Current.TemporaryFolder;
+                    string tmpName = "hm_" + Guid.NewGuid().ToString("N") + file.FileType;
+                    var copy = await file.CopyAsync(temp, tmpName, NameCollisionOption.ReplaceExisting);
+                    _player.OpenPath(copy.Path);
+                    return;
+                }
+                catch
+                {
+                    try { _player.OpenPath(file.Path); return; } catch { }
+                    throw;
+                }
+            }
+#endif
+            var stream = await file.OpenReadAsync();
+            _player.OpenStream(stream);
+        }
+
         private void ShowMediaUnsupported()
         {
             _isPlaying = false;
@@ -336,13 +450,13 @@ namespace HyperMedia
             NoSupportText.Visibility = Visibility.Visible;
         }
 
-        private void VideoPlayer_MediaOpened(object sender, RoutedEventArgs e)
+        private void VideoPlayer_MediaOpened(object sender, EventArgs e)
         {
             try
             {
-                if (VideoPlayer.NaturalDuration.HasTimeSpan)
+                double total = _player.DurationSeconds;
+                if (total > 0)
                 {
-                    double total = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                     DurationText.Text = FormatTime(total);
                     PositionSlider.Maximum = Math.Max(1, total);
                     if (PositionProgress != null) PositionProgress.Maximum = PositionSlider.Maximum;
@@ -350,11 +464,10 @@ namespace HyperMedia
 
                 if (_pendingResumePos > 0)
                 {
-                    double total = VideoPlayer.NaturalDuration.HasTimeSpan
-                        ? VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds : 0;
-                    if (total <= 0 || _pendingResumePos < total - 5)
+                    double totalDur = _player.DurationSeconds;
+                    if (totalDur <= 0 || _pendingResumePos < totalDur - 5)
                     {
-                        try { VideoPlayer.Position = TimeSpan.FromSeconds(_pendingResumePos); }
+                        try { _player.PositionSeconds = _pendingResumePos; }
                         catch { }
                     }
                     _pendingResumePos = 0;
@@ -363,15 +476,15 @@ namespace HyperMedia
             catch (Exception ex) { DebugLog("MediaOpened failed: " + ex.Message); }
         }
 
-        private void VideoPlayer_MediaEnded(object sender, RoutedEventArgs e)
+        private void VideoPlayer_MediaEnded(object sender, EventArgs e)
         {
             _isPlaying = false;
             UpdatePlayPauseIcon();
 
             if (_repeatMode == 2)
             {
-                try { VideoPlayer.Position = TimeSpan.Zero; } catch { }
-                VideoPlayer.Play();
+                try { _player.PositionSeconds = 0; } catch { }
+                _player.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
                 return;
@@ -391,7 +504,7 @@ namespace HyperMedia
             }
         }
 
-        private void VideoPlayer_MediaFailed(object sender, ExceptionRoutedEventArgs e)
+        private void VideoPlayer_MediaFailed(object sender, EventArgs e)
         {
             ShowMediaUnsupported();
         }
@@ -401,15 +514,15 @@ namespace HyperMedia
             if (_seeking) return;
             try
             {
-                if (VideoPlayer.NaturalDuration.HasTimeSpan && VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds > 0)
+                double total = _player.DurationSeconds;
+                if (total > 0)
                 {
-                    double total = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
                     if (Math.Abs(PositionSlider.Maximum - total) > 0.5)
                         PositionSlider.Maximum = total;
-                    double pos = VideoPlayer.Position.TotalSeconds;
+                    double pos = _player.PositionSeconds;
                     PositionSlider.Value = Math.Min(total, Math.Max(0, pos));
                 }
-                CurrentTimeText.Text = FormatTime(VideoPlayer.Position.TotalSeconds);
+                CurrentTimeText.Text = FormatTime(_player.PositionSeconds);
                 SyncPositionProgress();
             }
             catch (Exception ex) { DebugLog("PositionTimer failed: " + ex.Message); }
@@ -431,7 +544,7 @@ namespace HyperMedia
             SyncPositionProgress();
             if (!_seeking) return;
             CurrentTimeText.Text = FormatTime(e.NewValue);
-            try { VideoPlayer.Position = TimeSpan.FromSeconds(e.NewValue); }
+            try { _player.PositionSeconds = e.NewValue; }
             catch (Exception ex) { DebugLog("seek failed: " + ex.Message); }
         }
 
@@ -445,7 +558,7 @@ namespace HyperMedia
             _seeking = false;
             try
             {
-                VideoPlayer.Position = TimeSpan.FromSeconds(PositionSlider.Value);
+                _player.PositionSeconds = PositionSlider.Value;
                 CurrentTimeText.Text = FormatTime(PositionSlider.Value);
             }
             catch (Exception ex) { DebugLog("seek failed: " + ex.Message); }
@@ -453,7 +566,8 @@ namespace HyperMedia
 
         private void VolumeSlider_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
         {
-            try { VideoPlayer.Volume = Math.Max(0, Math.Min(1.0, e.NewValue / 100.0)); }
+            if (_player == null) return;
+            try { _player.Volume = Math.Max(0, Math.Min(1.0, e.NewValue / 100.0)); }
             catch (Exception ex) { DebugLog("volume failed: " + ex.Message); }
             try { if (VolumeProgress != null) VolumeProgress.Value = e.NewValue; }
             catch { }
@@ -481,7 +595,7 @@ namespace HyperMedia
             if (_mediaEnded)
             {
                 _mediaEnded = false;
-                try { VideoPlayer.Position = TimeSpan.Zero; } catch { }
+                try { _player.PositionSeconds = 0; } catch { }
                 CurrentTimeText.Text = "00:00";
                 PositionSlider.Value = 0;
             }
@@ -489,11 +603,10 @@ namespace HyperMedia
             {
                 try
                 {
-                    if (VideoPlayer.NaturalDuration.HasTimeSpan &&
-                        VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds > 0 &&
-                        VideoPlayer.Position >= VideoPlayer.NaturalDuration.TimeSpan)
+                    double total = _player.DurationSeconds;
+                    if (total > 0 && _player.PositionSeconds >= total)
                     {
-                        VideoPlayer.Position = TimeSpan.Zero;
+                        _player.PositionSeconds = 0;
                         CurrentTimeText.Text = "00:00";
                         PositionSlider.Value = 0;
                     }
@@ -501,7 +614,7 @@ namespace HyperMedia
                 catch { }
             }
 
-            VideoPlayer.Play();
+            _player.Play();
             _isPlaying = true;
             if (_spectrum != null) _spectrum.SetPlaying(true);
             UpdatePlayPauseIcon();
@@ -513,7 +626,7 @@ namespace HyperMedia
         private void PausePlayback()
         {
             if (!_isPlaying) return;
-            VideoPlayer.Pause();
+            _player.Pause();
             _isPlaying = false;
             if (_spectrum != null) _spectrum.SetPlaying(false);
             UpdatePlayPauseIcon();
@@ -524,7 +637,7 @@ namespace HyperMedia
         {
             SaveResumePosition();
             _mediaEnded = false;
-            VideoPlayer.Stop();
+            _player.Stop();
             _isPlaying = false;
             _positionTimer.Stop();
             StopVisualizer();
@@ -560,8 +673,8 @@ namespace HyperMedia
             {
                 try
                 {
-                    VideoPlayer.Position = TimeSpan.Zero;
-                    VideoPlayer.Play();
+                    _player.PositionSeconds = 0;
+                    _player.Play();
                     _isPlaying = true;
                     UpdatePlayPauseIcon();
                 }
@@ -586,8 +699,8 @@ namespace HyperMedia
             }
             else
             {
-                try { VideoPlayer.Position = TimeSpan.Zero; } catch { }
-                VideoPlayer.Play();
+                try { _player.PositionSeconds = 0; } catch { }
+                _player.Play();
                 _isPlaying = true;
                 UpdatePlayPauseIcon();
             }
@@ -617,7 +730,7 @@ namespace HyperMedia
             if (_isPhotoMode) return;
             _speedIndex = (_speedIndex + 1) % SPEEDS.Length;
             SpeedBtn.Content = SPEEDS[_speedIndex].ToString("0.0#x");
-            try { VideoPlayer.PlaybackRate = SPEEDS[_speedIndex]; }
+            try { _player.Rate = SPEEDS[_speedIndex]; }
             catch (Exception ex) { DebugLog("set speed failed: " + ex.Message); }
             ResetAutoHide();
         }
@@ -680,7 +793,7 @@ namespace HyperMedia
         private void BackBtn_Click(object sender, RoutedEventArgs e)
         {
             SaveResumePosition();
-            VideoPlayer.Stop();
+            _player.Stop();
             if (Frame != null && Frame.CanGoBack)
                 Frame.GoBack();
             else
@@ -691,7 +804,7 @@ namespace HyperMedia
         {
             base.OnNavigatedFrom(e);
             SaveResumePosition();
-            try { VideoPlayer.Stop(); } catch { }
+            try { _player.Stop(); } catch { }
             _isPlaying = false;
             _positionTimer.Stop();
             _autoHideTimer.Stop();
@@ -709,10 +822,9 @@ namespace HyperMedia
 
             try
             {
-                if (!VideoPlayer.NaturalDuration.HasTimeSpan) return;
-                double total = VideoPlayer.NaturalDuration.TimeSpan.TotalSeconds;
+                double total = _player.DurationSeconds;
                 if (total <= 5) return;
-                double pos = VideoPlayer.Position.TotalSeconds;
+                double pos = _player.PositionSeconds;
 
                 // Near the end counts as finished.
                 if (pos >= total - 5)
@@ -916,7 +1028,7 @@ namespace HyperMedia
                 if (_spectrum != null)
                 {
                     float drive = _isPlaying
-                        ? (float)(0.35 + VideoPlayer.Volume * 0.65)
+                        ? (float)(0.35 + _player.Volume * 0.65)
                         : 0.08f;
                     _spectrum.SetDrive(drive);
                 }

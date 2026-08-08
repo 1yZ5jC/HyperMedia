@@ -112,7 +112,6 @@
     </Compile>
     <Compile Include="PerformanceProfile.cs" />
     <Compile Include="AppText.cs" />
-    <Compile Include="Converters.cs" />
     <Compile Include="HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
     </Compile>
@@ -120,15 +119,11 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="MetadataEditor.cs" />
-    <Compile Include="PlayHistory.cs" />
-    <Compile Include="RecentItem.cs" />
     <Compile Include="ShazamAudioExtractor.cs" />
     <Compile Include="ShazamFingerprint.cs" />
-    <Compile Include="VideoThumbnailService.cs" />
-    <Compile Include="Fft.cs" />
-    <Compile Include="SpectrumEngine.cs" />
-    <Compile Include="Visualizers.cs" />
     <Compile Include="ShazamRecognizer.cs" />
+    <Compile Include="SpectrumEngine.cs" />
+    <Compile Include="VideoThumbnailService.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
@@ -232,6 +227,7 @@
     <AssemblyOriginatorKeyFile>HyperMedia.Windows_TemporaryKey.pfx</AssemblyOriginatorKeyFile>
   </PropertyGroup>
   <Import Project="$(MSBuildExtensionsPath)\Microsoft\WindowsXaml\v$(VisualStudioVersion)\Microsoft.Windows.UI.Xaml.CSharp.targets" />
+  <Import Project="..\HyperMedia.Shared\HyperMedia.Shared.projitems" Label="Shared" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -9,11 +9,14 @@
     <Import_RootNamespace>HyperMedia</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <ApplicationDefinition Include="$(MSBuildThisFileDirectory)App.xaml">
-      <SubType>Designer</SubType>
-    </ApplicationDefinition>
-    <Compile Include="$(MSBuildThisFileDirectory)App.xaml.cs">
-      <DependentUpon>App.xaml</DependentUpon>
-    </Compile>
+    <Compile Include="$(MSBuildThisFileDirectory)Converters.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Fft.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IPlayerBackend.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)MediaElementBackend.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PlaybackEngineSettings.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PlayHistory.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VlcBackend.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)RecentItem.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Visualizers.cs" />
   </ItemGroup>
 </Project>

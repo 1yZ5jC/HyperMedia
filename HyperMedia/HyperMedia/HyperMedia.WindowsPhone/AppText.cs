@@ -333,6 +333,7 @@ namespace HyperMedia
             Add("Playing", "正在播放", "Playing");
             Add("Paused", "已暂停", "Paused");
             Add("VlcNotInit", "错误: VLC 未初始化", "Error: VLC not initialized");
+            Add("VlcFallback", "VLC 引擎不可用，已回退系统播放器", "libVLC unavailable; fell back to system player");
             Add("ErrorPrefix", "错误: ", "Error: ");
             Add("ClearPlaylistConfirm", "确定要清空播放列表吗？", "Clear the playlist?");
             Add("ClearPlaylistTitle", "清空播放列表", "Clear Playlist");

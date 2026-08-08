@@ -16,6 +16,26 @@
                        Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                        CharacterSpacing="80" Margin="0,0,0,10"/>
 
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Text="播放引擎" FontFamily="Segoe UI Semibold" FontSize="13"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
+                    <TextBlock Text="VLC 格式全、功能完整；MediaElement 资源占用低（重开文件生效）"
+                               FontFamily="Segoe UI" FontSize="11"
+                               Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
+                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+                <ComboBox x:Name="EngineCombo" Grid.Column="1" MinWidth="112"
+                          VerticalAlignment="Center" SelectionChanged="EngineCombo_SelectionChanged">
+                    <ComboBoxItem Content="VLC" Tag="vlc" IsSelected="True"/>
+                    <ComboBoxItem Content="MediaElement" Tag="media"/>
+                </ComboBox>
+            </Grid>
+
             <StackPanel Margin="0,0,0,14">
                 <TextBlock Text="默认音量" FontFamily="Segoe UI Semibold" FontSize="13"
                            Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
@@ -35,7 +55,7 @@
                               MinWidth="100" Toggled="AutoPlayToggle_Toggled"/>
             </Grid>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="ResumeRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -87,7 +107,7 @@
                        Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                        CharacterSpacing="80" Margin="0,18,0,10"/>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="SubtitleSizeRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -104,7 +124,7 @@
                 </ComboBox>
             </Grid>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="SubtitleColorRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -122,7 +142,7 @@
                 </ComboBox>
             </Grid>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="SubtitleOutlineRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -139,7 +159,7 @@
                 </ComboBox>
             </Grid>
 
-            <StackPanel Margin="0,0,0,14">
+            <StackPanel x:Name="SubtitleMarginRow" Margin="0,0,0,14">
                 <TextBlock Text="字幕位置偏移" FontFamily="Segoe UI Semibold" FontSize="13"
                            Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
                 <Grid Margin="0,2,0,0">
@@ -178,7 +198,7 @@
                        Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
                        CharacterSpacing="80" Margin="0,18,0,10"/>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="DeinterlaceRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -196,7 +216,7 @@
                 </ComboBox>
             </Grid>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="LoudnessRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
@@ -220,7 +240,7 @@
                               MinWidth="100" Toggled="EpisodeToggle_Toggled"/>
             </Grid>
 
-            <Grid Margin="0,0,0,14">
+            <Grid x:Name="IntroSkipRow" Margin="0,0,0,14">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>

@@ -146,6 +146,7 @@ namespace HyperMedia
                 }
                 catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
 
+#if WINDOWS_APP
                 // No system thumbnail available (typical for HEVC on Windows 8.1).
                 // Software-decode the first frame with libVLC and cache it.
                 if (Category == "Videos")
@@ -154,6 +155,7 @@ namespace HyperMedia
                     if (custom != null)
                         Thumbnail = custom;
                 }
+#endif
             }
             catch (Exception ex)
             {

@@ -31,10 +31,12 @@
         <MediaElement x:Name="VideoPlayer" Grid.RowSpan="2"
                       AutoPlay="True" Stretch="Uniform"
                       AreTransportControlsEnabled="False"
-                      IsTapEnabled="False"
-                      MediaOpened="VideoPlayer_MediaOpened"
-                      MediaEnded="VideoPlayer_MediaEnded"
-                      MediaFailed="VideoPlayer_MediaFailed"/>
+                      IsTapEnabled="False"/>
+
+        <!-- libVLC (VlcBackend) rendering surface; used when the playback
+             engine setting is VLC (libVLCX). Hidden otherwise. -->
+        <SwapChainPanel x:Name="VlcVideoPanel" Grid.RowSpan="2"
+                        Visibility="Collapsed"/>
 
         <!-- Tap surface: catches taps on the media area so the control bars
              can be toggled even over the video surface (hidden in photo mode). -->
@@ -99,6 +101,12 @@
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    Text="此格式不受支持" Foreground="#88FFFFFF"
                    FontFamily="Segoe UI" FontSize="15" Visibility="Collapsed"/>
+
+        <!-- Engine fallback notice (VLC requested but init failed) -->
+        <TextBlock x:Name="EngineNoticeText" Grid.RowSpan="2"
+                   HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,72,0,0"
+                   Text="VLC 引擎不可用" Foreground="#AAFFFFFF"
+                   FontFamily="Segoe UI" FontSize="13" Visibility="Collapsed"/>
 
         <!-- Top bar: back + filename -->
         <Border x:Name="TopBar" Grid.RowSpan="2" VerticalAlignment="Top"

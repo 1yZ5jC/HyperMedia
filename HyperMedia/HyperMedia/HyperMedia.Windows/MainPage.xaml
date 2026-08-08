@@ -149,6 +149,10 @@
                             VerticalAlignment="Stretch"
                             SizeChanged="VlcVideoPanel_SizeChanged"/>
 
+            <MediaElement x:Name="MediaSurface" Visibility="Collapsed"
+                          Stretch="Uniform" AreTransportControlsEnabled="False"
+                          IsTapEnabled="False" AutoPlay="True"/>
+
             <!-- WELCOME SCREEN -->
             <Border x:Name="WelcomeScreen" Visibility="Visible">
                 <Grid>

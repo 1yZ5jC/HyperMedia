@@ -37,6 +37,7 @@ namespace HyperMedia
             this.InitializeComponent();
             LoadSettings();
             ApplyCurrentLanguage();
+            ApplyEngineLimits();
             this.Loaded += (s, e) => ApplyCurrentLanguage();
             UpdatePerfLevelText();
         }
@@ -134,6 +135,9 @@ namespace HyperMedia
                 if (!string.IsNullOrEmpty(mode))
                     SelectComboBoxItem(DeinterlaceCombo, mode);
             }
+
+            SelectComboBoxItem(EngineCombo,
+                PlaybackEngineSettings.Current == PlaybackEngine.Vlc ? "vlc" : "media");
 
             if (settings.Values.ContainsKey(KEY_SLEEP_TIMER))
             {
@@ -450,6 +454,55 @@ namespace HyperMedia
                 }
             }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] LanguageCombo failed: {0}", ex.Message); }
+        }
+
+        private void EngineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                var item = EngineCombo.SelectedItem as ComboBoxItem;
+                if (item == null || item.Tag == null) return;
+                PlaybackEngineSettings.Current = item.Tag.ToString() == "vlc"
+                    ? PlaybackEngine.Vlc : PlaybackEngine.MediaElement;
+                ApplyEngineLimits();
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] EngineCombo failed: {0}", ex.Message); }
+        }
+
+        // Settings only libVLC can honor are greyed out in MediaElement mode.
+        private void ApplyEngineLimits()
+        {
+            try
+            {
+                bool vlc = PlaybackEngineSettings.Current == PlaybackEngine.Vlc;
+                SetRowEnabled(ResumeRow, vlc);
+                SetRowEnabled(SubtitleSizeRow, vlc);
+                SetRowEnabled(SubtitleColorRow, vlc);
+                SetRowEnabled(SubtitleOutlineRow, vlc);
+                SetRowEnabled(SubtitleMarginRow, vlc);
+                SetRowEnabled(DeinterlaceRow, vlc);
+                SetRowEnabled(LoudnessRow, vlc);
+                SetRowEnabled(IntroSkipRow, vlc);
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] ApplyEngineLimits failed: {0}", ex.Message); }
+        }
+
+        private static void SetRowEnabled(UIElement row, bool enabled)
+        {
+            if (row == null) return;
+            row.Opacity = enabled ? 1.0 : 0.45;
+            SetControlsEnabled(row, enabled);
+        }
+
+        private static void SetControlsEnabled(UIElement el, bool enabled)
+        {
+            var c = el as Control;
+            if (c != null) c.IsEnabled = enabled;
+            var p = el as Panel;
+            if (p == null) return;
+            foreach (var child in p.Children)
+                SetControlsEnabled(child, enabled);
         }
 
         private void SelectComboBoxItem(ComboBox combo, string tagValue)

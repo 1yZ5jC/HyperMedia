@@ -185,6 +185,8 @@ namespace HyperMedia
             public TextBlock TimeIndicator;
         }
 
+        private IPlayerBackend _engine;
+
         public MainPage()
         {
             this.InitializeComponent();
@@ -222,12 +224,28 @@ namespace HyperMedia
             // Apply settings
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
 
+            // Player engine: MediaElement or VLC (user-selectable in Settings).
+            if (PlaybackEngineSettings.Current == PlaybackEngine.MediaElement)
+            {
+                _engine = new MediaElementBackend(MediaSurface);
+                _engine.MediaOpened += Engine_MediaOpened;
+                _engine.MediaEnded += Engine_MediaEnded;
+                _engine.PlaybackFailed += Engine_PlaybackFailed;
+                MediaSurface.Visibility = Visibility.Visible;
+                VlcVideoPanel.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                MediaSurface.Visibility = Visibility.Collapsed;
+            }
+
             InitShareAndTile();
             ApplyPlayerLanguage();
 
             this.Loaded += (s, e) =>
             {
-                InitLibVlc();
+                ApplyPlayerLanguage();
+                if (_engine == null) InitLibVlc();
                 ApplyPlayerLanguage();
             };
             ShowControls();
@@ -790,9 +808,37 @@ namespace HyperMedia
                 var sw = Stopwatch.StartNew();
 
                 var tempFolder = ApplicationData.Current.TemporaryFolder;
-                var tempFile = await file.CopyAsync(tempFolder, "hypermedia_temp" + file.FileType,
-                    NameCollisionOption.ReplaceExisting);
+
+                // Give the previous player/visualizer a moment to release their
+                // handles on the shared temp name; ReplaceExisting over a still-open
+                // file throws and silently kills the whole open.
+                await Task.Delay(150);
+
+                StorageFile tempFile = null;
+                Exception copyEx = null;
+                for (int attempt = 0; attempt < 4 && tempFile == null; attempt++)
+                {
+                    try
+                    {
+                        tempFile = await file.CopyAsync(tempFolder, "hypermedia_temp" + file.FileType,
+                            NameCollisionOption.ReplaceExisting);
+                    }
+                    catch (Exception ex)
+                    {
+                        copyEx = ex;
+                        Debug.WriteLine("[HyperMedia] Temp copy attempt {0} failed: {1}", attempt + 1, ex.Message);
+                        await Task.Delay(200);
+                    }
+                }
+                if (tempFile == null)
+                    throw copyEx ?? new InvalidOperationException("Temp file copy failed");
                 _tempFile = tempFile;
+
+                if (_engine != null)
+                {
+                    OpenWithEngine(tempFile, sw);
+                    return;
+                }
 
                 OpenWithLibVlc(tempFile.Path, sw);
             }
@@ -881,6 +927,13 @@ namespace HyperMedia
             _originalFileName = url;
             StatusText.Text = L("Connecting");
             var sw = Stopwatch.StartNew();
+
+            if (_engine != null)
+            {
+                OpenUrlWithEngine(url, sw);
+                return;
+            }
+
             OpenWithLibVlc(url, sw);
         }
 
@@ -1016,6 +1069,50 @@ namespace HyperMedia
             SyncSmtcMetadata();
 
             Debug.WriteLine("[HyperMedia] libVLC playback started: {0}ms", sw.ElapsedMilliseconds);
+        }
+
+        private async void OpenWithEngine(StorageFile tempFile, Stopwatch sw)
+        {
+            FileNameText.Text = _originalFileName ?? tempFile.Name;
+            UpdatePlaylistCounter();
+
+            _engine.Close();
+            try
+            {
+                var stream = await tempFile.OpenReadAsync();
+                _engine.OpenStream(stream);
+            }
+            catch (Exception ex)
+            {
+                HideOverlay();
+                StatusText.Text = "Error: " + ex.Message;
+                Debug.WriteLine("[HyperMedia] MediaElement open failed: {0}", ex.Message);
+                return;
+            }
+
+            StartEnginePlayback(sw);
+        }
+
+        private void OpenUrlWithEngine(string url, Stopwatch sw)
+        {
+            _engine.Close();
+            _engine.OpenUrl(url);
+            StartEnginePlayback(sw);
+        }
+
+        private void StartEnginePlayback(Stopwatch sw)
+        {
+            try { _engine.Rate = _playbackSpeed; } catch { }
+            try { _engine.Volume = VolumeSlider.Value / 100.0; } catch { }
+            _isPlaying = true;
+            _positionTimer.Start();
+            UpdatePlayPauseIcon(true);
+            StatusText.Text = "";
+            HideOverlay();
+            ResetAutoHide();
+            StartSmtcSync();
+            SyncSmtcMetadata();
+            Debug.WriteLine("[HyperMedia] MediaElement playback started: {0}ms", sw.ElapsedMilliseconds);
         }
 
         private bool _pickerOpen;
@@ -1962,8 +2059,10 @@ namespace HyperMedia
             {
                 var updater = _smtc.DisplayUpdater;
                 updater.Type = MediaPlaybackType.Music;
-                updater.MusicProperties.Title = _originalFileName ?? "HyperMedia";
-                updater.MusicProperties.Artist = "HyperMedia";
+                updater.MusicProperties.Title = !string.IsNullOrEmpty(_musicTitle)
+                    ? _musicTitle
+                    : (_originalFileName ?? "HyperMedia");
+                updater.MusicProperties.Artist = !string.IsNullOrEmpty(_musicArtist) ? _musicArtist : "HyperMedia";
                 updater.Update();
 
                 _smtc.PlaybackStatus = _isPlaying
@@ -1975,7 +2074,7 @@ namespace HyperMedia
 
         private void SmtcSyncTimer_Tick(object sender, object e)
         {
-            if (_vlcPlayer == null || _smtc == null) return;
+            if ((_vlcPlayer == null && _engine == null) || _smtc == null) return;
             try
             {
                 SyncSmtcState();
@@ -2429,6 +2528,18 @@ namespace HyperMedia
                 RotateBtn.Visibility = v;
                 CropBtn.Visibility = v;
                 RecordBtn.Visibility = v;
+
+                // libVLC-only video tools: greyed out (not just hidden) under the
+                // MediaElement engine, since snapshot/crop/rotate/filter need libVLC.
+                bool engine = PlaybackEngineSettings.Current == PlaybackEngine.MediaElement;
+                bool toolsActive = !isMusic && !engine;
+                AspectRatioButton.IsEnabled = toolsActive;
+                VideoFilterBtn.IsEnabled = toolsActive;
+                SnapshotButton.IsEnabled = toolsActive;
+                ChapterBtn.IsEnabled = toolsActive;
+                RotateBtn.IsEnabled = toolsActive;
+                CropBtn.IsEnabled = toolsActive;
+                RecordBtn.IsEnabled = toolsActive;
 
                 // Lyrics + visualizer style buttons are music-only
                 Visibility mv = isMusic ? Visibility.Visible : Visibility.Collapsed;
@@ -3148,11 +3259,16 @@ namespace HyperMedia
 
         private void LyricTimer_Tick(object sender, object e)
         {
-            if (_vlcPlayer == null || _lyricLines.Count == 0) return;
+            if (_lyricLines.Count == 0) return;
 
-            double posMs = 0;
-            try { posMs = _vlcPlayer.time(); }
-            catch { return; }
+            double posMs = -1;
+            try
+            {
+                if (_vlcPlayer != null) posMs = _vlcPlayer.time();
+                else if (_engine != null) posMs = _engine.PositionSeconds * 1000.0;
+            }
+            catch { }
+            if (posMs < 0) return;
 
             int idx = -1;
             for (int i = _lyricLines.Count - 1; i >= 0; i--)
@@ -3591,8 +3707,19 @@ namespace HyperMedia
                     PlayNext();
                     _autoAdvancing = false;
                 }
+                if (_repeatMode == 2 || _playlist.Count > 1)
+                {
+                    _autoAdvancing = true;
+                    PlayNext();
+                    _autoAdvancing = false;
+                }
                 else
                 {
+                    // Full teardown: the stale player/visualizer would otherwise keep
+                    // the temp file locked, and the next OpenFile would fail to
+                    // ReplaceExisting-copy over it.
+                    StopPlayback();
+                    WelcomeScreen.Visibility = Visibility.Visible;
                     StatusText.Text = L("PlaybackComplete");
                     ShowControls();
                 }
@@ -3609,6 +3736,123 @@ namespace HyperMedia
                 ShowControls();
                 ShowToast(L("PlaybackError"), L("PlaybackErrorDetail"));
             });
+        }
+
+        private void Engine_MediaOpened(object sender, EventArgs e)
+        {
+            try { _duration = _engine.DurationSeconds; } catch { }
+            if (_duration <= 0)
+            {
+                try { _duration = _engine.PositionSeconds; } catch { }
+            }
+            if (_duration > 0)
+            {
+                try
+                {
+                    PositionSlider.Maximum = _duration;
+                    DurationText.Text = FormatTime(_duration);
+                }
+                catch { }
+            }
+            StatusText.Text = "";
+            UpdatePlayPauseIcon(true);
+            StartEngineMusicUi();
+        }
+
+        // MediaElement engine-mode equivalent of DetectMusicMode(): real metadata,
+        // album art, lyrics and the analyser all keyed off the ORIGINAL file.
+        private async void StartEngineMusicUi()
+        {
+            try
+            {
+                if (_engine == null) return;
+
+                string ext = _currentOriginalFile != null
+                    ? System.IO.Path.GetExtension(_currentOriginalFile.Name).ToLowerInvariant()
+                    : System.IO.Path.GetExtension(_currentMusicFilePath ?? "").ToLowerInvariant();
+                bool isAudio = MUSIC_EXTENSIONS.Contains(ext);
+
+                _isMusicMode = isAudio;
+                MusicOverlay.Visibility = isAudio ? Visibility.Visible : Visibility.Collapsed;
+                UpdateVideoControlsForMode(isAudio);
+                if (!isAudio)
+                {
+                    StopVisualizer();
+                    UpdateLyricsVisLayout();
+                    return;
+                }
+                UpdateLyricSourceButtons(SettingsPage.GetLyricSource());
+
+                string artist = "";
+                string title = "";
+                string album = "";
+                if (_currentOriginalFile != null)
+                {
+                    try
+                    {
+                        var props = await _currentOriginalFile.Properties.GetMusicPropertiesAsync();
+                        artist = props.Artist ?? "";
+                        title = props.Title ?? "";
+                        album = props.Album ?? "";
+                        if (string.IsNullOrEmpty(title))
+                            title = System.IO.Path.GetFileNameWithoutExtension(_currentOriginalFile.Name);
+                        if (_duration <= 0 && props.Duration.TotalSeconds > 0)
+                        {
+                            _duration = props.Duration.TotalSeconds;
+                            try
+                            {
+                                PositionSlider.Maximum = _duration;
+                                DurationText.Text = FormatTime(_duration);
+                            }
+                            catch { }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("[HyperMedia] Engine music properties failed: {0}", ex.Message);
+                        title = System.IO.Path.GetFileNameWithoutExtension(_currentOriginalFile.Name);
+                    }
+                }
+
+                _musicArtist = artist;
+                _musicTitle = title;
+
+                string metaText = "";
+                if (!string.IsNullOrEmpty(artist)) metaText += artist;
+                if (!string.IsNullOrEmpty(album))
+                {
+                    if (metaText.Length > 0) metaText += " · ";
+                    metaText += album;
+                }
+                AlbumArtMetaText.Text = metaText;
+
+                await LoadAlbumArtAsync();
+                LoadLyrics();
+
+                string analyserPath = _tempFile != null ? _tempFile.Path : _currentMusicFilePath;
+                UpdateVisStyleLabel();
+                StartVisualizer(analyserPath);
+                UpdateLyricsVisLayout();
+
+                if (_lyricLines.Count > 0 && _isPlaying && !_lyricTimer.IsEnabled)
+                    _lyricTimer.Start();
+
+                StartSmtcSync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] StartEngineMusicUi FAILED: {0}", ex.Message);
+            }
+        }
+
+        private void Engine_MediaEnded(object sender, EventArgs e)
+        {
+            OnVlcEndReached();
+        }
+
+        private void Engine_PlaybackFailed(object sender, EventArgs e)
+        {
+            OnVlcEncounteredError();
         }
 
         private async void OnSnapshotTaken(string filename)
@@ -3869,7 +4113,20 @@ namespace HyperMedia
         private void ResumePlayback()
         {
             if (_isPlaying) return;
-            if (_vlcPlayer == null) return;
+            if (_vlcPlayer == null && _engine == null) return;
+            if (_engine != null)
+            {
+                try { _engine.Play(); } catch (Exception ex) { LogUnhandled(ex); }
+                _isPlaying = true;
+                _positionTimer.Start();
+                UpdatePlayPauseIcon(true);
+                ResetAutoHide();
+                if (_lyricLines.Count > 0 && !_lyricTimer.IsEnabled)
+                    _lyricTimer.Start();
+                if (_spectrumEngine != null) _spectrumEngine.SetPlaying(true);
+                SyncSmtcState();
+                return;
+            }
 
             // Played-to-completion state: the player sits at the end. play() alone
             // would restart from the tail and instantly re-trigger EndReached, so
@@ -3915,6 +4172,19 @@ namespace HyperMedia
         {
             if (!_isPlaying) return;
 
+            if (_engine != null)
+            {
+                try { _engine.Pause(); } catch (Exception ex) { LogUnhandled(ex); }
+                _isPlaying = false;
+                _lyricTimer.Stop();
+                _positionTimer.Stop();
+                UpdatePlayPauseIcon(false);
+                ShowControls();
+                if (_spectrumEngine != null) _spectrumEngine.SetPlaying(false);
+                SyncSmtcState();
+                return;
+            }
+
             _isPlaying = false;
             if (_vlcPlayer != null)
             {
@@ -3955,6 +4225,11 @@ namespace HyperMedia
             StopSmtcSync();
 
             StopVisualizer();
+
+            if (_engine != null)
+            {
+                try { _engine.Close(); } catch { }
+            }
 
             ReleaseVlcPlayback();
 
@@ -4179,6 +4454,27 @@ namespace HyperMedia
 
         private void PositionTimer_Tick(object sender, object e)
         {
+            if (_engine != null)
+            {
+                double posSec = _engine.PositionSeconds;
+                if (_duration <= 0)
+                    _duration = _engine.DurationSeconds;
+                if (posSec > 0)
+                {
+                    if (_duration > 0)
+                    {
+                        PositionSlider.Value = posSec;
+                        CurrentTimeText.Text = FormatTime(posSec);
+                        if (_spectrumEngine != null) _spectrumEngine.NotifyPosition(posSec);
+                    }
+                    else
+                    {
+                        CurrentTimeText.Text = FormatTime(posSec);
+                    }
+                }
+                CheckAbRepeat();
+                return;
+            }
             if (_vlcPlayer == null) return;
             long time = _vlcPlayer.time();
             double sec = time / 1000.0;
@@ -4233,6 +4529,13 @@ namespace HyperMedia
         private void SeekTo(double seconds)
         {
             if (_duration <= 0) return;
+            if (_engine != null)
+            {
+                _engine.PositionSeconds = Math.Max(0, seconds);
+                CurrentTimeText.Text = FormatTime(seconds);
+                if (_spectrumEngine != null) _spectrumEngine.NotifySeek(seconds);
+                return;
+            }
             _vlcPlayer?.setTime((long)(seconds * 1000));
             CurrentTimeText.Text = FormatTime(seconds);
             if (_spectrumEngine != null) _spectrumEngine.NotifySeek(seconds);
@@ -4297,13 +4600,20 @@ namespace HyperMedia
             int vol = (int)e.NewValue;
             if (_volumeFadeTimer != null)
                 _volumeFadeTimer.Stop();
-            _vlcPlayer?.setVolume(vol);
+            if (_engine != null)
+            {
+                try { _engine.Volume = vol / 100.0; } catch { }
+            }
+            else
+            {
+                _vlcPlayer?.setVolume(vol);
+            }
             UpdateVolumeIcon(vol);
         }
 
         private void MuteButton_Click(object sender, RoutedEventArgs e)
         {
-            if (_vlcPlayer == null) return;
+            if (_vlcPlayer == null && _engine == null) return;
 
             if (VolumeSlider.Value > 0)
             {
@@ -4359,6 +4669,11 @@ namespace HyperMedia
             if (_vlcPlayer != null)
             {
                 try { _vlcPlayer.setRate((float)_playbackSpeed); }
+                catch (Exception ex) { LogUnhandled(ex); }
+            }
+            else if (_engine != null)
+            {
+                try { _engine.Rate = _playbackSpeed; }
                 catch (Exception ex) { LogUnhandled(ex); }
             }
 

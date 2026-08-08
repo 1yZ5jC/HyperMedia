@@ -67,7 +67,7 @@
                                   IsOn="True" VerticalAlignment="Center"/>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="ResumeRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -131,7 +131,7 @@
                 <TextBlock Text="字幕" FontFamily="Segoe UI" FontSize="11"
                            Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="SubtitleSizeRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -153,7 +153,7 @@
                     </ComboBox>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="SubtitleColorRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -176,7 +176,7 @@
                     </ComboBox>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="SubtitleOutlineRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -198,7 +198,7 @@
                     </ComboBox>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="SubtitleMarginRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -247,7 +247,7 @@
                 <TextBlock Text="视频" FontFamily="Segoe UI" FontSize="11"
                            Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" CharacterSpacing="80" Margin="0,16,0,16"/>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="DeinterlaceRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -270,7 +270,7 @@
                     </ComboBox>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="LoudnessRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -304,7 +304,7 @@
                                   Toggled="EpisodeToggle_Toggled"/>
                 </Grid>
 
-                <Grid Margin="0,0,0,20">
+                <Grid x:Name="IntroSkipRow" Margin="0,0,0,20">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
@@ -338,6 +338,26 @@
                               SelectionChanged="LanguageCombo_SelectionChanged">
                         <ComboBoxItem Content="简体中文" Tag="zh-CN" IsSelected="True"/>
                         <ComboBoxItem Content="English" Tag="en-US"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="播放引擎" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
+                        <TextBlock Text="libVLC：格式全、功能完整；系统引擎：资源占用低。切换后重新打开文件生效"
+                                   FontFamily="Segoe UI" FontSize="12" Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="EngineCombo" Grid.Column="1" Width="160"
+                              VerticalAlignment="Center"
+                              SelectionChanged="EngineCombo_SelectionChanged">
+                        <ComboBoxItem Content="VLC (libVLC)" Tag="vlc" IsSelected="True"/>
+                        <ComboBoxItem Content="MediaElement (系统)" Tag="media"/>
                     </ComboBox>
                 </Grid>
 

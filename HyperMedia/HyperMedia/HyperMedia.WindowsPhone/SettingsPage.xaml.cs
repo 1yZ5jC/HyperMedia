@@ -133,6 +133,9 @@ namespace HyperMedia
                     SelectComboBoxItem(LyricSourceCombo, source);
             }
 
+            SelectComboBoxItem(EngineCombo,
+                PlaybackEngineSettings.Current == PlaybackEngine.Vlc ? "vlc" : "media");
+
             // Restore language selection (without triggering reload loop)
             _isLoading = true;
             if (settings.Values.ContainsKey(KEY_LANGUAGE))
@@ -157,6 +160,7 @@ namespace HyperMedia
             AutoHideDelaySlider.ValueChanged += AutoHideDelaySlider_ValueChanged;
             SubtitleSizeCombo.SelectionChanged += SubtitleSizeCombo_SelectionChanged;
             SubtitleColorCombo.SelectionChanged += SubtitleColorCombo_SelectionChanged;
+            EngineCombo.SelectionChanged += EngineCombo_SelectionChanged;
             _isLoading = false;
         }
         private void SaveSetting(string key, object value)
@@ -273,6 +277,20 @@ namespace HyperMedia
                 var item = DeinterlaceCombo.SelectedItem as ComboBoxItem;
                 if (item != null && item.Tag != null)
                     SaveSetting(KEY_DEINTERLACE, item.Tag.ToString());
+            }
+            catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
+        }
+
+        private void EngineCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            try
+            {
+                if (EngineCombo.SelectedItem == null) return;
+                var item = EngineCombo.SelectedItem as ComboBoxItem;
+                if (item != null && item.Tag != null)
+                    PlaybackEngineSettings.Current =
+                        item.Tag.ToString() == "vlc" ? PlaybackEngine.Vlc : PlaybackEngine.MediaElement;
             }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
         }

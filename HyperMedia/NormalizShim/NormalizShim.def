@@ -1,0 +1,8 @@
+LIBRARY Normaliz.dll
+EXPORTS
+    NormalizeString
+    IsNormalizedString
+    IdnToAscii
+    IdnToUnicode
+    IdnToNameprepUnicode
+    IdnToNameprepAscii

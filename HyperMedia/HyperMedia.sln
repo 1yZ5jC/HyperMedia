@@ -21,6 +21,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HyperMedia.MediaCore.Window
 EndProject
 Global
 	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		HyperMedia\HyperMedia.Shared\HyperMedia.Shared.projitems*{151186e6-3f8e-40e8-8d53-0087db1ba811}*SharedItemsImports = 4
+		HyperMedia\HyperMedia.Shared\HyperMedia.Shared.projitems*{39272752-0475-45dd-8231-321224984829}*SharedItemsImports = 4
 		HyperMedia.MediaCore\HyperMedia.MediaCore.Shared\HyperMedia.MediaCore.Shared.vcxitems*{46add8d8-d7cf-4e7a-8f36-63d1cd3a8f92}*SharedItemsImports = 9
 		HyperMedia.MediaCore\HyperMedia.MediaCore.Shared\HyperMedia.MediaCore.Shared.vcxitems*{84b07e2b-adc3-4da1-80f9-a6712df6dd7b}*SharedItemsImports = 4
 		HyperMedia\HyperMedia.Shared\HyperMedia.Shared.projitems*{8987686a-2152-4b4d-a41d-2b3056bfbe73}*SharedItemsImports = 13

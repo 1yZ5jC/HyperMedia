@@ -73,6 +73,26 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Column="0">
+                        <TextBlock Text="播放引擎" FontFamily="Segoe UI" FontSize="15"
+                                   Foreground="#FFFFFFFF"/>
+                        <TextBlock Text="切换后需重新打开文件生效"
+                                   FontFamily="Segoe UI" FontSize="15" Foreground="#55FFFFFF"
+                                   Margin="0,4,0,0"/>
+                    </StackPanel>
+                    <ComboBox x:Name="EngineCombo" Grid.Column="1" Width="180"
+                              SelectionChanged="EngineCombo_SelectionChanged"
+                              VerticalAlignment="Center">
+                        <ComboBoxItem Content="VLC (libVLC)" Tag="vlc"/>
+                        <ComboBoxItem Content="系统 (MediaElement)" Tag="media"/>
+                    </ComboBox>
+                </Grid>
+
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0">
                         <TextBlock Text="断点续播" FontFamily="Segoe UI" FontSize="15"
                                    Foreground="#FFFFFFFF"/>
                         <TextBlock Text="记住上次播放位置并从断点继续"
