@@ -18,6 +18,7 @@ namespace HyperMedia
         private const string KEY_RESUME = "Settings_Resume";
         private const string KEY_AUTO_HIDE = "Settings_AutoHide";
         private const string KEY_AUTO_HIDE_DELAY = "Settings_AutoHideDelay";
+        private const string KEY_MOUSE_WHEEL_ZOOM = "Settings_MouseWheelZoom";
         private const string KEY_SUBTITLE_SIZE = "Settings_SubtitleSize";
         private const string KEY_SUBTITLE_COLOR = "Settings_SubtitleColor";
         private const string KEY_SUBTITLE_MARGIN = "Settings_SubtitleMargin";
@@ -103,6 +104,9 @@ namespace HyperMedia
 
             if (settings.Values.ContainsKey(KEY_AUTO_HIDE))
                 AutoHideToggle.IsOn = (bool)settings.Values[KEY_AUTO_HIDE];
+
+            if (settings.Values.ContainsKey(KEY_MOUSE_WHEEL_ZOOM))
+                MouseWheelZoomToggle.IsOn = (bool)settings.Values[KEY_MOUSE_WHEEL_ZOOM];
 
             if (settings.Values.ContainsKey(KEY_AUTO_HIDE_DELAY))
             {
@@ -259,6 +263,12 @@ namespace HyperMedia
         {
             if (_isLoading) return;
             SaveSetting(KEY_AUTO_HIDE, AutoHideToggle.IsOn);
+        }
+
+        private void MouseWheelZoomToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            SaveSetting(KEY_MOUSE_WHEEL_ZOOM, MouseWheelZoomToggle.IsOn);
         }
 
         private void AutoHideDelaySlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)

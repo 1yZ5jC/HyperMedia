@@ -507,7 +507,7 @@
                     </Grid.RowDefinitions>
 
                     <!-- Photo Top Bar -->
-                    <Border Grid.Row="0" VerticalAlignment="Top">
+                    <Border x:Name="PhotoTopBar" Grid.Row="0" VerticalAlignment="Top">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="#DD0A0A0F" Offset="0"/>
@@ -586,6 +586,30 @@
                                                FontFamily="Segoe UI Semibold" FontSize="12"
                                                Foreground="#66FFFFFF" MinWidth="28" TextAlignment="Center"/>
                                 </Button>
+                                <Button x:Name="PhotoEditBtn" Click="PhotoEditBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="编辑"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x270E;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoInfoBtn" Click="PhotoInfoBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="图片信息"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#x2139;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
+                                <Button x:Name="PhotoFullscreenBtn" Click="PhotoFullscreenBtn_Click"
+                                        Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                    <ToolTipService.ToolTip>
+                                        <ToolTip Content="全屏"/>
+                                    </ToolTipService.ToolTip>
+                                    <TextBlock Text="&#xE740;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                               Foreground="#FFFFFFFF"/>
+                                </Button>
                                 <Button x:Name="PhotoCloseBtn" Click="PhotoCloseBtn_Click"
                                         Style="{StaticResource ZunePrimaryStyle}">
                                     <ToolTipService.ToolTip>
@@ -598,23 +622,139 @@
                         </Grid>
                     </Border>
 
+                    <!-- Photo Edit Bar -->
+                    <Border x:Name="PhotoEditBar" Grid.Row="0" VerticalAlignment="Top"
+                            Visibility="Collapsed">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
+                                <GradientStop Color="#DD0A0A0F" Offset="0"/>
+                                <GradientStop Color="#880A0A0F" Offset="1"/>
+                            </LinearGradientBrush>
+                        </Border.Background>
+                        <StackPanel Orientation="Horizontal" Margin="16,10">
+                            <Button x:Name="PhotoEditCancelBtn" Click="PhotoEditCancelBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="取消编辑"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="14"
+                                           Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditCropBtn" Click="PhotoEditCropBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="裁剪"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="PhotoEditCropIcon" Text="裁剪" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditRotateBtn" Click="PhotoEditRotateBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="旋转 90°"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="旋转" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditFilterBtn" Click="PhotoEditFilterBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="滤镜"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock x:Name="PhotoEditFilterIcon" Text="滤镜" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#66FFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditBrightDownBtn" Click="PhotoEditBrightDownBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="亮度 -"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="亮度-" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditBrightUpBtn" Click="PhotoEditBrightUpBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="亮度 +"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="亮度+" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditContrastDownBtn" Click="PhotoEditContrastDownBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="对比度 -"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="对比-" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditContrastUpBtn" Click="PhotoEditContrastUpBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="对比度 +"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="对比+" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditResetBtn" Click="PhotoEditResetBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,4,0">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="重置"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="重置" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFFFFFFF"/>
+                            </Button>
+                            <Button x:Name="PhotoEditSaveBtn" Click="PhotoEditSaveBtn_Click"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="另存为"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="另存为" FontFamily="Segoe UI Semibold"
+                                           FontSize="12" Foreground="#FFE040FB"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
                     <!-- Photo Image -->
                     <ScrollViewer Grid.Row="1" x:Name="PhotoScrollViewer"
                                   HorizontalScrollBarVisibility="Auto"
                                   VerticalScrollBarVisibility="Auto"
-                                  ZoomMode="Enabled"
+                                  PointerMoved="PhotoScrollViewer_PointerMoved"
+                                  PointerPressed="PhotoScrollViewer_PointerPressed"
+                                  PointerReleased="PhotoScrollViewer_PointerReleased"
+                                  PointerCaptureLost="PhotoScrollViewer_PointerCaptureLost"
+                                  SizeChanged="PhotoScrollViewer_SizeChanged"
+                                  ViewChanged="PhotoScrollViewer_ViewChanged"
                                   DoubleTapped="PhotoScrollViewer_DoubleTapped">
-                        <Image x:Name="PhotoImage"
-                               Stretch="Uniform"
-                               RenderTransformOrigin="0.5,0.5">
-                            <Image.RenderTransform>
-                                <CompositeTransform x:Name="PhotoTransform"/>
-                            </Image.RenderTransform>
-                        </Image>
+                        <Grid x:Name="PhotoFitGrid">
+                            <Image x:Name="PhotoImage"
+                                   Stretch="Uniform"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"
+                                   PointerWheelChanged="PhotoScrollViewer_PointerWheelChanged"
+                                   RenderTransformOrigin="0.5,0.5">
+                                <Image.RenderTransform>
+                                    <CompositeTransform x:Name="PhotoTransform"/>
+                                </Image.RenderTransform>
+                            </Image>
+                        </Grid>
                     </ScrollViewer>
 
+                    <Canvas x:Name="PhotoCropCanvas" Grid.Row="1" Visibility="Collapsed" IsHitTestVisible="False">
+                        <Rectangle x:Name="CropShadeTop" Fill="#99000000"/>
+                        <Rectangle x:Name="CropShadeBottom" Fill="#99000000"/>
+                        <Rectangle x:Name="CropShadeLeft" Fill="#99000000"/>
+                        <Rectangle x:Name="CropShadeRight" Fill="#99000000"/>
+                        <Rectangle x:Name="CropBox" Fill="#00FFFFFF"
+                                   Stroke="#FFE040FB" StrokeThickness="2"/>
+                        <Rectangle x:Name="CropHandleTL" Width="12" Height="12" Fill="#FFE040FB"/>
+                        <Rectangle x:Name="CropHandleTR" Width="12" Height="12" Fill="#FFE040FB"/>
+                        <Rectangle x:Name="CropHandleBL" Width="12" Height="12" Fill="#FFE040FB"/>
+                        <Rectangle x:Name="CropHandleBR" Width="12" Height="12" Fill="#FFE040FB"/>
+                    </Canvas>
+
                     <!-- Photo Bottom Bar -->
-                    <Border Grid.Row="2" VerticalAlignment="Bottom">
+                    <Border x:Name="PhotoBottomBar" Grid.Row="2" VerticalAlignment="Bottom">
                         <Border.Background>
                             <LinearGradientBrush StartPoint="0,0" EndPoint="0,1">
                                 <GradientStop Color="#000A0A0F" Offset="0"/>
@@ -959,6 +1099,45 @@
                     </ScrollViewer>
 
                     <Button Grid.Row="2" Click="MediaInfoOverlay_Close"
+                            HorizontalAlignment="Right" Margin="0,12,0,0"
+                            Style="{StaticResource ZuneActionStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="&#x2716;" FontFamily="Segoe UI" FontSize="12"
+                                       Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,6,0"/>
+                            <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
+                                       FontSize="12" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+            </Border>
+
+            <!-- PHOTO INFO OVERLAY -->
+            <Border x:Name="PhotoInfoOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Center" VerticalAlignment="Center"
+                    MinWidth="440" MaxWidth="580" Background="#FF0D0D16"
+                    BorderThickness="1,0,0,0" Margin="0,0,0,60">
+                <Border.BorderBrush>
+                    <SolidColorBrush Color="#FFE040FB"/>
+                </Border.BorderBrush>
+                <Grid Margin="28,24">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="图片信息"
+                               FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB"
+                               CharacterSpacing="60" Margin="0,0,0,16"/>
+
+                    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                                  MaxHeight="420">
+                        <TextBlock x:Name="PhotoInfoExifText"
+                                   Text="" FontFamily="Consolas" FontSize="12"
+                                   Foreground="#AAFFFFFF" TextWrapping="Wrap"/>
+                    </ScrollViewer>
+
+                    <Button Grid.Row="2" Click="PhotoInfoOverlay_Close"
                             HorizontalAlignment="Right" Margin="0,12,0,0"
                             Style="{StaticResource ZuneActionStyle}">
                         <StackPanel Orientation="Horizontal">

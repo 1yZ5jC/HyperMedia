@@ -84,6 +84,24 @@
                               MinWidth="100" Toggled="AutoHideToggle_Toggled"/>
             </Grid>
 
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Text="滚轮缩放图片" FontFamily="Segoe UI Semibold" FontSize="13"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                               VerticalAlignment="Center" TextWrapping="Wrap"/>
+                    <TextBlock Text="照片查看器中滚轮缩放；关闭后滚轮滚动大图"
+                               FontFamily="Segoe UI" FontSize="11"
+                               Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
+                               TextWrapping="Wrap" Margin="0,2,0,0"/>
+                </StackPanel>
+                <ToggleSwitch x:Name="MouseWheelZoomToggle" Grid.Column="1" IsOn="True"
+                              MinWidth="100" VerticalAlignment="Center" Toggled="MouseWheelZoomToggle_Toggled"/>
+            </Grid>
+
             <StackPanel Margin="0,0,0,14">
                 <TextBlock Text="自动隐藏延迟" FontFamily="Segoe UI Semibold" FontSize="13"
                            Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>

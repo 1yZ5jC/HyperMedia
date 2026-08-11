@@ -177,6 +177,18 @@ namespace HyperMedia
         private readonly Stopwatch _visClock = new Stopwatch();
         private bool _visTicking;
         private const string KEY_LYRICS_VISIBLE = "Settings_LyricsVisible";
+        private const string KEY_MOUSE_WHEEL_ZOOM = "Settings_MouseWheelZoom";
+
+        private bool IsMouseWheelZoomEnabled()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                object v = settings.Values[KEY_MOUSE_WHEEL_ZOOM];
+                return (v == null) || ((bool)v);
+            }
+            catch { return true; }
+        }
 
         // External subtitle pending
         private string _pendingExternalSubPath;
@@ -5204,8 +5216,30 @@ namespace HyperMedia
         private bool _isSlideshow;
         private DispatcherTimer _slideshowTimer;
         private StorageFile _photoFile;
-        private double _photoZoom = 1.0;
         private double _photoRotation = 0;
+        private double _photoNaturalW = 0;
+        private double _photoNaturalH = 0;
+        private float _photoFitZoom = 1f;
+        private bool _photoIsFit = true;
+        private bool _photoChromeHidden = false;
+        private DispatcherTimer _photoAutoHideTimer;
+
+        // Edit-mode state
+        private bool _photoEditMode;
+        private bool _photoCropActive;
+        private bool _photoEditBusy;
+        private byte[] _photoEditSrc;
+        private int _photoEditW;
+        private int _photoEditH;
+        private int _photoEditRotation;
+        private int _photoEditFilter;
+        private int _photoEditBrightness;
+        private double _photoEditContrast = 1.0;
+        private Windows.Foundation.Rect _photoCropRect;
+        private int _photoCropDragMode;
+
+        private const uint MAX_PHOTO_DECODE_SIDE = 2560;
+        private const uint MAX_EDIT_SIDE = 4096;
 
         private static readonly HashSet<string> PHOTO_EXTENSIONS = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -5235,36 +5269,37 @@ namespace HyperMedia
                 PlaylistSidebar.Visibility = Visibility.Collapsed;
                 PhotoViewerOverlay.Visibility = Visibility.Visible;
 
-                var stream = await file.OpenReadAsync();
-                if (_photoFile != file)
-                {
-                    stream.Dispose();
-                    return;
-                }
-                var bitmap = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
-                await bitmap.SetSourceAsync(stream);
-                if (_photoFile != file)
-                {
-                    stream.Dispose();
-                    return;
-                }
-                PhotoImage.Source = bitmap;
+                // Release the previous frame before decoding the next one
+                PhotoImage.Source = null;
+
+                var bmp = await CreateScaledBitmap(file);
+                if (_photoFile != file) return;
+
+                _photoNaturalW = bmp.PixelWidth;
+                _photoNaturalH = bmp.PixelHeight;
+                PhotoImage.Source = bmp;
 
                 FileNameText.Text = file.Name;
                 PhotoFileName.Text = file.Name;
                 UpdatePhotoCounter();
                 LoadPhotoInfo(file);
 
-                _photoZoom = 1.0;
                 _photoRotation = 0;
-                PhotoImage.Stretch = Stretch.Uniform;
-                PhotoTransform.ScaleX = 1;
-                PhotoTransform.ScaleY = 1;
                 PhotoTransform.Rotation = 0;
-                PhotoZoomText.Text = "100%";
+                PhotoImage.Opacity = 1;
+                FitPhotoView();
+                EventHandler<object> layoutHandler = null;
+                layoutHandler = (s, e2) =>
+                {
+                    PhotoScrollViewer.LayoutUpdated -= layoutHandler;
+                    if (_photoFile == file && _photoNaturalW > 0 && _photoIsFit)
+                        FitPhotoView();
+                };
+                PhotoScrollViewer.LayoutUpdated += layoutHandler;
                 if (PhotoFilterIcon != null)
                     PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
                         Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+                FadeInPhotoImage();
             }
             catch (Exception ex)
             {
@@ -5274,14 +5309,146 @@ namespace HyperMedia
             }
         }
 
+        private async Task<Windows.UI.Xaml.Media.Imaging.BitmapImage> CreateScaledBitmap(StorageFile file)
+        {
+            using (var stream = await file.OpenReadAsync())
+            {
+                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                uint maxSide = Math.Max(decoder.PixelWidth, decoder.PixelHeight);
+                var bmp = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
+                if (maxSide > MAX_PHOTO_DECODE_SIDE)
+                {
+                    double scale = (double)MAX_PHOTO_DECODE_SIDE / maxSide;
+                    bmp.DecodePixelWidth = (int)Math.Max(1, Math.Round(decoder.PixelWidth * scale));
+                    bmp.DecodePixelHeight = (int)Math.Max(1, Math.Round(decoder.PixelHeight * scale));
+                }
+                using (var src = await file.OpenReadAsync())
+                {
+                    await bmp.SetSourceAsync(src);
+                }
+                return bmp;
+            }
+        }
+
+        private double _photoFitScale;
+        private double _photoLbPadX, _photoLbPadY;
+
+        private void UpdatePhotoLayoutForMode()
+        {
+            var sv = PhotoScrollViewer;
+            PhotoFitGrid.Width = Math.Max(1, sv.ViewportWidth);
+            PhotoFitGrid.Height = Math.Max(1, sv.ViewportHeight);
+            PhotoScrollViewer.ZoomMode = ZoomMode.Enabled;
+        }
+
+        private void UpdatePhotoCropMapping()
+        {
+            var sv = PhotoScrollViewer;
+            if (_photoNaturalW <= 0 || sv.ViewportWidth <= 0 || sv.ViewportHeight <= 0) return;
+            _photoFitScale = Math.Min(sv.ViewportWidth / _photoNaturalW,
+                                      sv.ViewportHeight / _photoNaturalH);
+            _photoLbPadX = (sv.ViewportWidth - _photoNaturalW * _photoFitScale) / 2;
+            _photoLbPadY = (sv.ViewportHeight - _photoNaturalH * _photoFitScale) / 2;
+        }
+
+        private double GetPhotoZoomMin()
+        {
+            return 1.0;
+        }
+
+        private void UpdatePhotoFitZoom()
+        {
+            _photoFitZoom = 1f;
+        }
+
+        private void CenterPhotoView()
+        {
+            var sv = PhotoScrollViewer;
+            double ox = Math.Max(0, (sv.ViewportWidth * sv.ZoomFactor - sv.ViewportWidth) / 2);
+            double oy = Math.Max(0, (sv.ViewportHeight * sv.ZoomFactor - sv.ViewportHeight) / 2);
+            if (ox > 0 || oy > 0)
+                sv.ChangeView(ox, oy, null, true);
+        }
+
+        private void FitPhotoView()
+        {
+            var sv = PhotoScrollViewer;
+            if (sv.ViewportWidth <= 0 || sv.ViewportHeight <= 0) return;
+            UpdatePhotoLayoutForMode();
+            sv.ChangeView(0, 0, 1.0f, true);
+            _photoIsFit = true;
+            UpdatePhotoZoomText();
+        }
+
+        private void SetPhotoZoom(double zoom)
+        {
+            var sv = PhotoScrollViewer;
+            zoom = Math.Max(GetPhotoZoomMin(), Math.Min(8.0, zoom));
+            double ratio = zoom / sv.ZoomFactor;
+            if (ratio == 1) return;
+            double cx = sv.HorizontalOffset + sv.ViewportWidth / 2;
+            double cy = sv.VerticalOffset + sv.ViewportHeight / 2;
+            sv.ChangeView(cx * ratio - sv.ViewportWidth / 2,
+                          cy * ratio - sv.ViewportHeight / 2,
+                          (float)zoom, true);
+        }
+
+        private void SetPhotoZoomAt(double zoom, Point p)
+        {
+            var sv = PhotoScrollViewer;
+            zoom = Math.Max(GetPhotoZoomMin(), Math.Min(8.0, zoom));
+            double ratio = zoom / sv.ZoomFactor;
+            if (ratio == 1) return;
+            double ax = sv.HorizontalOffset + p.X;
+            double ay = sv.VerticalOffset + p.Y;
+            sv.ChangeView(ax * ratio - p.X, ay * ratio - p.Y, (float)zoom, true);
+        }
+
+        private void UpdatePhotoZoomText()
+        {
+            if (PhotoZoomText == null) return;
+            PhotoZoomText.Text = _photoIsFit
+                ? L("PhotoFit")
+                : ((int)Math.Round(PhotoScrollViewer.ZoomFactor * 100)) + "%";
+        }
+
+        private void FadeInPhotoImage()
+        {
+            try
+            {
+                PhotoImage.Opacity = 0;
+                var sb = new Storyboard();
+                var da = new DoubleAnimation
+                {
+                    From = 0,
+                    To = 1,
+                    Duration = new Duration(TimeSpan.FromMilliseconds(250))
+                };
+                Storyboard.SetTarget(da, PhotoImage);
+                Storyboard.SetTargetProperty(da, "Opacity");
+                sb.Children.Add(da);
+                sb.Begin();
+            }
+            catch { }
+        }
+
         private void ClosePhotoViewer()
         {
             _isPhotoMode = false;
             StopSlideshow();
+            StopPhotoAutoHide();
+            _photoChromeHidden = false;
+            RestoreScrollManipulation();
+            PhotoTopBar.Visibility = Visibility.Visible;
+            PhotoBottomBar.Visibility = Visibility.Visible;
             PhotoViewerOverlay.Visibility = Visibility.Collapsed;
             this.BottomAppBar = ToolsAppBar;
             VlcVideoPanel.Visibility = Visibility.Visible;
             PhotoImage.Source = null;
+            _photoNaturalW = 0;
+            _photoNaturalH = 0;
+            _photoFitZoom = 1f;
+            _photoIsFit = true;
         }
 
         private void PhotoCloseBtn_Click(object sender, RoutedEventArgs e)
@@ -5333,21 +5500,257 @@ namespace HyperMedia
             catch { }
         }
 
+        private void PhotoInfoBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ShowPhotoInfo();
+        }
+
+        private void PhotoInfoOverlay_Close(object sender, RoutedEventArgs e)
+        {
+            PhotoInfoOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void ShowPhotoInfo()
+        {
+            if (_photoFile == null) return;
+            var sb = new StringBuilder();
+            try
+            {
+                var imgProps = await _photoFile.Properties.GetImagePropertiesAsync();
+                var basic = await _photoFile.GetBasicPropertiesAsync();
+
+                sb.AppendLine(L("ExifDimensions") + ": " + imgProps.Width + " \u00D7 " + imgProps.Height);
+                double mb = basic.Size / (1024.0 * 1024.0);
+                sb.AppendLine(L("ExifSize") + ": " + (mb >= 1 ? mb.ToString("0.00") + " MB" : (basic.Size / 1024.0).ToString("0") + " KB"));
+                if (imgProps.DateTaken != null && imgProps.DateTaken.Year > 2000)
+                    sb.AppendLine(L("ExifDateTaken") + ": " + imgProps.DateTaken.Year + "-" +
+                        imgProps.DateTaken.Month.ToString("00") + "-" + imgProps.DateTaken.Day.ToString("00") + " " +
+                        imgProps.DateTaken.Hour.ToString("00") + ":" + imgProps.DateTaken.Minute.ToString("00"));
+                if (!string.IsNullOrEmpty(imgProps.CameraManufacturer))
+                    sb.AppendLine(L("ExifCamera") + ": " + imgProps.CameraManufacturer);
+                if (!string.IsNullOrEmpty(imgProps.CameraModel))
+                    sb.AppendLine(L("ExifModel") + ": " + imgProps.CameraModel);
+
+                using (var stream = await _photoFile.OpenReadAsync())
+                {
+                    var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                    var propsView = decoder.BitmapProperties;
+                    var keys = new[]
+                    {
+                        "System.Photo.CameraManufacturer", "System.Photo.CameraModel",
+                        "System.Photo.LensModel", "System.Photo.ExposureTime",
+                        "System.Photo.FNumber", "System.Photo.ISOSpeed",
+                        "System.Photo.FocalLength", "System.Photo.Flash",
+                        "System.Photo.WhiteBalance", "System.Photo.Orientation",
+                        "System.Photo.PixelXDimension", "System.Photo.PixelYDimension",
+                        "System.Photo.ExposureBias", "System.Photo.MeteringMode",
+                        "System.Photo.ProgramMode", "System.Photo.UserComment",
+                        "System.Photo.DateTaken", "System.Photo.GPSLatitude",
+                        "System.Photo.GPSLongitude", "System.Photo.GPSAltitude",
+                        "System.Photo.GPSLatitudeRef", "System.Photo.GPSLongitudeRef",
+                        "System.Image.ResolutionX", "System.Image.ResolutionY",
+                        "System.Image.ColorSpace", "System.Photo.FocalLengthInFilm"
+                    };
+                    var result = await propsView.GetPropertiesAsync(keys);
+                    var pw = result as Windows.Graphics.Imaging.BitmapPropertySet;
+                    if (pw != null)
+                    {
+                        if (string.IsNullOrEmpty(imgProps.CameraManufacturer))
+                            AppendExifLine(sb, pw, "System.Photo.CameraManufacturer", L("ExifCamera"), v => v.ToString());
+                        if (string.IsNullOrEmpty(imgProps.CameraModel))
+                            AppendExifLine(sb, pw, "System.Photo.CameraModel", L("ExifModel"), v => v.ToString());
+                        AppendExifLine(sb, pw, "System.Photo.LensModel", L("ExifLens"), v => v.ToString());
+                        AppendExifLine(sb, pw, "System.Photo.ExposureTime", L("ExifExposure"),
+                            v => FormatExposureTime(GetDouble(v)));
+                        AppendExifLine(sb, pw, "System.Photo.FNumber", L("ExifAperture"),
+                            v => "f/" + GetDouble(v).ToString("0.#"));
+                        AppendExifLine(sb, pw, "System.Photo.ISOSpeed", L("ExifIso"),
+                            v => "ISO " + GetUInt32(v));
+                        AppendExifLine(sb, pw, "System.Photo.FocalLength", L("ExifFocal"),
+                            v => GetDouble(v).ToString("0.#") + " mm");
+                        AppendExifLine(sb, pw, "System.Photo.Flash", L("ExifFlash"),
+                            v => (GetUInt32(v) & 1) != 0 ? L("FlashOn") : L("FlashOff"));
+                        AppendExifLine(sb, pw, "System.Photo.WhiteBalance", L("ExifWhiteBalance"),
+                            v => GetUInt32(v) == 0 ? L("WbAuto") : L("WbManual"));
+                        AppendExifLine(sb, pw, "System.Photo.Orientation", L("ExifOrientation"),
+                            v => FormatOrientation(GetUInt32(v)));
+                        AppendExifLine(sb, pw, "System.Photo.ExposureBias", L("ExifBias"),
+                            v => (GetDouble(v) > 0 ? "+" : "") + GetDouble(v).ToString("0.#") + " EV");
+                        AppendExifLine(sb, pw, "System.Photo.MeteringMode", L("ExifMetering"),
+                            v => FormatMetering(GetUInt32(v)));
+                        AppendExifLine(sb, pw, "System.Photo.ProgramMode", L("ExifProgram"),
+                            v => FormatProgram(GetUInt32(v)));
+                        AppendExifLine(sb, pw, "System.Photo.FocalLengthInFilm", L("ExifFocalFilm"),
+                            v => GetUInt32(v) + " mm");
+                        AppendExifLine(sb, pw, "System.Image.ResolutionX", "DPI",
+                            v => GetDouble(v).ToString("0.#") + " \u00D7 " + GetDouble(pw["System.Image.ResolutionY"]).ToString("0.#"));
+                        AppendExifLine(sb, pw, "System.Image.ColorSpace", L("ExifColorSpace"),
+                            v => GetUInt32(v) == 1 ? "sRGB" : "0x" + GetUInt32(v).ToString("X"));
+                        AppendExifLine(sb, pw, "System.Photo.GPSLatitude", L("ExifGps"),
+                            v => FormatGpsLine(pw));
+                        AppendExifLine(sb, pw, "System.Photo.UserComment", L("ExifComment"), v => v.ToString());
+                    }
+                }
+            }
+            catch { }
+            PhotoInfoExifText.Text = sb.ToString();
+            PhotoInfoOverlay.Visibility = Visibility.Visible;
+        }
+
+        private static void AppendExifLine(StringBuilder sb, Windows.Graphics.Imaging.BitmapPropertySet props,
+            string key, string label, Func<object, string> fmt)
+        {
+            object val;
+            if (TryGetProp(props, key, out val) && val != null)
+            {
+                try { sb.AppendLine(label + ": " + fmt(val)); }
+                catch { }
+            }
+        }
+
+        private static bool TryGetProp(Windows.Graphics.Imaging.BitmapPropertySet props, string key, out object val)
+        {
+            val = null;
+            if (props == null || !props.ContainsKey(key)) return false;
+            val = props[key];
+            return true;
+        }
+
+        private static double GetDouble(object v)
+        {
+            var pv = v as IPropertyValue;
+            if (pv != null && pv.Type == Windows.Foundation.PropertyType.Double) return pv.GetDouble();
+            if (pv != null && pv.Type == Windows.Foundation.PropertyType.Single) return pv.GetSingle();
+            return 0;
+        }
+
+        private static uint GetUInt32(object v)
+        {
+            var pv = v as IPropertyValue;
+            if (pv == null) return 0;
+            switch (pv.Type)
+            {
+                case Windows.Foundation.PropertyType.UInt32: return pv.GetUInt32();
+                case Windows.Foundation.PropertyType.UInt16: return pv.GetUInt16();
+                case Windows.Foundation.PropertyType.Int32: return (uint)pv.GetInt32();
+                default: return 0;
+            }
+        }
+
+        private static uint[] GetUInt32Array(object v)
+        {
+            var pv = v as IPropertyValue;
+            if (pv == null || pv.Type != Windows.Foundation.PropertyType.UInt32Array) return null;
+            uint[] arr;
+            pv.GetUInt32Array(out arr);
+            return arr;
+        }
+
+        private static string FormatExposureTime(double sec)
+        {
+            if (sec <= 0) return "";
+            if (sec < 1) return "1/" + Math.Max(1, Math.Round(1 / sec)) + " s";
+            return sec.ToString("0.#") + " s";
+        }
+
+        private static string FormatOrientation(uint o)
+        {
+            switch (o)
+            {
+                case 1: return "0\u00B0";
+                case 3: return "180\u00B0";
+                case 6: return "90\u00B0 CW";
+                case 8: return "90\u00B0 CCW";
+                default: return o.ToString();
+            }
+        }
+
+        private static string FormatMetering(uint m)
+        {
+            switch (m)
+            {
+                case 1: return "Average";
+                case 2: return "Center-weighted";
+                case 3: return "Spot";
+                case 4: return "Multi-spot";
+                case 5: return "Pattern";
+                default: return m.ToString();
+            }
+        }
+
+        private static string FormatProgram(uint p)
+        {
+            switch (p)
+            {
+                case 1: return "Manual";
+                case 2: return "Program AE";
+                case 3: return "Aperture priority";
+                case 4: return "Shutter priority";
+                case 5: return "Creative";
+                case 6: return "Action";
+                case 7: return "Portrait";
+                case 8: return "Landscape";
+                default: return p.ToString();
+            }
+        }
+
+        private static string FormatGps(uint[] dms)
+        {
+            if (dms == null || dms.Length < 3) return "";
+            double sec = dms[2] / 100.0;
+            return dms[0] + "\u00B0" + dms[1] + "'" + sec.ToString("0.#") + "\"";
+        }
+
+        private static string FormatGpsLine(Windows.Graphics.Imaging.BitmapPropertySet props)
+        {
+            object lat, lon;
+            if (!TryGetProp(props, "System.Photo.GPSLatitude", out lat) ||
+                !TryGetProp(props, "System.Photo.GPSLongitude", out lon))
+                return "";
+            return FormatGps(GetUInt32Array(lat)) + GetGpsRef(props, "System.Photo.GPSLatitudeRef") +
+                "  " + FormatGps(GetUInt32Array(lon)) + GetGpsRef(props, "System.Photo.GPSLongitudeRef");
+        }
+
+        private static string GetGpsRef(Windows.Graphics.Imaging.BitmapPropertySet props, string key)
+        {
+            object val;
+            if (TryGetProp(props, key, out val) && val != null)
+            {
+                var pv = val as IPropertyValue;
+                if (pv != null && pv.Type == Windows.Foundation.PropertyType.String)
+                {
+                    string s = pv.GetString();
+                    if (!string.IsNullOrEmpty(s)) return s;
+                }
+            }
+            return "";
+        }
+
         private void PhotoFilterBtn_Click(object sender, RoutedEventArgs e)
         {
             _photoFilterIndex = (_photoFilterIndex + 1) % 4;
             if (_photoFilterIndex == 0)
             {
                 ReloadPhotoImage();
-                if (PhotoFilterIcon != null)
-                    PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                        Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+                SetPhotoFilterIconActive(false);
                 return;
             }
-            if (PhotoFilterIcon != null)
-                PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            SetPhotoFilterIconActive(true);
             ApplyPhotoFilter();
+        }
+
+        private void SetPhotoFilterIconActive(bool active)
+        {
+            if (PhotoFilterIcon == null) return;
+            PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(active
+                ? Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)
+                : Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+        }
+
+        private void RollbackPhotoFilter()
+        {
+            _photoFilterIndex = (_photoFilterIndex + 3) % 4;
+            SetPhotoFilterIconActive(_photoFilterIndex != 0);
         }
 
         private async void ApplyPhotoFilter()
@@ -5355,40 +5758,71 @@ namespace HyperMedia
             if (_photoFile == null) return;
             try
             {
-                var stream = await _photoFile.OpenReadAsync();
-                var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
-                var data = await decoder.GetPixelDataAsync();
-                byte[] src = data.DetachPixelData();
-                int w = (int)decoder.PixelWidth;
-                int h = (int)decoder.PixelHeight;
-
-                if (w * h > 20000000)
+                using (var stream = await _photoFile.OpenReadAsync())
                 {
-                    ShowOverlay("图片过大，跳过滤镜");
-                    HideOverlayDelayed();
-                    return;
-                }
+                    var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                    uint sw = decoder.PixelWidth, sh = decoder.PixelHeight;
+                    if (sw * sh > 20000000)
+                    {
+                        ShowOverlay(L("ImageTooLargeFilter"));
+                        HideOverlayDelayed();
+                        RollbackPhotoFilter();
+                        return;
+                    }
+                    double scale = Math.Min(1.0, (double)MAX_PHOTO_DECODE_SIDE / Math.Max(sw, sh));
+                    int w = Math.Max(1, (int)Math.Round(sw * scale));
+                    int h = Math.Max(1, (int)Math.Round(sh * scale));
 
-                byte[] dst = (byte[])src.Clone();
-                await Task.Run(() => FilterImage(src, dst, w, h, _photoFilterIndex));
+                    var transform = new Windows.Graphics.Imaging.BitmapTransform
+                    {
+                        ScaledWidth = (uint)w,
+                        ScaledHeight = (uint)h,
+                        InterpolationMode = Windows.Graphics.Imaging.BitmapInterpolationMode.Fant
+                    };
+                    var data = await decoder.GetPixelDataAsync(
+                        Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                        Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied,
+                        transform,
+                        Windows.Graphics.Imaging.ExifOrientationMode.RespectExifOrientation,
+                        Windows.Graphics.Imaging.ColorManagementMode.DoNotColorManage);
+                    byte[] src = data.DetachPixelData();
+                    byte[] dst = (byte[])src.Clone();
+                    int filterIndex = _photoFilterIndex;
+                    await Task.Run(() => FilterImage(src, dst, w, h, filterIndex));
 
-                var wb = new WriteableBitmap(w, h);
-                using (var s = wb.PixelBuffer.AsStream())
-                {
-                    s.Seek(0, SeekOrigin.Begin);
-                    s.Write(dst, 0, dst.Length);
+                    if (_photoFile == null) return;
+                    var wb = new WriteableBitmap(w, h);
+                    using (var s = wb.PixelBuffer.AsStream())
+                    {
+                        s.Seek(0, SeekOrigin.Begin);
+                        s.Write(dst, 0, dst.Length);
+                    }
+                    wb.Invalidate();
+                    PhotoImage.Source = wb;
+                    PhotoImage.Opacity = 1;
+                    _photoNaturalW = w;
+                    _photoNaturalH = h;
+                    PhotoTransform.Rotation = _photoRotation;
+                    RestorePhotoZoomRatio();
                 }
-                wb.Invalidate();
-                PhotoImage.Source = wb;
-                PhotoImage.Stretch = Stretch.Uniform;
-                PhotoTransform.ScaleX = 1;
-                PhotoTransform.ScaleY = 1;
-                _photoZoom = 1.0;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[HyperMedia] ApplyPhotoFilter failed: {0}", ex.Message);
+                RollbackPhotoFilter();
             }
+        }
+
+        private void RestorePhotoZoomRatio()
+        {
+            if (!_photoEditMode)
+            {
+                FitPhotoView();
+                return;
+            }
+            double ratio = _photoIsFit ? 1.0 : PhotoScrollViewer.ZoomFactor / _photoFitZoom;
+            UpdatePhotoFitZoom();
+            PhotoScrollViewer.ChangeView(null, null, (float)(_photoFitZoom * ratio), true);
         }
 
         private async void ReloadPhotoImage()
@@ -5396,14 +5830,15 @@ namespace HyperMedia
             if (_photoFile == null) return;
             try
             {
-                var s = await _photoFile.OpenReadAsync();
-                var bmp = new Windows.UI.Xaml.Media.Imaging.BitmapImage();
-                await bmp.SetSourceAsync(s);
+                var file = _photoFile;
+                var bmp = await CreateScaledBitmap(file);
+                if (_photoFile != file) return;
+                _photoNaturalW = bmp.PixelWidth;
+                _photoNaturalH = bmp.PixelHeight;
                 PhotoImage.Source = bmp;
-                PhotoImage.Stretch = Stretch.Uniform;
-                PhotoTransform.ScaleX = 1;
-                PhotoTransform.ScaleY = 1;
-                _photoZoom = 1.0;
+                PhotoImage.Opacity = 1;
+                PhotoTransform.Rotation = _photoRotation;
+                RestorePhotoZoomRatio();
             }
             catch { }
         }
@@ -5455,32 +5890,68 @@ namespace HyperMedia
 
         private void PhotoZoomInBtn_Click(object sender, RoutedEventArgs e)
         {
-            _photoZoom = Math.Min(_photoZoom * 1.25, 5.0);
-            PhotoTransform.ScaleX = _photoZoom;
-            PhotoTransform.ScaleY = _photoZoom;
-            PhotoZoomText.Text = ((int)(_photoZoom * 100)) + "%";
+            SetPhotoZoom(PhotoScrollViewer.ZoomFactor * 1.25);
         }
 
         private void PhotoZoomOutBtn_Click(object sender, RoutedEventArgs e)
         {
-            _photoZoom = Math.Max(_photoZoom / 1.25, 0.1);
-            PhotoTransform.ScaleX = _photoZoom;
-            PhotoTransform.ScaleY = _photoZoom;
-            PhotoZoomText.Text = ((int)(_photoZoom * 100)) + "%";
+            SetPhotoZoom(PhotoScrollViewer.ZoomFactor / 1.25);
         }
 
         private void PhotoZoomResetBtn_Click(object sender, RoutedEventArgs e)
         {
-            _photoZoom = 1.0;
-            PhotoTransform.ScaleX = 1;
-            PhotoTransform.ScaleY = 1;
-            PhotoZoomText.Text = "100%";
+            FitPhotoView();
         }
 
         private void PhotoRotateBtn_Click(object sender, RoutedEventArgs e)
         {
             _photoRotation = (_photoRotation + 90) % 360;
             PhotoTransform.Rotation = _photoRotation;
+        }
+
+        private void PhotoFullscreenBtn_Click(object sender, RoutedEventArgs e)
+        {
+            TogglePhotoChrome();
+        }
+
+        private void TogglePhotoChrome()
+        {
+            _photoChromeHidden = !_photoChromeHidden;
+            if (_photoChromeHidden)
+            {
+                PhotoTopBar.Visibility = Visibility.Collapsed;
+                PhotoBottomBar.Visibility = Visibility.Collapsed;
+                StartPhotoAutoHide();
+            }
+            else
+            {
+                StopPhotoAutoHide();
+                PhotoTopBar.Visibility = Visibility.Visible;
+                PhotoBottomBar.Visibility = Visibility.Visible;
+            }
+        }
+
+        private void StartPhotoAutoHide()
+        {
+            if (_photoAutoHideTimer == null)
+            {
+                _photoAutoHideTimer = new DispatcherTimer();
+                _photoAutoHideTimer.Interval = TimeSpan.FromSeconds(3);
+                _photoAutoHideTimer.Tick += PhotoAutoHideTimer_Tick;
+            }
+            _photoAutoHideTimer.Start();
+        }
+
+        private void StopPhotoAutoHide()
+        {
+            if (_photoAutoHideTimer != null)
+                _photoAutoHideTimer.Stop();
+        }
+
+        private void PhotoAutoHideTimer_Tick(object sender, object e)
+        {
+            PhotoTopBar.Visibility = Visibility.Collapsed;
+            PhotoBottomBar.Visibility = Visibility.Collapsed;
         }
 
         private void PhotoSlideshowBtn_Click(object sender, RoutedEventArgs e)
@@ -5565,22 +6036,697 @@ namespace HyperMedia
 
         private void PhotoScrollViewer_DoubleTapped(object sender, DoubleTappedRoutedEventArgs e)
         {
-            // Toggle between "fit screen" and "100% actual pixels"
-            if (PhotoImage.Stretch == Stretch.Uniform)
+            if (_photoCropActive) return;
+            TogglePhotoChrome();
+        }
+
+        private void PhotoScrollViewer_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+        {
+            if (_photoNaturalW <= 0 || _photoCropActive) return;
+            if (!IsMouseWheelZoomEnabled()) return;
+            var pt = e.GetCurrentPoint(PhotoScrollViewer);
+            int delta = pt.Properties.MouseWheelDelta;
+            if (delta == 0) return;
+            SetPhotoZoomAt(PhotoScrollViewer.ZoomFactor * (delta > 0 ? 1.25 : 0.8),
+                           new Point(pt.Position.X, pt.Position.Y));
+            e.Handled = true;
+        }
+
+        private bool _photoDragging;
+        private Point _photoDragLast;
+        private Point _photoDragStart;
+        private ManipulationModes _photoPrevManipulationMode;
+
+        private bool IsPhotoContentLargerThanViewport()
+        {
+            var sv = PhotoScrollViewer;
+            return sv.ExtentWidth > sv.ViewportWidth + 1 || sv.ExtentHeight > sv.ViewportHeight + 1;
+        }
+
+        private void PhotoScrollViewer_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            var pt = e.GetCurrentPoint(PhotoScrollViewer);
+            if (_photoCropActive)
             {
-                PhotoImage.Stretch = Stretch.None;
-                _photoZoom = 1.0;
-                PhotoTransform.ScaleX = 1;
-                PhotoTransform.ScaleY = 1;
-                PhotoZoomText.Text = "100%";
+                if (!pt.Properties.IsLeftButtonPressed) return;
+                Point content = ContentPoint(pt.Position);
+                int hit = HitTestCrop(content, _photoCropRect);
+                _photoCropDragMode = hit != 0 ? hit : 6; // outside selection -> draw new
+                _photoDragStart = content;
+                _photoDragLast = content;
+                if (_photoCropDragMode == 6)
+                {
+                    _photoCropRect = new Windows.Foundation.Rect(content.X, content.Y, 0, 0);
+                    UpdateCropOverlay();
+                }
+                PhotoScrollViewer.CapturePointer(e.Pointer);
+                e.Handled = true;
+                return;
             }
-            else
+            if (pt.Properties.IsLeftButtonPressed && IsPhotoContentLargerThanViewport())
             {
-                PhotoImage.Stretch = Stretch.Uniform;
-                _photoZoom = 1.0;
-                PhotoTransform.ScaleX = 1;
-                PhotoTransform.ScaleY = 1;
-                PhotoZoomText.Text = "适应";
+                _photoDragging = true;
+                _photoDragLast = pt.Position;
+                PhotoScrollViewer.CapturePointer(e.Pointer);
+                e.Handled = true;
+            }
+        }
+
+        private void PhotoScrollViewer_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (_photoCropActive && _photoCropDragMode != 0)
+            {
+                var pt = e.GetCurrentPoint(PhotoScrollViewer);
+                UpdateCropDrag(ContentPoint(pt.Position), true);
+                e.Handled = true;
+                return;
+            }
+            if (_photoDragging)
+            {
+                var pt = e.GetCurrentPoint(PhotoScrollViewer);
+                double dx = _photoDragLast.X - pt.Position.X;
+                double dy = _photoDragLast.Y - pt.Position.Y;
+                _photoDragLast = pt.Position;
+                PhotoScrollViewer.ChangeView(PhotoScrollViewer.HorizontalOffset + dx,
+                                             PhotoScrollViewer.VerticalOffset + dy,
+                                             null, false);
+                e.Handled = true;
+                return;
+            }
+            if (!_photoChromeHidden) return;
+            // Only reveal the bars when the mouse rests near the top/bottom edge
+            var pos = e.GetCurrentPoint(PhotoScrollViewer).Position;
+            double h = PhotoScrollViewer.ActualHeight;
+            bool nearTop = pos.Y < 56;
+            bool nearBottom = h > 0 && pos.Y > h - 56;
+            if (nearTop) PhotoTopBar.Visibility = Visibility.Visible;
+            if (nearBottom) PhotoBottomBar.Visibility = Visibility.Visible;
+            if (nearTop || nearBottom) StartPhotoAutoHide();
+        }
+
+        private void PhotoScrollViewer_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (_photoCropDragMode != 0)
+            {
+                _photoCropDragMode = 0;
+                try { PhotoScrollViewer.ReleasePointerCapture(e.Pointer); } catch { }
+                e.Handled = true;
+                return;
+            }
+            if (!_photoDragging) return;
+            _photoDragging = false;
+            try { PhotoScrollViewer.ReleasePointerCapture(e.Pointer); } catch { }
+            e.Handled = true;
+        }
+
+        private Point ContentPoint(Point viewportPt)
+        {
+            var sv = PhotoScrollViewer;
+            if (_photoEditMode)
+            {
+                double gx = (viewportPt.X + sv.HorizontalOffset) / sv.ZoomFactor - _photoLbPadX;
+                double gy = (viewportPt.Y + sv.VerticalOffset) / sv.ZoomFactor - _photoLbPadY;
+                return new Point(gx / _photoFitScale, gy / _photoFitScale);
+            }
+            return new Point((viewportPt.X + sv.HorizontalOffset) / sv.ZoomFactor,
+                             (viewportPt.Y + sv.VerticalOffset) / sv.ZoomFactor);
+        }
+
+        private static double Dist(Point a, Point b)
+        {
+            double dx = a.X - b.X, dy = a.Y - b.Y;
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
+
+        private static int HitTestCrop(Point p, Windows.Foundation.Rect r)
+        {
+            const double hit = 16;
+            double x0 = r.X, y0 = r.Y, x1 = r.X + r.Width, y1 = r.Y + r.Height;
+            if (p.X >= x0 - hit && p.X <= x0 + hit && p.Y >= y0 - hit && p.Y <= y0 + hit) return 2;
+            if (p.X >= x1 - hit && p.X <= x1 + hit && p.Y >= y0 - hit && p.Y <= y0 + hit) return 3;
+            if (p.X >= x0 - hit && p.X <= x0 + hit && p.Y >= y1 - hit && p.Y <= y1 + hit) return 4;
+            if (p.X >= x1 - hit && p.X <= x1 + hit && p.Y >= y1 - hit && p.Y <= y1 + hit) return 5;
+            if (p.X > x0 + 4 && p.X < x1 - 4 && p.Y > y0 + 4 && p.Y < y1 - 4) return 1;
+            return 0;
+        }
+
+        private void PhotoScrollViewer_PointerCaptureLost(object sender, PointerRoutedEventArgs e)
+        {
+            _photoDragging = false;
+        }
+
+        private void PhotoScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdatePhotoLayoutForMode();
+            UpdatePhotoCropMapping();
+            if (!_photoEditMode) return;
+            if (_photoNaturalW <= 0) return;
+            if (_photoIsFit)
+            {
+                PhotoScrollViewer.ChangeView(null, null, 1.0f, false);
+                CenterPhotoView();
+            }
+        }
+
+        private void PhotoScrollViewer_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            if (_photoNaturalW <= 0) return;
+            var sv = PhotoScrollViewer;
+            double minZ = GetPhotoZoomMin();
+            if (sv.ZoomFactor < minZ)
+            {
+                sv.ChangeView(null, null, (float)minZ, false);
+                return;
+            }
+            _photoIsFit = Math.Abs(sv.ZoomFactor - 1.0) < 0.01;
+            if (_photoEditMode && _photoCropActive) UpdateCropOverlay();
+            UpdatePhotoZoomText();
+        }
+
+        private async void PhotoEditBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoEditMode)
+            {
+                ExitEditMode();
+                return;
+            }
+            if (_photoFile == null) return;
+            if (_photoChromeHidden) TogglePhotoChrome();
+            StopSlideshow();
+            try
+            {
+                PhotoEditBar.Visibility = Visibility.Visible;
+                PhotoTopBar.Visibility = Visibility.Collapsed;
+                PhotoBottomBar.Visibility = Visibility.Collapsed;
+                _photoEditMode = true;
+                _photoEditRotation = 0;
+                _photoEditFilter = 0;
+                _photoEditBrightness = 0;
+                _photoEditContrast = 1.0;
+                _photoCropActive = false;
+                PhotoEditCropIcon.Text = L("EditCrop");
+                PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+                PhotoEditFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+
+                using (var stream = await _photoFile.OpenReadAsync())
+                {
+                    var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                    uint sw = decoder.PixelWidth, sh = decoder.PixelHeight;
+                    if (sw * sh > 40000000)
+                    {
+                        ShowOverlay(L("ImageTooLargeFilter"));
+                        HideOverlayDelayed();
+                        ExitEditMode();
+                        return;
+                    }
+                    double scale = Math.Min(1.0, (double)MAX_EDIT_SIDE / Math.Max(sw, sh));
+                    int w = Math.Max(1, (int)Math.Round(sw * scale));
+                    int h = Math.Max(1, (int)Math.Round(sh * scale));
+                    var transform = new Windows.Graphics.Imaging.BitmapTransform
+                    {
+                        ScaledWidth = (uint)w,
+                        ScaledHeight = (uint)h,
+                        InterpolationMode = Windows.Graphics.Imaging.BitmapInterpolationMode.Fant
+                    };
+                    var data = await decoder.GetPixelDataAsync(
+                        Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                        Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied,
+                        transform,
+                        Windows.Graphics.Imaging.ExifOrientationMode.RespectExifOrientation,
+                        Windows.Graphics.Imaging.ColorManagementMode.DoNotColorManage);
+                    _photoEditSrc = data.DetachPixelData();
+                    _photoEditW = w;
+                    _photoEditH = h;
+                }
+                UpdatePhotoLayoutForMode();
+                await ApplyEditPreview();
+                if (!_photoIsFit) CenterPhotoView();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] EnterEditMode failed: {0}", ex.Message);
+                ExitEditMode();
+            }
+        }
+
+        private void ExitEditMode()
+        {
+            if (!_photoEditMode) return;
+            _photoEditMode = false;
+            _photoCropActive = false;
+            RestoreScrollManipulation();
+            PhotoCropCanvas.Visibility = Visibility.Collapsed;
+            PhotoEditBar.Visibility = Visibility.Collapsed;
+            PhotoTopBar.Visibility = Visibility.Visible;
+            PhotoBottomBar.Visibility = Visibility.Visible;
+            UpdatePhotoLayoutForMode();
+            ReloadPhotoImage();
+        }
+
+        private async Task ApplyEditPreview()
+        {
+            if (_photoEditBusy) return;
+            _photoEditBusy = true;
+            try
+            {
+                byte[] src = _photoEditSrc;
+                int w = _photoEditW, h = _photoEditH;
+                if (_photoEditRotation != 0)
+                    src = RotatePixels(src, w, h, _photoEditRotation, ref w, ref h);
+                byte[] dst = (byte[])src.Clone();
+                int brightness = _photoEditBrightness;
+                double contrast = _photoEditContrast;
+                int filter = _photoEditFilter;
+                await Task.Run(() => ApplyBcFilter(dst, w, h, brightness, contrast, filter));
+
+                var wb = new WriteableBitmap(w, h);
+                using (var s = wb.PixelBuffer.AsStream())
+                {
+                    s.Seek(0, SeekOrigin.Begin);
+                    s.Write(dst, 0, dst.Length);
+                }
+                wb.Invalidate();
+                if (!_photoEditMode) return;
+                PhotoImage.Source = wb;
+                _photoNaturalW = w;
+                _photoNaturalH = h;
+                UpdatePhotoFitZoom();
+                if (_photoIsFit)
+                {
+                    PhotoScrollViewer.ChangeView(null, null, _photoFitZoom, true);
+                    CenterPhotoView();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] ApplyEditPreview failed: {0}", ex.Message);
+            }
+            finally
+            {
+                _photoEditBusy = false;
+            }
+        }
+
+        private static byte[] RotatePixels(byte[] src, int sw, int sh, int rotation, ref int w, ref int h)
+        {
+            if (rotation == 180)
+            {
+                byte[] dst = new byte[src.Length];
+                int stride = sw * 4;
+                for (int y = 0; y < sh; y++)
+                {
+                    for (int x = 0; x < sw; x++)
+                    {
+                        int s = y * stride + x * 4;
+                        int d = (sh - 1 - y) * stride + (sw - 1 - x) * 4;
+                        dst[d] = src[s];
+                        dst[d + 1] = src[s + 1];
+                        dst[d + 2] = src[s + 2];
+                        dst[d + 3] = src[s + 3];
+                    }
+                }
+                return dst;
+            }
+            int nw = sh, nh = sw;
+            byte[] dst2 = new byte[src.Length];
+            for (int y = 0; y < nh; y++)
+            {
+                for (int x = 0; x < nw; x++)
+                {
+                    int s, d;
+                    if (rotation == 90) // clockwise: new(x,y) = old(sw-1-y, x)
+                    {
+                        s = x * sw * 4 + (sw - 1 - y) * 4;
+                        d = y * nw * 4 + x * 4;
+                    }
+                    else // 270 (90 CCW): new(x,y) = old(y, sh-1-x)
+                    {
+                        s = (sh - 1 - x) * sw * 4 + y * 4;
+                        d = y * nw * 4 + x * 4;
+                    }
+                    dst2[d] = src[s];
+                    dst2[d + 1] = src[s + 1];
+                    dst2[d + 2] = src[s + 2];
+                    dst2[d + 3] = src[s + 3];
+                }
+            }
+            w = nw;
+            h = nh;
+            return dst2;
+        }
+
+        private static void ApplyBcFilter(byte[] data, int w, int h, int brightness, double contrast, int filter)
+        {
+            int n = w * h;
+            for (int i = 0, p = 0; i < n; i++, p += 4)
+            {
+                byte r = data[p], g = data[p + 1], b = data[p + 2];
+                int nr = ApplyBc(r, brightness, contrast);
+                int ng = ApplyBc(g, brightness, contrast);
+                int nb = ApplyBc(b, brightness, contrast);
+                switch (filter)
+                {
+                    case 1: // grayscale (Rec.601)
+                        int lum = (nr * 299 + ng * 587 + nb * 114) / 1000;
+                        nr = lum; ng = lum; nb = lum;
+                        break;
+                    case 2: // sepia
+                        int sr = nr, sg = ng, sb2 = nb;
+                        nr = Math.Min(255, (int)(sr * 0.393 + sg * 0.769 + sb2 * 0.189));
+                        ng = Math.Min(255, (int)(sr * 0.349 + sg * 0.686 + sb2 * 0.131));
+                        nb = Math.Min(255, (int)(sr * 0.272 + sg * 0.534 + sb2 * 0.131));
+                        break;
+                    case 3: // cool
+                        nr = (int)(nr * 0.9);
+                        ng = (int)(ng * 0.96);
+                        nb = Math.Min(255, (int)(nb * 1.12));
+                        break;
+                }
+                data[p] = (byte)nr;
+                data[p + 1] = (byte)ng;
+                data[p + 2] = (byte)nb;
+                data[p + 3] = data[p + 3];
+            }
+        }
+
+        private static int ApplyBc(int v, int brightness, double contrast)
+        {
+            double t = (v - 128) * contrast + 128 + brightness;
+            return Math.Max(0, Math.Min(255, (int)t));
+        }
+
+        private void PhotoEditCancelBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ExitEditMode();
+        }
+
+        private void PhotoEditRotateBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditRotation = (_photoEditRotation + 90) % 360;
+            ApplyEditPreview();
+        }
+
+        private void PhotoEditFilterBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditFilter = (_photoEditFilter + 1) % 4;
+            SetEditFilterActive(_photoEditFilter != 0);
+            ApplyEditPreview();
+        }
+
+        private void SetEditFilterActive(bool active)
+        {
+            if (PhotoEditFilterIcon == null) return;
+            PhotoEditFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(active
+                ? Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)
+                : Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+        }
+
+        private void PhotoEditBrightDownBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditBrightness = Math.Max(-100, _photoEditBrightness - 10);
+            ApplyEditPreview();
+        }
+
+        private void PhotoEditBrightUpBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditBrightness = Math.Min(100, _photoEditBrightness + 10);
+            ApplyEditPreview();
+        }
+
+        private void PhotoEditContrastDownBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditContrast = Math.Max(0.3, _photoEditContrast - 0.1);
+            ApplyEditPreview();
+        }
+
+        private void PhotoEditContrastUpBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            _photoEditContrast = Math.Min(2.5, _photoEditContrast + 0.1);
+            ApplyEditPreview();
+        }
+
+        private void PhotoEditResetBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (_photoCropActive) return;
+            var file = _photoFile;
+            if (file == null) return;
+            _photoEditRotation = 0;
+            _photoEditFilter = 0;
+            _photoEditBrightness = 0;
+            _photoEditContrast = 1.0;
+            SetEditFilterActive(false);
+            ReloadEditSource(file);
+        }
+
+        private async void ReloadEditSource(StorageFile file)
+        {
+            try
+            {
+                using (var stream = await file.OpenReadAsync())
+                {
+                    var decoder = await Windows.Graphics.Imaging.BitmapDecoder.CreateAsync(stream);
+                    uint sw = decoder.PixelWidth, sh = decoder.PixelHeight;
+                    double scale = Math.Min(1.0, (double)MAX_EDIT_SIDE / Math.Max(sw, sh));
+                    int w = Math.Max(1, (int)Math.Round(sw * scale));
+                    int h = Math.Max(1, (int)Math.Round(sh * scale));
+                    var transform = new Windows.Graphics.Imaging.BitmapTransform
+                    {
+                        ScaledWidth = (uint)w,
+                        ScaledHeight = (uint)h,
+                        InterpolationMode = Windows.Graphics.Imaging.BitmapInterpolationMode.Fant
+                    };
+                    var data = await decoder.GetPixelDataAsync(
+                        Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                        Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied,
+                        transform,
+                        Windows.Graphics.Imaging.ExifOrientationMode.RespectExifOrientation,
+                        Windows.Graphics.Imaging.ColorManagementMode.DoNotColorManage);
+                    if (_photoFile != file) return;
+                    _photoEditSrc = data.DetachPixelData();
+                    _photoEditW = w;
+                    _photoEditH = h;
+                }
+                await ApplyEditPreview();
+            }
+            catch { }
+        }
+
+        private void PhotoEditCropBtn_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_photoEditMode) return;
+            if (_photoCropActive)
+            {
+                ApplyCropToSource();
+                return;
+            }
+            // Apply any pending rotation into the source so the crop box maps to it directly
+            if (_photoEditRotation != 0)
+            {
+                _photoEditSrc = RotatePixels(_photoEditSrc, _photoEditW, _photoEditH, _photoEditRotation, ref _photoEditW, ref _photoEditH);
+                _photoEditRotation = 0;
+            }
+            _photoCropActive = true;
+            _photoCropRect = new Windows.Foundation.Rect(
+                _photoEditW * 0.05, _photoEditH * 0.05,
+                _photoEditW * 0.9, _photoEditH * 0.9);
+            _photoCropDragMode = 0;
+            PhotoCropCanvas.Width = _photoEditW;
+            PhotoCropCanvas.Height = _photoEditH;
+            PhotoCropCanvas.Visibility = Visibility.Visible;
+            PhotoEditCropIcon.Text = L("EditCropDone");
+            PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            _photoPrevManipulationMode = PhotoScrollViewer.ManipulationMode;
+            PhotoScrollViewer.ManipulationMode = ManipulationModes.None;
+            if (_photoIsFit) FitPhotoView();
+            UpdatePhotoCropMapping();
+            UpdateCropOverlay();
+        }
+
+        private void ApplyCropToSource()
+        {
+            if (!_photoCropActive) return;
+            var r = _photoCropRect;
+            int x0 = Math.Max(0, (int)Math.Floor(r.X));
+            int y0 = Math.Max(0, (int)Math.Floor(r.Y));
+            int w = Math.Min(_photoEditW - x0, Math.Max(1, (int)Math.Floor(r.Width)));
+            int h = Math.Min(_photoEditH - y0, Math.Max(1, (int)Math.Floor(r.Height)));
+            byte[] dst = new byte[w * h * 4];
+            for (int y = 0; y < h; y++)
+            {
+                int s = (y0 + y) * _photoEditW * 4 + x0 * 4;
+                int d = y * w * 4;
+                Array.Copy(_photoEditSrc, s, dst, d, w * 4);
+            }
+            _photoEditSrc = dst;
+            _photoEditW = w;
+            _photoEditH = h;
+            _photoEditRotation = 0;
+            _photoEditFilter = 0;
+            _photoEditBrightness = 0;
+            _photoEditContrast = 1.0;
+            SetEditFilterActive(false);
+            _photoCropActive = false;
+            RestoreScrollManipulation();
+            PhotoCropCanvas.Visibility = Visibility.Collapsed;
+            PhotoEditCropIcon.Text = L("EditCrop");
+            PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+            ApplyEditPreview();
+        }
+
+        private void RestoreScrollManipulation()
+        {
+            try
+            {
+                if (_photoCropDragMode != 0)
+                {
+                    _photoCropDragMode = 0;
+                    try { PhotoScrollViewer.ReleasePointerCaptures(); } catch { }
+                }
+                PhotoScrollViewer.ManipulationMode = _photoPrevManipulationMode;
+            }
+            catch { }
+        }
+
+        private void CancelCrop()
+        {
+            _photoCropActive = false;
+            RestoreScrollManipulation();
+            PhotoCropCanvas.Visibility = Visibility.Collapsed;
+            PhotoEditCropIcon.Text = L("EditCrop");
+            PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
+                Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
+        }
+
+        private void UpdateCropOverlay()
+        {
+            var sv = PhotoScrollViewer;
+            double z = sv.ZoomFactor;
+            double ox = sv.HorizontalOffset;
+            double oy = sv.VerticalOffset;
+            Func<double, double> X = v => (v * _photoFitScale + _photoLbPadX) * z - ox;
+            Func<double, double> Y = v => (v * _photoFitScale + _photoLbPadY) * z - oy;
+            var r = _photoCropRect;
+            double w = _photoEditW * _photoFitScale * z, h = _photoEditH * _photoFitScale * z;
+            Canvas.SetLeft(CropShadeTop, X(0)); Canvas.SetTop(CropShadeTop, Y(0));
+            CropShadeTop.Width = w; CropShadeTop.Height = Math.Max(0, Y(r.Y));
+            Canvas.SetLeft(CropShadeBottom, X(0)); Canvas.SetTop(CropShadeBottom, Y(r.Y + r.Height));
+            CropShadeBottom.Width = w; CropShadeBottom.Height = Math.Max(0, h - Y(r.Y + r.Height));
+            Canvas.SetLeft(CropShadeLeft, X(0)); Canvas.SetTop(CropShadeLeft, Y(r.Y));
+            CropShadeLeft.Width = Math.Max(0, X(r.X)); CropShadeLeft.Height = Y(r.Height);
+            Canvas.SetLeft(CropShadeRight, X(r.X + r.Width)); Canvas.SetTop(CropShadeRight, Y(r.Y));
+            CropShadeRight.Width = Math.Max(0, w - X(r.X + r.Width)); CropShadeRight.Height = Y(r.Height);
+
+            Canvas.SetLeft(CropBox, X(r.X)); Canvas.SetTop(CropBox, Y(r.Y));
+            CropBox.Width = X(r.Width); CropBox.Height = Y(r.Height);
+
+            Canvas.SetLeft(CropHandleTL, X(r.X) - 6); Canvas.SetTop(CropHandleTL, Y(r.Y) - 6);
+            Canvas.SetLeft(CropHandleTR, X(r.X + r.Width) - 6); Canvas.SetTop(CropHandleTR, Y(r.Y) - 6);
+            Canvas.SetLeft(CropHandleBL, X(r.X) - 6); Canvas.SetTop(CropHandleBL, Y(r.Y + r.Height) - 6);
+            Canvas.SetLeft(CropHandleBR, X(r.X + r.Width) - 6); Canvas.SetTop(CropHandleBR, Y(r.Y + r.Height) - 6);
+        }
+
+        private void UpdateCropDrag(Point contentPt, bool moving)
+        {
+            var r = _photoCropRect;
+            double minSize = 20;
+            if (_photoCropDragMode == 1) // move
+            {
+                double dx = contentPt.X - _photoDragLast.X;
+                double dy = contentPt.Y - _photoDragLast.Y;
+                _photoDragLast = contentPt;
+                double nx = Math.Max(0, Math.Min(_photoEditW - r.Width, r.X + dx));
+                double ny = Math.Max(0, Math.Min(_photoEditH - r.Height, r.Y + dy));
+                _photoCropRect = new Windows.Foundation.Rect(nx, ny, r.Width, r.Height);
+            }
+            else if (_photoCropDragMode == 2) // TL
+            {
+                double x = Math.Max(0, Math.Min(r.X + r.Width - minSize, contentPt.X));
+                double y = Math.Max(0, Math.Min(r.Y + r.Height - minSize, contentPt.Y));
+                _photoCropRect = new Windows.Foundation.Rect(x, y, r.X + r.Width - x, r.Y + r.Height - y);
+            }
+            else if (_photoCropDragMode == 3) // TR
+            {
+                double x = Math.Min(_photoEditW, Math.Max(r.X + minSize, contentPt.X));
+                double y = Math.Max(0, Math.Min(r.Y + r.Height - minSize, contentPt.Y));
+                _photoCropRect = new Windows.Foundation.Rect(r.X, y, x - r.X, r.Y + r.Height - y);
+            }
+            else if (_photoCropDragMode == 4) // BL
+            {
+                double x = Math.Max(0, Math.Min(r.X + r.Width - minSize, contentPt.X));
+                double y = Math.Min(_photoEditH, Math.Max(r.Y + minSize, contentPt.Y));
+                _photoCropRect = new Windows.Foundation.Rect(x, r.Y, r.X + r.Width - x, y - r.Y);
+            }
+            else if (_photoCropDragMode == 5) // BR
+            {
+                double x = Math.Min(_photoEditW, Math.Max(r.X + minSize, contentPt.X));
+                double y = Math.Min(_photoEditH, Math.Max(r.Y + minSize, contentPt.Y));
+                _photoCropRect = new Windows.Foundation.Rect(r.X, r.Y, x - r.X, y - r.Y);
+            }
+            else if (_photoCropDragMode == 6) // draw a brand new selection
+            {
+                double x0 = Math.Max(0, Math.Min(_photoEditW, Math.Min(_photoDragStart.X, contentPt.X)));
+                double y0 = Math.Max(0, Math.Min(_photoEditH, Math.Min(_photoDragStart.Y, contentPt.Y)));
+                double x1 = Math.Max(0, Math.Min(_photoEditW, Math.Max(_photoDragStart.X, contentPt.X)));
+                double y1 = Math.Max(0, Math.Min(_photoEditH, Math.Max(_photoDragStart.Y, contentPt.Y)));
+                if (x1 - x0 < 4 || y1 - y0 < 4) return;
+                _photoCropRect = new Windows.Foundation.Rect(x0, y0, x1 - x0, y1 - y0);
+            }
+            if (moving) UpdateCropOverlay();
+        }
+
+        private void PhotoEditSaveBtn_Click(object sender, RoutedEventArgs e)
+        {
+            SaveEditedPhoto();
+        }
+
+        private async void SaveEditedPhoto()
+        {
+            if (!_photoEditMode) return;
+            try
+            {
+                byte[] src = _photoEditSrc;
+                int w = _photoEditW, h = _photoEditH;
+                if (_photoEditRotation != 0)
+                    src = RotatePixels(src, w, h, _photoEditRotation, ref w, ref h);
+                byte[] outBytes = (byte[])src.Clone();
+                await Task.Run(() => ApplyBcFilter(outBytes, w, h, _photoEditBrightness, _photoEditContrast, _photoEditFilter));
+
+                var picker = new FileSavePicker();
+                picker.SuggestedStartLocation = PickerLocationId.PicturesLibrary;
+                picker.FileTypeChoices.Add("JPEG", new List<string> { ".jpg" });
+                string baseName = System.IO.Path.GetFileNameWithoutExtension(_photoFile.Name);
+                picker.SuggestedFileName = string.IsNullOrEmpty(baseName) ? "edited" : baseName + "_edited.jpg";
+                var target = await picker.PickSaveFileAsync();
+                if (target == null) return;
+
+                using (var fs = await target.OpenAsync(FileAccessMode.ReadWrite))
+                {
+                    var encoder = await Windows.Graphics.Imaging.BitmapEncoder.CreateAsync(
+                        Windows.Graphics.Imaging.BitmapEncoder.JpegEncoderId, fs);
+                    encoder.SetPixelData(Windows.Graphics.Imaging.BitmapPixelFormat.Bgra8,
+                        Windows.Graphics.Imaging.BitmapAlphaMode.Premultiplied,
+                        (uint)w, (uint)h, 96, 96, outBytes);
+                    await encoder.FlushAsync();
+                }
+                ShowOverlay(L("EditSaved"));
+                HideOverlayDelayed();
+                ExitEditMode();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] SaveEditedPhoto failed: {0}", ex.Message);
+                ShowOverlay(L("EditSaveFailed") + " " + ex.Message);
+                HideOverlayDelayed();
             }
         }
 
@@ -5849,15 +6995,32 @@ namespace HyperMedia
                 switch (e.Key)
                 {
                     case VirtualKey.Left:
+                        StopSlideshow();
                         GoToPrevPhoto();
                         break;
                     case VirtualKey.Right:
+                        StopSlideshow();
                         GoToNextPhoto();
                         break;
                     case VirtualKey.Escape:
-                        ClosePhotoViewer();
-                        WelcomeScreen.Visibility = Visibility.Visible;
-                        FileNameText.Text = "";
+                        if (_photoEditMode)
+                        {
+                            ExitEditMode();
+                        }
+                        else if (PhotoInfoOverlay.Visibility == Visibility.Visible)
+                        {
+                            PhotoInfoOverlay.Visibility = Visibility.Collapsed;
+                        }
+                        else if (_photoChromeHidden)
+                        {
+                            TogglePhotoChrome();
+                        }
+                        else
+                        {
+                            ClosePhotoViewer();
+                            WelcomeScreen.Visibility = Visibility.Visible;
+                            FileNameText.Text = "";
+                        }
                         break;
                     default:
                         handled = false;
