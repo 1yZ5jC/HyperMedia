@@ -6313,6 +6313,8 @@ namespace HyperMedia
                 _photoNaturalW = w;
                 _photoNaturalH = h;
                 UpdatePhotoFitZoom();
+                UpdatePhotoCropMapping();
+                if (_photoCropActive) UpdateCropOverlay();
                 if (_photoIsFit)
                 {
                     PhotoScrollViewer.ChangeView(null, null, _photoFitZoom, true);
@@ -6519,7 +6521,7 @@ namespace HyperMedia
             catch { }
         }
 
-        private void PhotoEditCropBtn_Click(object sender, RoutedEventArgs e)
+        private async void PhotoEditCropBtn_Click(object sender, RoutedEventArgs e)
         {
             if (!_photoEditMode) return;
             if (_photoCropActive)
@@ -6532,14 +6534,13 @@ namespace HyperMedia
             {
                 _photoEditSrc = RotatePixels(_photoEditSrc, _photoEditW, _photoEditH, _photoEditRotation, ref _photoEditW, ref _photoEditH);
                 _photoEditRotation = 0;
+                await ApplyEditPreview();
             }
             _photoCropActive = true;
             _photoCropRect = new Windows.Foundation.Rect(
                 _photoEditW * 0.05, _photoEditH * 0.05,
                 _photoEditW * 0.9, _photoEditH * 0.9);
             _photoCropDragMode = 0;
-            PhotoCropCanvas.Width = _photoEditW;
-            PhotoCropCanvas.Height = _photoEditH;
             PhotoCropCanvas.Visibility = Visibility.Visible;
             PhotoEditCropIcon.Text = L("EditCropDone");
             PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
@@ -6613,21 +6614,22 @@ namespace HyperMedia
             double z = sv.ZoomFactor;
             double ox = sv.HorizontalOffset;
             double oy = sv.VerticalOffset;
+            double s = _photoFitScale * z;
             Func<double, double> X = v => (v * _photoFitScale + _photoLbPadX) * z - ox;
             Func<double, double> Y = v => (v * _photoFitScale + _photoLbPadY) * z - oy;
             var r = _photoCropRect;
-            double w = _photoEditW * _photoFitScale * z, h = _photoEditH * _photoFitScale * z;
+            double w = _photoEditW * s, h = _photoEditH * s;
             Canvas.SetLeft(CropShadeTop, X(0)); Canvas.SetTop(CropShadeTop, Y(0));
-            CropShadeTop.Width = w; CropShadeTop.Height = Math.Max(0, Y(r.Y));
+            CropShadeTop.Width = w; CropShadeTop.Height = Math.Max(0, r.Y * s);
             Canvas.SetLeft(CropShadeBottom, X(0)); Canvas.SetTop(CropShadeBottom, Y(r.Y + r.Height));
-            CropShadeBottom.Width = w; CropShadeBottom.Height = Math.Max(0, h - Y(r.Y + r.Height));
+            CropShadeBottom.Width = w; CropShadeBottom.Height = Math.Max(0, h - (r.Y + r.Height) * s);
             Canvas.SetLeft(CropShadeLeft, X(0)); Canvas.SetTop(CropShadeLeft, Y(r.Y));
-            CropShadeLeft.Width = Math.Max(0, X(r.X)); CropShadeLeft.Height = Y(r.Height);
+            CropShadeLeft.Width = Math.Max(0, r.X * s); CropShadeLeft.Height = r.Height * s;
             Canvas.SetLeft(CropShadeRight, X(r.X + r.Width)); Canvas.SetTop(CropShadeRight, Y(r.Y));
-            CropShadeRight.Width = Math.Max(0, w - X(r.X + r.Width)); CropShadeRight.Height = Y(r.Height);
+            CropShadeRight.Width = Math.Max(0, w - (r.X + r.Width) * s); CropShadeRight.Height = r.Height * s;
 
             Canvas.SetLeft(CropBox, X(r.X)); Canvas.SetTop(CropBox, Y(r.Y));
-            CropBox.Width = X(r.Width); CropBox.Height = Y(r.Height);
+            CropBox.Width = r.Width * s; CropBox.Height = r.Height * s;
 
             Canvas.SetLeft(CropHandleTL, X(r.X) - 6); Canvas.SetTop(CropHandleTL, Y(r.Y) - 6);
             Canvas.SetLeft(CropHandleTR, X(r.X + r.Width) - 6); Canvas.SetTop(CropHandleTR, Y(r.Y) - 6);
