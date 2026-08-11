@@ -462,9 +462,17 @@
                                         <TextBlock Text="网易云" FontSize="12" Foreground="#88FFFFFF"/>
                                     </Button>
                                     <Button x:Name="LyricSrcQqBtn" Click="LyricSourceButton_Click"
-                                            Tag="qq" FontSize="12" Padding="12,7" Margin="0,0,0,0"
+                                            Tag="qq" FontSize="12" Padding="12,7" Margin="0,0,6,0"
                                             Background="Transparent" Foreground="#88FFFFFF" BorderThickness="0">
                                         <TextBlock Text="QQ" FontSize="12" Foreground="#88FFFFFF"/>
+                                    </Button>
+                                    <Button x:Name="LyricPickBtn" Click="LyricPickBtn_Click"
+                                            Tag="pick" FontSize="12" Padding="14,7" Margin="0,0,0,0"
+                                            Style="{StaticResource ZunePrimaryStyle}">
+                                        <ToolTipService.ToolTip>
+                                            <ToolTip Content="选择歌词版本（原版 / Live / 器乐版等）"/>
+                                        </ToolTipService.ToolTip>
+                                        <TextBlock Text="选择歌词" FontSize="12" Foreground="#FFFFFFFF"/>
                                     </Button>
                                 </StackPanel>
                             </Grid>
@@ -728,6 +736,37 @@
                             <TextBlock Text="保存自定义" FontFamily="Segoe UI" FontSize="12" Foreground="#99FFFFFF"/>
                         </Button>
                         <Button Click="EqualizerOverlay_Close" Style="{StaticResource ZuneActionStyle}">
+                            <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold" FontSize="12"/>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- LYRIC PICKER OVERLAY -->
+            <Border x:Name="LyricPickerOverlay" Visibility="Collapsed"
+                    HorizontalAlignment="Right" VerticalAlignment="Center"
+                    Width="440" Background="#FF0D0D16" BorderThickness="1,0,0,0">
+                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                <Grid Margin="20,16">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock x:Name="LyricPickTitle" Text="选择歌词" FontFamily="Segoe UI" FontSize="14"
+                               Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,6"/>
+                    <TextBlock x:Name="LyricPickSubtitle" Text="" Grid.Row="1" FontFamily="Segoe UI" FontSize="12"
+                               Foreground="#88FFFFFF" TextWrapping="Wrap" Margin="0,0,0,12"/>
+                    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="420">
+                        <StackPanel x:Name="LyricPickList"/>
+                    </ScrollViewer>
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                        <Button x:Name="LyricPickRescanBtn" Click="LyricPickRescanBtn_Click"
+                                Style="{StaticResource ZunePrimaryStyle}" Margin="0,0,8,0">
+                            <TextBlock Text="重新搜索" FontFamily="Segoe UI" FontSize="12" Foreground="#99FFFFFF"/>
+                        </Button>
+                        <Button Click="LyricPickerOverlay_Close" Style="{StaticResource ZuneActionStyle}">
                             <TextBlock Text="关闭" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold" FontSize="12"/>
                         </Button>
                     </StackPanel>
@@ -1205,6 +1244,16 @@
                                 </ToolTipService.ToolTip>
                                 <TextBlock x:Name="LyricsToggleText" Text="歌词"
                                            FontFamily="Segoe UI" FontSize="14" Foreground="#FFFFFFFF"/>
+                            </Button>
+
+                            <Button x:Name="LyricPickBarBtn"
+                                    Click="LyricPickBarBtn_Click"
+                                    Padding="16,10" Margin="0,0,4,0"
+                                    Style="{StaticResource ZunePrimaryStyle}">
+                                <ToolTipService.ToolTip>
+                                    <ToolTip Content="选择歌词版本（原版 / Live / 器乐版等）"/>
+                                </ToolTipService.ToolTip>
+                                <TextBlock Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="18" Foreground="#FFFFFFFF"/>
                             </Button>
 
                             <Button x:Name="VisStyleBtn"

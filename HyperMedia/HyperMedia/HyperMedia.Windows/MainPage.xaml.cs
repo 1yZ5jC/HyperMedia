@@ -139,11 +139,16 @@ namespace HyperMedia
         private StorageFile _currentOriginalFile = null;
         private string _musicArtist = "";
         private string _musicTitle = "";
+        private string _musicAlbum = "";
 
         // Lyric sync
         private List<LyricLine> _lyricLines = new List<LyricLine>();
         private int _currentLyricIndex = -1;
         private DispatcherTimer _lyricTimer;
+
+        // Online lyric candidates (multi-source picker)
+        private List<LyricCandidate> _lyricCandidates = new List<LyricCandidate>();
+        private const string KEY_LYRIC_CHOICE = "Settings_LyricChoice_";
 
         // Visualizer (music animation)
         private SpectrumEngine _spectrumEngine;
@@ -2487,6 +2492,7 @@ namespace HyperMedia
 
                     _musicArtist = artist;
                     _musicTitle = nowPlaying;
+                    _musicAlbum = album;
 
                     Debug.WriteLine("[HyperMedia] Music metadata: artist={0}, nowPlaying={1}, album={2}", artist, nowPlaying, album);
 
@@ -2545,6 +2551,7 @@ namespace HyperMedia
                 Visibility mv = isMusic ? Visibility.Visible : Visibility.Collapsed;
                 if (LyricsToggleBtn != null) LyricsToggleBtn.Visibility = mv;
                 if (VisStyleBtn != null) VisStyleBtn.Visibility = mv;
+                if (LyricPickBarBtn != null) LyricPickBarBtn.Visibility = mv;
             }
             catch (Exception ex) { LogUnhandled(ex); }
         }
@@ -2627,6 +2634,7 @@ namespace HyperMedia
                     return;
                 }
 
+                _lyricCandidates.Clear();
                 string baseName = System.IO.Path.GetFileNameWithoutExtension(_currentOriginalFile.Name);
                 Debug.WriteLine("[HyperMedia] LoadLyrics: file='{0}' artist='{1}' title='{2}'",
                     _currentOriginalFile.Name, _musicArtist, _musicTitle);
@@ -2701,35 +2709,90 @@ namespace HyperMedia
                     if (string.IsNullOrEmpty(artist)) artist = parsed.Item1;
                 }
                 if (string.IsNullOrEmpty(title)) title = System.IO.Path.GetFileNameWithoutExtension(_currentOriginalFile != null ? _currentOriginalFile.Name : "");
-                Debug.WriteLine("[HyperMedia] OnlineLyrics: source='{0}' artist='{1}' title='{2}' file='{3}'",
-                    SettingsPage.GetLyricSource(), artist, title, _currentOriginalFile != null ? _currentOriginalFile.Name : "");
+                if (string.IsNullOrEmpty(artist) && title != null &&
+                    (title.Contains(" - ") || title.Contains(" -") || title.Contains("- ")))
+                {
+                    var split = ParseArtistTitleFromFileName(title + ".mp3");
+                    if (!string.IsNullOrEmpty(split.Item1) && !string.IsNullOrEmpty(split.Item2) &&
+                        split.Item2 != title && !string.IsNullOrEmpty(split.Item1))
+                    {
+                        artist = split.Item1;
+                        title = split.Item2;
+                        Debug.WriteLine("[HyperMedia] OnlineLyrics: split combined title -> artist='{0}' title='{1}'", artist, title);
+                    }
+                }
+                string album = _musicAlbum;
+                if (string.IsNullOrEmpty(album) && _vlcMedia != null)
+                {
+                    try { album = _vlcMedia.meta(MediaMeta.Album) ?? ""; }
+                    catch { }
+                }
+                Debug.WriteLine("[HyperMedia] OnlineLyrics: source='{0}' artist='{1}' title='{2}' album='{3}' file='{4}'",
+                    SettingsPage.GetLyricSource(), artist, title, album, _currentOriginalFile != null ? _currentOriginalFile.Name : "");
 
                 string source = SettingsPage.GetLyricSource();
-                if (source == "netease")
+                var merged = new List<LyricCandidate>();
+                if (source == "netease" || source == "auto")
                 {
-                    bool shown = await TryQueryAndShow(QueryNeteaseLyric, artist, title, "Netease");
-                    Debug.WriteLine("[HyperMedia] OnlineLyrics[netease] shown={0}", shown);
-                    if (!shown) ShowNoLyrics();
-                    return;
+                    var ne = await CollectNeteaseCandidates(artist, title, album);
+                    if (ne != null) merged.AddRange(ne);
                 }
-                if (source == "qq")
+                if (source == "qq" || source == "auto")
                 {
-                    bool shown = await TryQueryAndShow(QueryQqLyric, artist, title, "QQ");
-                    Debug.WriteLine("[HyperMedia] OnlineLyrics[qq] shown={0}", shown);
-                    if (!shown) ShowNoLyrics();
-                    return;
+                    var qq = await CollectQqCandidates(artist, title, album);
+                    if (qq != null) merged.AddRange(qq);
                 }
 
-                // Auto: Netease first, QQ as fallback
-                bool shownAuto = await TryQueryAndShow(QueryNeteaseLyric, artist, title, "Netease");
-                Debug.WriteLine("[HyperMedia] OnlineLyrics[auto] Netease shown={0}", shownAuto);
-                if (!shownAuto)
-                    shownAuto = await TryQueryAndShow(QueryQqLyric, artist, title, "QQ");
-                Debug.WriteLine("[HyperMedia] OnlineLyrics[auto] after QQ fallback shown={0}", shownAuto);
+                var usable = merged.Where(c => !string.IsNullOrEmpty(c.LyricText)).ToList();
+                if (usable.Count > 0)
+                {
+                    usable.Sort((a, b) =>
+                    {
+                        if (a.StrictMatch != b.StrictMatch) return b.StrictMatch.CompareTo(a.StrictMatch);
+                        if (Math.Abs(a.Score - b.Score) > 0.001) return b.Score.CompareTo(a.Score);
+                        int srcA = a.Source == "Netease" ? 0 : 1;
+                        int srcB = b.Source == "Netease" ? 0 : 1;
+                        if (srcA != srcB) return srcA.CompareTo(srcB);
+                        return a.Order.CompareTo(b.Order);
+                    });
+
+                    string remembered = null;
+                    if (_currentOriginalFile != null)
+                    {
+                        try
+                        {
+                            remembered = ApplicationData.Current.LocalSettings.Values[KEY_LYRIC_CHOICE + _currentOriginalFile.Name] as string;
+                        }
+                        catch { }
+                    }
+
+                    if (usable.Count == 1)
+                    {
+                        Debug.WriteLine("[HyperMedia] OnlineLyrics: single usable candidate -> auto");
+                        _lyricCandidates = usable;
+                        DisplayLyrics(usable[0].LyricText);
+                        return;
+                    }
+
+                    var chosen = usable.FirstOrDefault(c =>
+                        remembered != null && c.Source + "|" + c.SongId == remembered);
+                    if (chosen != null)
+                    {
+                        Debug.WriteLine("[HyperMedia] OnlineLyrics: restoring remembered choice {0}", remembered);
+                        _lyricCandidates = usable;
+                        DisplayLyrics(chosen.LyricText);
+                        return;
+                    }
+
+                    _lyricCandidates = usable;
+                    ShowLyricCandidatePicker();
+                    return;
+                }
+                Debug.WriteLine("[HyperMedia] No online lyrics found for '{0}' by '{1}'", title, artist);
 
                 // No lyrics and no usable track info at all: ask Shazam to
                 // identify the track from the audio, then retry lyrics.
-                if (!shownAuto && string.IsNullOrEmpty(artist) &&
+                if (string.IsNullOrEmpty(artist) &&
                     (string.IsNullOrEmpty(title) || LooksLikeJunkFileName(title)))
                 {
                     Debug.WriteLine("[HyperMedia] OnlineLyrics: trying Shazam recognition");
@@ -2737,9 +2800,24 @@ namespace HyperMedia
                     if (track != null && !string.IsNullOrEmpty(track.Title))
                     {
                         Debug.WriteLine("[HyperMedia] Shazam identified: {0} - {1}", track.Subtitle, track.Title);
-                        shownAuto = await TryQueryAndShow(QueryNeteaseLyric, track.Subtitle ?? "", track.Title, "Netease(Shazam)");
-                        if (!shownAuto)
-                            shownAuto = await TryQueryAndShow(QueryQqLyric, track.Subtitle ?? "", track.Title, "QQ(Shazam)");
+                        var ne2 = await CollectNeteaseCandidates(track.Subtitle ?? "", track.Title, album);
+                        var qq2 = await CollectQqCandidates(track.Subtitle ?? "", track.Title, album);
+                        var u2 = new List<LyricCandidate>();
+                        if (ne2 != null) u2.AddRange(ne2);
+                        if (qq2 != null) u2.AddRange(qq2);
+                        u2 = u2.Where(c => !string.IsNullOrEmpty(c.LyricText)).ToList();
+                        if (u2.Count == 1)
+                        {
+                            _lyricCandidates = u2;
+                            DisplayLyrics(u2[0].LyricText);
+                            return;
+                        }
+                        if (u2.Count > 1)
+                        {
+                            _lyricCandidates = u2;
+                            ShowLyricCandidatePicker();
+                            return;
+                        }
                     }
                     else
                     {
@@ -2747,17 +2825,159 @@ namespace HyperMedia
                     }
                 }
 
-                if (!shownAuto)
-                {
-                    Debug.WriteLine("[HyperMedia] No online lyrics found for '{0}' by '{1}'", title, artist);
-                    ShowNoLyrics();
-                }
+                ShowNoLyrics();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[HyperMedia] TryLoadOnlineLyrics FAILED: {0}", ex.Message);
                 ShowNoLyrics();
             }
+        }
+
+        private void UpdateLyricPickButton()
+        {
+            try
+            {
+                if (LyricPickBtn == null) return;
+                LyricPickBtn.Visibility = Visibility.Visible;
+            }
+            catch { }
+        }
+
+        private void ShowLyricCandidatePicker()
+        {
+            try
+            {
+                if (LyricPickList == null) return;
+
+                LyricPickList.Children.Clear();
+                LyricPickSubtitle.Text = _currentOriginalFile != null
+                    ? _currentOriginalFile.Name
+                    : L("LyricPickSubtitleEmpty");
+
+                var usable = _lyricCandidates.Where(c => !string.IsNullOrEmpty(c.LyricText)).ToList();
+                if (usable.Count == 0)
+                {
+                    var empty = new TextBlock
+                    {
+                        Text = L("LyricPickEmpty"),
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 13,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF)),
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 4, 0, 4)
+                    };
+                    LyricPickList.Children.Add(empty);
+                    LyricPickerOverlay.Visibility = Visibility.Visible;
+                    return;
+                }
+
+                foreach (var c in usable)
+                {
+                    string srcLabel = c.Source == "Netease" ? L("LyricSourceShortNetease") : L("LyricSourceShortQq");
+                    var badge = new TextBlock
+                    {
+                        Text = "[" + srcLabel + "]",
+                        FontFamily = new FontFamily("Segoe UI Semibold"),
+                        FontSize = 12,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB)),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        Margin = new Thickness(0, 0, 10, 0)
+                    };
+
+                    string artistPart = string.IsNullOrEmpty(c.Artist) ? "" : " - " + c.Artist;
+                    string albumPart = string.IsNullOrEmpty(c.Album) ? "" : " (" + c.Album + ")";
+                    var titleTb = new TextBlock
+                    {
+                        Text = c.Title + albumPart + artistPart,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 14,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)),
+                        TextTrimming = TextTrimming.CharacterEllipsis
+                    };
+
+                    string marks = "";
+                    if (c.StrictMatch) marks += L("LyricPickRecommended");
+                    if (c.Format == LyricFormat.Krc || c.Format == LyricFormat.Qrc)
+                        marks += (marks.Length > 0 ? " · " : "") + L("LyricPickWordLevel");
+                    var markTb = new TextBlock
+                    {
+                        Text = marks,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 11,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xE0, 0x40, 0xFB)),
+                        Margin = new Thickness(0, 2, 0, 0)
+                    };
+
+                    var textCol = new StackPanel { Orientation = Windows.UI.Xaml.Controls.Orientation.Vertical };
+                    textCol.Children.Add(titleTb);
+                    if (marks.Length > 0) textCol.Children.Add(markTb);
+
+                    var row = new Grid { Margin = new Thickness(0, 0, 0, 8) };
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+                    row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+                    Grid.SetColumn(badge, 0);
+                    Grid.SetColumn(textCol, 1);
+                    row.Children.Add(badge);
+                    row.Children.Add(textCol);
+
+                    string choice = c.Source + "|" + c.SongId;
+                    string lyricText = c.LyricText;
+                    var item = new Button
+                    {
+                        Content = row,
+                        Tag = c,
+                        Background = new SolidColorBrush(Color.FromArgb(0x10, 0xFF, 0xFF, 0xFF)),
+                        BorderThickness = new Thickness(0),
+                        HorizontalAlignment = HorizontalAlignment.Stretch,
+                        Padding = new Thickness(10, 8, 10, 8),
+                        Margin = new Thickness(0, 0, 0, 6)
+                    };
+                    item.Tapped += async (s, ev) =>
+                    {
+                        try
+                        {
+                            if (_currentOriginalFile != null)
+                                ApplicationData.Current.LocalSettings.Values[KEY_LYRIC_CHOICE + _currentOriginalFile.Name] = choice;
+                            LyricPickerOverlay.Visibility = Visibility.Collapsed;
+                            DisplayLyrics(lyricText);
+                            ShowOverlay(L("LyricPickApplied"));
+                            await Task.Delay(400);
+                        }
+                        catch (Exception ex) { LogUnhandled(ex); }
+                    };
+                    LyricPickList.Children.Add(item);
+                }
+
+                LyricPickerOverlay.Visibility = Visibility.Visible;
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void LyricPickerOverlay_Close(object sender, RoutedEventArgs e)
+        {
+            LyricPickerOverlay.Visibility = Visibility.Collapsed;
+        }
+
+        private async void LyricPickRescanBtn_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                LyricPickerOverlay.Visibility = Visibility.Collapsed;
+                await Task.Delay(100);
+                LoadLyrics();
+            }
+            catch (Exception ex) { LogUnhandled(ex); }
+        }
+
+        private void LyricPickBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ShowLyricCandidatePicker();
+        }
+
+        private void LyricPickBarBtn_Click(object sender, RoutedEventArgs e)
+        {
+            ShowLyricCandidatePicker();
         }
 
         private async System.Threading.Tasks.Task<ShazamRecognizer.TrackResult> TryRecognizeByAudio()
@@ -2796,14 +3016,275 @@ namespace HyperMedia
             return false;
         }
 
-        private async System.Threading.Tasks.Task<bool> TryQueryAndShow(Func<string, string, System.Threading.Tasks.Task<string>> query,
-            string artist, string title, string sourceName)
+        private async System.Threading.Tasks.Task<string> QueryNeteaseLyric(string artist, string title)
         {
-            string lyric = await query(artist, title);
-            if (string.IsNullOrEmpty(lyric)) return false;
-            Debug.WriteLine("[HyperMedia] Online lyrics ({0}) loaded: {1} chars", sourceName, lyric.Length);
-            DisplayLyrics(lyric);
-            return true;
+            var list = await CollectNeteaseCandidates(artist, title);
+            if (list == null) return null;
+            var hit = list.FirstOrDefault(c => c.StrictMatch && !string.IsNullOrEmpty(c.LyricText));
+            return hit != null ? hit.LyricText : null;
+        }
+
+        private async System.Threading.Tasks.Task<List<LyricCandidate>> CollectNeteaseCandidates(string artist, string title, string album = null)
+        {
+            var result = new List<LyricCandidate>();
+            try
+            {
+                Windows.Data.Json.JsonArray songs = null;
+                foreach (string q in LyricMatcher.BuildSearchQueries(artist, title, album))
+                {
+                    string searchUrl = "https://music.163.com/api/search/get/web?s=" +
+                        Uri.EscapeDataString(q) + "&type=1&offset=0&limit=10";
+                    string searchJson = await HttpGetStringAsync(searchUrl);
+                    if (string.IsNullOrEmpty(searchJson)) continue;
+
+                    var search = Windows.Data.Json.JsonObject.Parse(searchJson);
+                    var resultObj = search.GetNamedObject("result", null);
+                    songs = resultObj != null ? resultObj.GetNamedArray("songs", null) : null;
+                    Debug.WriteLine("[HyperMedia] Netease search '{0}' hits: {1}", q, songs != null ? songs.Count : -1);
+                    if (songs != null && songs.Count > 0) break;
+                }
+                if (songs == null || songs.Count == 0) return result;
+
+                var seenIds = new HashSet<string>();
+                int order = 0;
+                for (uint i = 0; i < songs.Count; i++)
+                {
+                    var song = songs.GetObjectAt(i);
+                    if (!song.ContainsKey("id")) continue;
+                    string id = ((long)song.GetNamedNumber("id")).ToString();
+                    if (seenIds.Contains(id)) continue;
+                    seenIds.Add(id);
+
+                    string name = song.GetNamedString("name", "");
+                    string artistName = "";
+                    string albumName = "";
+                    var aliases = new List<string>();
+                    try
+                    {
+                        var arts = song.GetNamedArray("artists", null);
+                        if (arts != null && arts.Count > 0)
+                            artistName = arts.GetObjectAt(0).GetNamedString("name", "");
+                        var alb = song.GetNamedObject("album", null);
+                        if (alb != null && alb.ContainsKey("name"))
+                            albumName = alb.GetNamedString("name", "");
+                        var aliasArr = song.GetNamedArray("alias", null);
+                        if (aliasArr != null)
+                        {
+                            for (uint k = 0; k < aliasArr.Count; k++)
+                            {
+                                string al = aliasArr.GetStringAt(k);
+                                if (!string.IsNullOrEmpty(al)) aliases.Add(al);
+                            }
+                        }
+                    }
+                    catch { }
+
+                    bool strict = TitlesMatch(name, title) &&
+                        (string.IsNullOrEmpty(artist) || ArtistsMatch(song, artist));
+                    double score = LyricMatcher.ScoreTrack(title, artist, album, name, artistName, albumName, aliases);
+                    result.Add(new LyricCandidate
+                    {
+                        Source = "Netease",
+                        SongId = id,
+                        Title = name,
+                        Artist = artistName,
+                        Album = albumName,
+                        Aliases = aliases,
+                        StrictMatch = strict,
+                        Score = score,
+                        Order = order++,
+                        Format = LyricFormat.Lrc
+                    });
+                    Debug.WriteLine("[HyperMedia] Netease candidate: id={0} name='{1}' album='{2}' strict={3} score={4:F2}",
+                        id, name, albumName, strict, score);
+                }
+                if (result.Count == 0) return result;
+
+                // Probe lyrics broadly so the picker can offer every playable
+                // version (original, live, instrumental, cover). Strict candidates
+                // go first in array order (preserves the legacy first-match
+                // behavior), then relaxed candidates by score. Probes run in small
+                // parallel batches to keep latency low.
+                var probing = new List<LyricCandidate>();
+                foreach (var c in result)
+                    if (c.StrictMatch) probing.Add(c);
+                foreach (var c in result)
+                    if (!c.StrictMatch) probing.Add(c);
+
+                int usableCount = 0;
+                var pending = new List<LyricCandidate>(probing);
+                while (pending.Count > 0 && usableCount < 6)
+                {
+                    var batch = pending.Take(3).ToList();
+                    pending.RemoveRange(0, batch.Count);
+                    await Task.WhenAll(batch.Select(c => TryLoadNeteaseCandidateLyrics(c)));
+                    usableCount += batch.Count(c => !string.IsNullOrEmpty(c.LyricText));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] CollectNeteaseCandidates FAILED: {0}", ex.Message);
+            }
+            return result;
+        }
+
+        private async System.Threading.Tasks.Task TryLoadNeteaseCandidateLyrics(LyricCandidate c)
+        {
+            try
+            {
+                string lyricUrl = "https://music.163.com/api/song/lyric?id=" + c.SongId + "&lv=1&kv=1&tv=-1";
+                string lyricJson = await HttpGetStringAsync(lyricUrl);
+                if (string.IsNullOrEmpty(lyricJson)) return;
+
+                var lyricObj = Windows.Data.Json.JsonObject.Parse(lyricJson);
+                var lrc = lyricObj.GetNamedObject("lrc", null);
+                if (lrc == null || !lrc.ContainsKey("lyric")) return;
+                string lyric = lrc.GetNamedString("lyric", "");
+                if (string.IsNullOrEmpty(lyric)) return;
+                c.LyricText = lyric;
+                c.Format = LyricParsers.DetectFormat(lyric);
+                Debug.WriteLine("[HyperMedia] Netease id={0} lyric: {1} chars", c.SongId, lyric.Length);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] TryLoadNeteaseCandidateLyrics FAILED: {0}", ex.Message);
+            }
+        }
+
+        private async System.Threading.Tasks.Task<string> QueryQqLyric(string artist, string title)
+        {
+            var list = await CollectQqCandidates(artist, title);
+            if (list == null) return null;
+            var hit = list.FirstOrDefault(c => c.StrictMatch && !string.IsNullOrEmpty(c.LyricText));
+            return hit != null ? hit.LyricText : null;
+        }
+
+        private async System.Threading.Tasks.Task<List<LyricCandidate>> CollectQqCandidates(string artist, string title, string album = null)
+        {
+            var result = new List<LyricCandidate>();
+            try
+            {
+                Windows.Data.Json.JsonArray list = null;
+                foreach (string q in LyricMatcher.BuildSearchQueries(artist, title, album))
+                {
+                    string searchUrl = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=1&n=10&w=" +
+                        Uri.EscapeDataString(q) + "&format=json";
+                    string searchJson = await HttpGetStringAsync(searchUrl);
+                    if (string.IsNullOrEmpty(searchJson)) continue;
+
+                    var search = Windows.Data.Json.JsonObject.Parse(searchJson);
+                    var data = search.GetNamedObject("data", null);
+                    var song = data != null ? data.GetNamedObject("song", null) : null;
+                    list = song != null ? song.GetNamedArray("list", null) : null;
+                    Debug.WriteLine("[HyperMedia] QQ search '{0}' hits: {1}", q, list != null ? list.Count : -1);
+                    if (list != null && list.Count > 0) break;
+                }
+                if (list == null || list.Count == 0) return result;
+
+                var seenMids = new HashSet<string>();
+                int order = 0;
+                for (uint i = 0; i < list.Count; i++)
+                {
+                    var item = list.GetObjectAt(i);
+                    if (!item.ContainsKey("songmid")) continue;
+                    string mid = item.GetNamedString("songmid", "");
+                    if (seenMids.Contains(mid)) continue;
+                    seenMids.Add(mid);
+
+                    string name = item.GetNamedString("songname", "");
+                    string artistName = "";
+                    string albumName = "";
+                    var aliases = new List<string>();
+                    try
+                    {
+                        var singers = item.GetNamedArray("singer", null);
+                        if (singers != null && singers.Count > 0)
+                            artistName = singers.GetObjectAt(0).GetNamedString("name", "");
+                        if (item.ContainsKey("albumname"))
+                            albumName = item.GetNamedString("albumname", "");
+                        var alb = item.GetNamedObject("album", null);
+                        if (alb != null && alb.ContainsKey("name"))
+                            albumName = alb.GetNamedString("name", "");
+                    }
+                    catch { }
+
+                    bool strict = TitlesMatch(name, title) &&
+                        (string.IsNullOrEmpty(artist) || QqArtistsMatch(item, artist));
+                    double score = LyricMatcher.ScoreTrack(title, artist, album, name, artistName, albumName, aliases);
+                    result.Add(new LyricCandidate
+                    {
+                        Source = "QQ",
+                        SongId = mid,
+                        Title = name,
+                        Artist = artistName,
+                        Album = albumName,
+                        Aliases = aliases,
+                        StrictMatch = strict,
+                        Score = score,
+                        Order = order++,
+                        Format = LyricFormat.Lrc
+                    });
+                    Debug.WriteLine("[HyperMedia] QQ candidate: songmid={0} name='{1}' album='{2}' strict={3} score={4:F2}",
+                        mid, name, albumName, strict, score);
+                }
+                if (result.Count == 0) return result;
+
+                var probing = new List<LyricCandidate>();
+                foreach (var c in result)
+                    if (c.StrictMatch) probing.Add(c);
+                foreach (var c in result)
+                    if (!c.StrictMatch) probing.Add(c);
+
+                int usableCount = 0;
+                var pending = new List<LyricCandidate>(probing);
+                while (pending.Count > 0 && usableCount < 6)
+                {
+                    var batch = pending.Take(3).ToList();
+                    pending.RemoveRange(0, batch.Count);
+                    await Task.WhenAll(batch.Select(c => TryLoadQqCandidateLyrics(c)));
+                    usableCount += batch.Count(c => !string.IsNullOrEmpty(c.LyricText));
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] CollectQqCandidates FAILED: {0}", ex.Message);
+            }
+            return result;
+        }
+
+        private async System.Threading.Tasks.Task TryLoadQqCandidateLyrics(LyricCandidate c)
+        {
+            try
+            {
+                var headers = new Dictionary<string, string> { { "Referer", "https://y.qq.com" } };
+                string lyricUrl = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=" +
+                    c.SongId + "&format=json";
+                string lyricJson = await HttpGetStringAsync(lyricUrl, headers);
+                if (string.IsNullOrEmpty(lyricJson)) return;
+
+                var lyricObj = Windows.Data.Json.JsonObject.Parse(lyricJson);
+                if (!lyricObj.ContainsKey("lyric")) return;
+                string base64 = lyricObj.GetNamedString("lyric", "");
+                if (string.IsNullOrEmpty(base64)) return;
+
+                try
+                {
+                    byte[] bytes = Convert.FromBase64String(base64);
+                    string lyricText = System.Text.Encoding.UTF8.GetString(bytes, 0, bytes.Length);
+                    if (string.IsNullOrEmpty(lyricText)) return;
+                    c.LyricText = lyricText;
+                    c.Format = LyricParsers.DetectFormat(lyricText);
+                    Debug.WriteLine("[HyperMedia] QQ songmid={0} lyric decoded: {1} chars", c.SongId, lyricText.Length);
+                }
+                catch
+                {
+                    Debug.WriteLine("[HyperMedia] QQ songmid={0}: base64 decode failed", c.SongId);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] TryLoadQqCandidateLyrics FAILED: {0}", ex.Message);
+            }
         }
 
         // Parse common "Artist - Title" (or "Artist - Title (version)") file names.
@@ -2830,143 +3311,6 @@ namespace HyperMedia
                 }
             }
             return System.Tuple.Create(artist, title);
-        }
-
-        private async System.Threading.Tasks.Task<string> QueryNeteaseLyric(string artist, string title)
-        {
-            try
-            {
-                string query = string.IsNullOrEmpty(artist) ? title : artist + " " + title;
-                string searchUrl = "https://music.163.com/api/search/get/web?s=" +
-                    Uri.EscapeDataString(query) + "&type=1&offset=0&limit=10";
-                string searchJson = await HttpGetStringAsync(searchUrl);
-                if (string.IsNullOrEmpty(searchJson)) return null;
-
-                var search = Windows.Data.Json.JsonObject.Parse(searchJson);
-                var result = search.GetNamedObject("result", null);
-                var songs = result != null ? result.GetNamedArray("songs", null) : null;
-                Debug.WriteLine("[HyperMedia] Netease search hits: {0}", songs != null ? songs.Count : -1);
-                if (songs == null || songs.Count == 0) return null;
-
-                // Netease often lacks original copyrights (e.g. Jay Chou lives on QQ Music),
-                // so search hits may be covers. Require an exact title + artist match.
-                var candidateIds = new List<string>();
-                for (uint i = 0; i < songs.Count; i++)
-                {
-                    var song = songs.GetObjectAt(i);
-                    if (!song.ContainsKey("id")) continue;
-                    string name = song.GetNamedString("name", "");
-                    if (!TitlesMatch(name, title)) continue;
-                    if (!string.IsNullOrEmpty(artist) && !ArtistsMatch(song, artist)) continue;
-                    candidateIds.Add(((long)song.GetNamedNumber("id")).ToString());
-                    Debug.WriteLine("[HyperMedia] Netease matched: id={0} name='{1}'",
-                        candidateIds[candidateIds.Count - 1], name);
-                }
-                if (candidateIds.Count == 0)
-                {
-                    Debug.WriteLine("[HyperMedia] Netease: no title/artist match among {0} hits", songs.Count);
-                    return null;
-                }
-
-                // The same track often has multiple Netease entries and only some carry
-                // lyrics, so probe candidates in order until we find one with lyrics.
-                foreach (string songId in candidateIds)
-                {
-                    string lyricUrl = "https://music.163.com/api/song/lyric?id=" + songId + "&lv=1&kv=1&tv=-1";
-                    string lyricJson = await HttpGetStringAsync(lyricUrl);
-                    if (string.IsNullOrEmpty(lyricJson)) continue;
-
-                    var lyricObj = Windows.Data.Json.JsonObject.Parse(lyricJson);
-                    var lrc = lyricObj.GetNamedObject("lrc", null);
-                    if (lrc == null || !lrc.ContainsKey("lyric"))
-                    {
-                        Debug.WriteLine("[HyperMedia] Netease id={0}: no lrc.lyric field", songId);
-                        continue;
-                    }
-                    string lyric = lrc.GetNamedString("lyric", "");
-                    Debug.WriteLine("[HyperMedia] Netease id={0} lyric field: {1} chars", songId, lyric.Length);
-                    if (!string.IsNullOrEmpty(lyric)) return lyric;
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("[HyperMedia] QueryNeteaseLyric FAILED: {0}", ex.Message);
-                return null;
-            }
-        }
-
-        private async System.Threading.Tasks.Task<string> QueryQqLyric(string artist, string title)
-        {
-            try
-            {
-                string query = string.IsNullOrEmpty(artist) ? title : artist + " " + title;
-                string searchUrl = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp?p=1&n=10&w=" +
-                    Uri.EscapeDataString(query) + "&format=json";
-                string searchJson = await HttpGetStringAsync(searchUrl);
-                if (string.IsNullOrEmpty(searchJson)) return null;
-
-                var search = Windows.Data.Json.JsonObject.Parse(searchJson);
-                var data = search.GetNamedObject("data", null);
-                var song = data != null ? data.GetNamedObject("song", null) : null;
-                var list = song != null ? song.GetNamedArray("list", null) : null;
-                Debug.WriteLine("[HyperMedia] QQ search hits: {0}", list != null ? list.Count : -1);
-                if (list == null || list.Count == 0) return null;
-
-                var candidateMids = new List<string>();
-                for (uint i = 0; i < list.Count; i++)
-                {
-                    var item = list.GetObjectAt(i);
-                    if (!item.ContainsKey("songmid")) continue;
-                    string name = item.GetNamedString("songname", "");
-                    if (!TitlesMatch(name, title)) continue;
-                    if (!string.IsNullOrEmpty(artist) && !QqArtistsMatch(item, artist)) continue;
-                    candidateMids.Add(item.GetNamedString("songmid", ""));
-                    Debug.WriteLine("[HyperMedia] QQ matched: songmid={0} name='{1}'",
-                        candidateMids[candidateMids.Count - 1], name);
-                }
-                if (candidateMids.Count == 0)
-                {
-                    Debug.WriteLine("[HyperMedia] QQ: no title/artist match among {0} hits", list.Count);
-                    return null;
-                }
-
-                var headers = new Dictionary<string, string> { { "Referer", "https://y.qq.com" } };
-                foreach (string songmid in candidateMids)
-                {
-                    string lyricUrl = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=" +
-                        songmid + "&format=json";
-                    string lyricJson = await HttpGetStringAsync(lyricUrl, headers);
-                    if (string.IsNullOrEmpty(lyricJson)) continue;
-
-                    var lyricObj = Windows.Data.Json.JsonObject.Parse(lyricJson);
-                    if (!lyricObj.ContainsKey("lyric"))
-                    {
-                        Debug.WriteLine("[HyperMedia] QQ songmid={0}: no lyric field", songmid);
-                        continue;
-                    }
-                    string base64 = lyricObj.GetNamedString("lyric", "");
-                    if (string.IsNullOrEmpty(base64)) continue;
-
-                    try
-                    {
-                        byte[] bytes = Convert.FromBase64String(base64);
-                        string lyricText = System.Text.Encoding.UTF8.GetString(bytes, 0, bytes.Length);
-                        Debug.WriteLine("[HyperMedia] QQ songmid={0} lyric decoded: {1} chars", songmid, lyricText.Length);
-                        if (!string.IsNullOrEmpty(lyricText)) return lyricText;
-                    }
-                    catch
-                    {
-                        Debug.WriteLine("[HyperMedia] QQ songmid={0}: base64 decode failed", songmid);
-                    }
-                }
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("[HyperMedia] QueryQqLyric FAILED: {0}", ex.Message);
-                return null;
-            }
         }
 
         private async System.Threading.Tasks.Task<string> HttpGetStringAsync(string url, Dictionary<string, string> headers = null)
@@ -3181,6 +3525,7 @@ namespace HyperMedia
             Debug.WriteLine("[HyperMedia] Lyrics parsed: {0} lines with timestamps", _lyricLines.Count);
             if (_lyricLines.Count > 0 && _isPlaying)
                 _lyricTimer.Start();
+            UpdateLyricPickButton();
         }
 
         private void ShowNoLyrics()
@@ -3198,6 +3543,7 @@ namespace HyperMedia
                 Margin = new Thickness(0, 4, 0, 4)
             };
             LyricsLines.Children.Add(tb);
+            UpdateLyricPickButton();
         }
 
         private List<LyricLine> ParseLrc(string text)
@@ -3701,12 +4047,6 @@ namespace HyperMedia
                 if (!_isNetworkStream && !string.IsNullOrEmpty(_originalFileName))
                     RemoveResumePosition(_originalFileName);
 
-                if (_repeatMode == 2 || _playlist.Count > 1)
-                {
-                    _autoAdvancing = true;
-                    PlayNext();
-                    _autoAdvancing = false;
-                }
                 if (_repeatMode == 2 || _playlist.Count > 1)
                 {
                     _autoAdvancing = true;
@@ -5559,6 +5899,7 @@ namespace HyperMedia
                     break;
                 case VirtualKey.Escape:
                     if (_isFullscreen) ToggleFullscreen();
+                    else if (LyricPickerOverlay.Visibility == Visibility.Visible) LyricPickerOverlay.Visibility = Visibility.Collapsed;
                     else if (EqualizerOverlay.Visibility == Visibility.Visible) EqualizerOverlay.Visibility = Visibility.Collapsed;
                     else if (VideoFilterOverlay.Visibility == Visibility.Visible) VideoFilterOverlay.Visibility = Visibility.Collapsed;
                     else if (StatsOverlay.Visibility == Visibility.Visible) StatsOverlay.Visibility = Visibility.Collapsed;

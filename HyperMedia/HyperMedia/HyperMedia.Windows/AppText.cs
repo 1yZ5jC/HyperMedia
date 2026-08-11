@@ -333,6 +333,12 @@ namespace HyperMedia
             Add("LyricSourceAuto", "自动", "Auto");
             Add("LyricSourceNetease", "网易云音乐", "Netease Music");
             Add("LyricSourceQq", "QQ 音乐", "QQ Music");
+            Add("LyricPickTitle", "选择歌词版本", "Choose Lyrics");
+            Add("LyricPickRecommended", "推荐", "Recommended");
+            Add("LyricPickWordLevel", "逐字", "Word-level");
+            Add("LyricPickApplied", "已切换歌词", "Lyrics switched");
+            Add("LyricPickEmpty", "未找到可用歌词候选。可切换上方来源（自动/网易云/QQ）后点击“重新搜索”，或尝试在播放页重新加载。", "No usable lyrics found. Switch source (Auto/Netease/QQ) then tap Rescan, or reload in the player.");
+            Add("LyricPickSubtitleEmpty", "（未在播放曲目）", "(no track playing)");
             Add("DescDeinterlace", "处理隔行扫描视频（DVD、旧录像等）", "Deinterlace interlaced video (DVD, old recordings)");
             Add("DescLoudness", "自动平衡不同媒体的音量差异（压缩器）", "Normalize volume across media (compressor)");
             Add("DescEpisode", "打开单个文件时自动把同目录其他媒体加入播放列表", "Auto-queue other media in the same folder");

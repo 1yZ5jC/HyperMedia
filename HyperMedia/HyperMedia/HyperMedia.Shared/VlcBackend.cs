@@ -32,9 +32,45 @@ namespace HyperMedia
             }
             catch (Exception ex)
             {
-                InitError = ex.ToString();
+                InitError = BuildFailureReport(ex);
                 _instance = null;
-                System.Diagnostics.Debug.WriteLine("[HyperMedia] VlcBackend Init FAILED: " + InitError);
+                System.Diagnostics.Debug.WriteLine(InitError);
+            }
+        }
+
+        private static string BuildFailureReport(Exception ex)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("[HyperMedia] VlcBackend Init FAILED");
+            sb.AppendLine("  type   : " + ex.GetType().FullName);
+            sb.AppendLine("  hresult: 0x" + ex.HResult.ToString("X8") + "  (" + MapHr(ex.HResult) + ")");
+            sb.AppendLine("  message: " + ex.Message);
+            Exception inner = ex.InnerException;
+            while (inner != null)
+            {
+                sb.AppendLine("  inner  : " + inner.GetType().FullName +
+                    " 0x" + inner.HResult.ToString("X8") + "  " + inner.Message);
+                inner = inner.InnerException;
+            }
+            try { sb.AppendLine("  stack  : " + ex.StackTrace); } catch { }
+            return sb.ToString();
+        }
+
+        private static string MapHr(int hr)
+        {
+            uint u = unchecked((uint)hr);
+            switch (u)
+            {
+                case 0x8007007E: return "MODULE_NOT_FOUND - 缺失 DLL/API set（如 winrt-error-l1-1-1）";
+                case 0x80004002: return "E_NOINTERFACE - 工厂接口或激活者不匹配";
+                case 0x80040154: return "REGDB_E_CLASSNOTREG - 类未注册";
+                case 0x80070032: return "ERROR_NOT_SUPPORTED - 架构/平台不支持";
+                case 0x8007000D: return "ERROR_INVALID_DATA - 元数据/数据损坏";
+                case 0x80070005: return "E_ACCESSDENIED";
+                case 0x80070057: return "E_INVALIDARG";
+                case 0x80004005: return "E_FAIL";
+                case 0x9EFFFFF:  return "0x9EFFFFF - 激活链失败（见 inner）";
+                default: return "未知";
             }
         }
 

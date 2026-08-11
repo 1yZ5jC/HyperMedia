@@ -58,7 +58,7 @@
         <TextBlock x:Name="VisHintText" Grid.RowSpan="2"
                    Text="动态可视化 (模拟)" VerticalAlignment="Bottom"
                    HorizontalAlignment="Center" Margin="0,0,0,24"
-                   Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="15"
+                   Foreground="#66FFFFFF" FontFamily="Segoe UI" FontSize="19"
                    Visibility="Collapsed"/>
 
         <!-- Photo viewer surface -->
@@ -90,7 +90,7 @@
                         Foreground="White" Background="Transparent"
                         BorderThickness="0" MinWidth="48" MinHeight="48"/>
                 <Button x:Name="PhotoResetBtn" Click="PhotoResetBtn_Click"
-                        Content="↩" FontFamily="Segoe UI Symbol" FontSize="20"
+                        Content="↩" FontFamily="Segoe UI Symbol" FontSize="22"
                         Foreground="White" Background="Transparent"
                         BorderThickness="0" MinWidth="48" MinHeight="48"/>
             </StackPanel>
@@ -100,25 +100,25 @@
         <TextBlock x:Name="NoSupportText" Grid.RowSpan="2"
                    HorizontalAlignment="Center" VerticalAlignment="Center"
                    Text="此格式不受支持" Foreground="#88FFFFFF"
-                   FontFamily="Segoe UI" FontSize="15" Visibility="Collapsed"/>
+                   FontFamily="Segoe UI" FontSize="19" Visibility="Collapsed"/>
 
         <!-- Engine fallback notice (VLC requested but init failed) -->
         <TextBlock x:Name="EngineNoticeText" Grid.RowSpan="2"
                    HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,72,0,0"
                    Text="VLC 引擎不可用" Foreground="#AAFFFFFF"
-                   FontFamily="Segoe UI" FontSize="13" Visibility="Collapsed"/>
+                   FontFamily="Segoe UI" FontSize="19" Visibility="Collapsed"/>
 
         <!-- Top bar: back + filename -->
         <Border x:Name="TopBar" Grid.RowSpan="2" VerticalAlignment="Top"
                 Background="#B0000000" Visibility="Collapsed">
-            <StackPanel Orientation="Horizontal" Margin="8,4,8,4">
-                <Button x:Name="BackBtn" Click="BackBtn_Click"
-                        Content="←" FontFamily="Segoe UI Symbol" FontSize="16"
+            <StackPanel Orientation="Horizontal" Margin="0,4,8,4">
+<Button x:Name="BackBtn" Click="BackBtn_Click"
+                        Content="←" FontFamily="Segoe UI Symbol" FontSize="20"
                         Foreground="White" Background="Transparent"
-                        BorderThickness="0" MinWidth="34" MinHeight="32"/>
+                        BorderThickness="0" MinWidth="46" MinHeight="46"/>
                 <TextBlock x:Name="FileNameText" Foreground="White"
-                           FontFamily="Segoe UI" FontSize="16"
-                           VerticalAlignment="Center" Margin="8,0,0,0"
+                           FontFamily="Segoe UI" FontSize="22"
+                           VerticalAlignment="Center" Margin="4,0,0,0"
                            TextTrimming="CharacterEllipsis"/>
             </StackPanel>
         </Border>
@@ -134,7 +134,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="CurrentTimeText" Text="00:00" Foreground="#AAFFFFFF"
-                               FontFamily="Segoe UI" FontSize="15" VerticalAlignment="Center"/>
+                               FontFamily="Segoe UI" FontSize="19" VerticalAlignment="Center"/>
                     <Grid Grid.Column="1" VerticalAlignment="Center" Margin="8,0,8,0">
                         <ProgressBar x:Name="PositionProgress" Minimum="0" Maximum="100" Value="0"
                                      Height="4" VerticalAlignment="Center"
@@ -145,16 +145,16 @@
                                 ValueChanged="PositionSlider_ValueChanged"/>
                     </Grid>
                     <TextBlock x:Name="DurationText" Grid.Column="2" Text="00:00" Foreground="#AAFFFFFF"
-                               FontFamily="Segoe UI" FontSize="15" VerticalAlignment="Center"/>
+                               FontFamily="Segoe UI" FontSize="19" VerticalAlignment="Center"/>
                 </Grid>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,4,0,0">
                     <Button x:Name="RepeatBtn" Click="RepeatBtn_Click" Content="⇄"
-                            Style="{StaticResource MainActionBtn}" FontSize="20"/>
+                            Style="{StaticResource MainActionBtn}" FontSize="22"/>
                     <Button x:Name="PrevBtn" Click="PrevBtn_Click" Content="◀◀"
                             Style="{StaticResource MainActionBtn}"/>
                     <Button x:Name="PlayPauseBtn" Click="PlayPauseBtn_Click" Content="▶"
-                            Style="{StaticResource MainActionBtn}" FontSize="32"/>
+                            Style="{StaticResource MainActionBtn}" FontSize="38"/>
                     <Button x:Name="NextBtn" Click="NextBtn_Click" Content="▶▶"
                             Style="{StaticResource MainActionBtn}"/>
                     <Button x:Name="StopBtn" Click="StopBtn_Click" Content="■"
@@ -163,8 +163,8 @@
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,2,0,0">
                     <TextBlock Text="音量" Foreground="#AAFFFFFF" FontFamily="Segoe UI"
-                               FontSize="15" VerticalAlignment="Center"/>
-                    <Grid VerticalAlignment="Center" Width="130" Margin="8,0,0,0">
+                               FontSize="19" VerticalAlignment="Center"/>
+                    <Grid VerticalAlignment="Center" Width="130" Margin="4,0,0,0">
                         <ProgressBar x:Name="VolumeProgress" Minimum="0" Maximum="100" Value="100"
                                      Height="4" VerticalAlignment="Center"
                                      Background="#55FFFFFF" Foreground="#FF00BCD4"/>
@@ -173,7 +173,7 @@
                                 ValueChanged="VolumeSlider_ValueChanged"/>
                     </Grid>
                     <Button x:Name="SpeedBtn" Click="SpeedBtn_Click" Content="1.0x"
-                            Style="{StaticResource MainActionBtn}" FontSize="16"
+                            Style="{StaticResource MainActionBtn}" FontSize="22"
                             MinWidth="56" Margin="12,0,0,0"/>
                 </StackPanel>
             </StackPanel>

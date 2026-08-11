@@ -112,6 +112,8 @@
     </Compile>
     <Compile Include="PerformanceProfile.cs" />
     <Compile Include="AppText.cs" />
+    <Compile Include="LyricMatcher.cs" />
+    <Compile Include="LyricParsers.cs" />
     <Compile Include="HomePage.xaml.cs">
       <DependentUpon>HomePage.xaml</DependentUpon>
     </Compile>

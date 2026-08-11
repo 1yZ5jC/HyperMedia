@@ -16,12 +16,12 @@
         <CommandBar x:Name="HomeBottomBar" Background="#FF0A0A0F" IsOpen="True">
             <CommandBar.Content>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
-                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="15"
+                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="19"
                                Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                    <TextBlock x:Name="HomeBottomBrand" Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="15"
+                    <TextBlock x:Name="HomeBottomBrand" Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="19"
                                Foreground="#55FFFFFF" VerticalAlignment="Center" CharacterSpacing="40"/>
                     <TextBlock x:Name="StatusText" Text="支持几乎所有媒体格式"
-                               FontFamily="Segoe UI" FontSize="15" Foreground="#33FFFFFF"
+                               FontFamily="Segoe UI" FontSize="19" Foreground="#33FFFFFF"
                                VerticalAlignment="Center" Margin="16,0,0,0"
                                TextTrimming="CharacterEllipsis"/>
                 </StackPanel>
@@ -88,38 +88,38 @@
 
                     <Grid Grid.Row="0" Margin="24,22,24,0">
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="15"
+                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="19"
                                        Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBlock x:Name="HomeBrandText" Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="15"
+                            <TextBlock x:Name="HomeBrandText" Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="19"
                                        Foreground="#99FFFFFF" VerticalAlignment="Center" CharacterSpacing="60"/>
                         </StackPanel>
                         <Button x:Name="OpenButton" Click="OpenButton_Click"
                                 Style="{StaticResource ZuneOpenStyle}"
                                 HorizontalAlignment="Right" VerticalAlignment="Center">
                             <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="+" FontFamily="Segoe UI Light" FontSize="17"
+                                <TextBlock Text="+" FontFamily="Segoe UI Light" FontSize="19"
                                            Foreground="#FFFFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                <TextBlock Text="打开" Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="15"
+                                <TextBlock Text="打开" Foreground="#FFFFFFFF" FontFamily="Segoe UI" FontSize="19"
                                            VerticalAlignment="Center" CharacterSpacing="40"/>
                             </StackPanel>
                         </Button>
                     </Grid>
 
                     <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="24,0,24,0">
-                        <TextBlock x:Name="HomeTitle1" Text="全部播放" FontFamily="Segoe UI Light" FontSize="48"
-                                   Foreground="#FFFFFFFF" LineHeight="50"/>
-                        <TextBlock x:Name="HomeTitle2" Text="随心所欲" FontFamily="Segoe UI Light" FontSize="48"
-                                   Foreground="#FFE040FB" LineHeight="50" Margin="0,0,0,10"/>
+                        <TextBlock x:Name="HomeTitle1" Text="全部播放" FontFamily="Segoe UI Light" FontSize="52"
+                                   Foreground="#FFFFFFFF" LineHeight="56"/>
+                        <TextBlock x:Name="HomeTitle2" Text="随心所欲" FontFamily="Segoe UI Light" FontSize="52"
+                                   Foreground="#FFE040FB" LineHeight="56" Margin="0,0,0,10"/>
                         <TextBlock x:Name="HomeDesc" Text="视频、音频、图片 — 一个播放器搞定所有媒体。"
-                                   FontFamily="Segoe UI" FontSize="16" Foreground="#88FFFFFF"
+                                   FontFamily="Segoe UI" FontSize="22" Foreground="#88FFFFFF"
                                     Margin="0,0,0,26" TextWrapping="Wrap"/>
                         <StackPanel Orientation="Horizontal">
                             <Button Click="OpenButton_Click" Style="{StaticResource ZuneActionStyle}" Margin="0,0,12,0">
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="15"
+                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="19"
                                                Foreground="#FF0A0A0F" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBlock Text="打开文件" Foreground="#FF0A0A0F" FontFamily="Segoe UI Semibold"
-                                               FontSize="15" VerticalAlignment="Center" CharacterSpacing="30"/>
+                                               FontSize="19" VerticalAlignment="Center" CharacterSpacing="30"/>
                                 </StackPanel>
                             </Button>
                             <Button x:Name="OpenUrlBtn" Click="OpenUrlButton_Click" Style="{StaticResource ZunePrimaryStyle}">
@@ -127,10 +127,10 @@
                                     <ToolTip Content="打开网络媒体 (Ctrl+U)"/>
                                 </ToolTipService.ToolTip>
                                 <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="&#x1F310;" FontFamily="Segoe UI Symbol" FontSize="15"
+                                    <TextBlock Text="&#x1F310;" FontFamily="Segoe UI Symbol" FontSize="19"
                                                Foreground="#99FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <TextBlock Text="打开网址" Foreground="#99FFFFFF" FontFamily="Segoe UI"
-                                               FontSize="15" VerticalAlignment="Center" CharacterSpacing="30"/>
+                                               FontSize="19" VerticalAlignment="Center" CharacterSpacing="30"/>
                                 </StackPanel>
                             </Button>
                         </StackPanel>
@@ -138,7 +138,7 @@
 
                     <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right"
                                 Margin="0,0,24,16">
-                        <TextBlock Text="滑动浏览" FontFamily="Segoe UI" FontSize="15"
+                        <TextBlock Text="滑动浏览" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="&#x203A;" FontFamily="Segoe UI" FontSize="26"
                                    Foreground="#44FFFFFF" VerticalAlignment="Center"/>
@@ -159,27 +159,27 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="VideosTitle" Grid.Row="0" Text="视频" FontFamily="Segoe UI Light" FontSize="34"
-                               Foreground="#FFFFFFFF" Margin="0,34,0,0" CharacterSpacing="40"/>
+                    <TextBlock x:Name="VideosTitle" Grid.Row="0" Text="视频" FontFamily="Segoe UI Light" FontSize="38"
+                               Foreground="#FFFFFFFF" Margin="24,34,0,0" CharacterSpacing="40"/>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,12,24,0">
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="MP4" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="MP4" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="AVI" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="AVI" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="MKV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="MKV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="WEBM" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="WEBM" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="MOV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="MOV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#20E040FB" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="WMV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="WMV" Foreground="#99E040FB" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                     </StackPanel>
 
@@ -189,16 +189,16 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#x1F3AC;" FontFamily="Segoe UI Symbol" FontSize="20"
+                        <TextBlock Text="&#x1F3AC;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="打开视频  &#x25B6;  播放"
-                                   FontFamily="Segoe UI Semibold" FontSize="16" Foreground="#99E040FB"
+                                   FontFamily="Segoe UI Semibold" FontSize="22" Foreground="#99E040FB"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
 
                     <StackPanel x:Name="RecentVideosPanel" Grid.Row="3" Margin="24,0,24,12">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="15"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="19"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -206,7 +206,7 @@
                                         Style="{StaticResource ZuneActionStyle}"
                                         Padding="10,6">
                                     <TextBlock x:Name="VideosToggleIcon" Text="&#x2630;" FontFamily="Segoe UI Symbol"
-                                               FontSize="15" Foreground="#CCE040FB"/>
+                                               FontSize="19" Foreground="#CCE040FB"/>
                                 </Button>
                             </StackPanel>
                         </Grid>
@@ -233,18 +233,18 @@
                                             </Border>
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding FileName}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#AAFFFFFF"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#AAFFFFFF"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding ResumeText}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#CCE040FB"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#CCE040FB"
                                                            Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}"
                                                            Margin="0,2,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                     <TextBlock Text="{Binding RatingText}"
-                                                               FontFamily="Segoe UI Symbol" FontSize="15" Foreground="#FFE040FB"
+                                                               FontFamily="Segoe UI Symbol" FontSize="19" Foreground="#FFE040FB"
                                                                Visibility="{Binding RatingText, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                     <TextBlock Text="{Binding PlayCountText}"
-                                                               FontFamily="Segoe UI" FontSize="15" Foreground="#66FFFFFF"
+                                                               FontFamily="Segoe UI" FontSize="19" Foreground="#66FFFFFF"
                                                                Visibility="{Binding PlayCountText, Converter={StaticResource NullToVisibilityConverter}}"
                                                                Margin="6,0,0,0"/>
                                                 </StackPanel>
@@ -277,7 +277,7 @@
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="UniformToFill"/>
-                                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="20"
+                                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="22"
                                                                Foreground="#AAE040FB" HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"/>
                                                     <Border Background="#DDE040FB" Padding="5,1"
@@ -285,7 +285,7 @@
                                                             Margin="0,0,4,0"
                                                             Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}">
                                                         <TextBlock Text="{Binding ResumeText}" FontFamily="Segoe UI"
-                                                                   FontSize="15" Foreground="#FF0A0A0F"/>
+                                                                   FontSize="19" Foreground="#FF0A0A0F"/>
                                                     </Border>
                                                     <ProgressBar Height="3"
                                                                  Background="#66FFFFFF" Foreground="#FFE040FB"
@@ -296,7 +296,7 @@
                                                 </Grid>
                                             </Border>
                                             <TextBlock Grid.Row="1" Text="{Binding FileName}"
-                                                       FontFamily="Segoe UI" FontSize="15" Foreground="#CCFFFFFF"
+                                                       FontFamily="Segoe UI" FontSize="19" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
                                         </Grid>
                                     </Border>
@@ -320,27 +320,27 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="MusicTitle" Grid.Row="0" Text="音乐" FontFamily="Segoe UI Light" FontSize="34"
-                               Foreground="#FFFFFFFF" Margin="0,34,0,0" CharacterSpacing="40"/>
+                    <TextBlock x:Name="MusicTitle" Grid.Row="0" Text="音乐" FontFamily="Segoe UI Light" FontSize="38"
+                               Foreground="#FFFFFFFF" Margin="24,34,0,0" CharacterSpacing="40"/>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,12,24,0">
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="MP3" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="MP3" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="FLAC" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="FLAC" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="WAV" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="WAV" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="AAC" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="AAC" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="OGG" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="OGG" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2000BCD4" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="WMA" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="WMA" Foreground="#9900BCD4" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                     </StackPanel>
 
@@ -350,16 +350,16 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="20"
+                        <TextBlock Text="&#x1F3B5;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FF00BCD4" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="打开音乐  &#x25B6;  播放"
-                                   FontFamily="Segoe UI Semibold" FontSize="16" Foreground="#9900BCD4"
+                                   FontFamily="Segoe UI Semibold" FontSize="22" Foreground="#9900BCD4"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
 
                     <StackPanel x:Name="RecentMusicPanel" Grid.Row="3" Margin="24,0,24,12">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="15"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="19"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -367,7 +367,7 @@
                                         Style="{StaticResource ZuneActionStyle}"
                                         Padding="10,6">
                                     <TextBlock x:Name="MusicToggleIcon" Text="&#x2630;" FontFamily="Segoe UI Symbol"
-                                               FontSize="15" Foreground="#CC00BCD4"/>
+                                               FontSize="19" Foreground="#CC00BCD4"/>
                                 </Button>
                             </StackPanel>
                         </Grid>
@@ -394,18 +394,18 @@
                                             </Border>
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding FileName}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#AAFFFFFF"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#AAFFFFFF"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding ResumeText}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#CCE040FB"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#CCE040FB"
                                                            Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}"
                                                            Margin="0,2,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                     <TextBlock Text="{Binding RatingText}"
-                                                               FontFamily="Segoe UI Symbol" FontSize="15" Foreground="#FFE040FB"
+                                                               FontFamily="Segoe UI Symbol" FontSize="19" Foreground="#FFE040FB"
                                                                Visibility="{Binding RatingText, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                     <TextBlock Text="{Binding PlayCountText}"
-                                                               FontFamily="Segoe UI" FontSize="15" Foreground="#66FFFFFF"
+                                                               FontFamily="Segoe UI" FontSize="19" Foreground="#66FFFFFF"
                                                                Visibility="{Binding PlayCountText, Converter={StaticResource NullToVisibilityConverter}}"
                                                                Margin="6,0,0,0"/>
                                                 </StackPanel>
@@ -438,7 +438,7 @@
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="UniformToFill"/>
-                                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                                    <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="22"
                                                                Foreground="#AA00BCD4" HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"/>
                                                     <Border Background="#DDE040FB" Padding="5,1"
@@ -446,7 +446,7 @@
                                                             Margin="0,0,4,0"
                                                             Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}">
                                                         <TextBlock Text="{Binding ResumeText}" FontFamily="Segoe UI"
-                                                                   FontSize="15" Foreground="#FF0A0A0F"/>
+                                                                   FontSize="19" Foreground="#FF0A0A0F"/>
                                                     </Border>
                                                     <ProgressBar Height="3"
                                                                  Background="#66FFFFFF" Foreground="#FF00BCD4"
@@ -457,7 +457,7 @@
                                                 </Grid>
                                             </Border>
                                             <TextBlock Grid.Row="1" Text="{Binding FileName}"
-                                                       FontFamily="Segoe UI" FontSize="15" Foreground="#CCFFFFFF"
+                                                       FontFamily="Segoe UI" FontSize="19" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
                                         </Grid>
                                     </Border>
@@ -480,27 +480,27 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock x:Name="PhotosTitle" Grid.Row="0" Text="图片" FontFamily="Segoe UI Light" FontSize="34"
-                               Foreground="#FFFFFFFF" Margin="0,34,0,0" CharacterSpacing="40"/>
+                    <TextBlock x:Name="PhotosTitle" Grid.Row="0" Text="图片" FontFamily="Segoe UI Light" FontSize="38"
+                               Foreground="#FFFFFFFF" Margin="24,34,0,0" CharacterSpacing="40"/>
 
                     <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="24,12,24,0">
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="JPG" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="JPG" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="PNG" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="PNG" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="BMP" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="BMP" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="GIF" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="GIF" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="TIFF" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="TIFF" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                         <Border Background="#2076FF00" Padding="10,4" Margin="0,0,8,0">
-                            <TextBlock Text="WEBP" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="15"/>
+                            <TextBlock Text="WEBP" Foreground="#9976FF00" FontFamily="Segoe UI" FontSize="19"/>
                         </Border>
                     </StackPanel>
 
@@ -510,16 +510,16 @@
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="20"
+                        <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="22"
                                    Foreground="#FF76FF00" VerticalAlignment="Center" Margin="0,0,12,0"/>
                         <TextBlock Grid.Column="1" Text="打开图片  &#x25B6;  查看"
-                                   FontFamily="Segoe UI Semibold" FontSize="16" Foreground="#9976FF00"
+                                   FontFamily="Segoe UI Semibold" FontSize="22" Foreground="#9976FF00"
                                    VerticalAlignment="Center" CharacterSpacing="20"/>
                     </Grid>
 
                     <StackPanel x:Name="RecentPhotosPanel" Grid.Row="3" Margin="24,0,24,12">
                         <Grid Margin="0,0,0,8">
-                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="15"
+                            <TextBlock Text="最近播放" FontFamily="Segoe UI" FontSize="19"
                                        Foreground="#44FFFFFF" CharacterSpacing="80"
                                        VerticalAlignment="Center"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -527,7 +527,7 @@
                                         Style="{StaticResource ZuneActionStyle}"
                                         Padding="10,6">
                                     <TextBlock x:Name="PhotosToggleIcon" Text="&#x2630;" FontFamily="Segoe UI Symbol"
-                                               FontSize="15" Foreground="#CC76FF00"/>
+                                               FontSize="19" Foreground="#CC76FF00"/>
                                 </Button>
                             </StackPanel>
                         </Grid>
@@ -554,18 +554,18 @@
                                             </Border>
                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
                                                 <TextBlock Text="{Binding FileName}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#AAFFFFFF"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#AAFFFFFF"
                                                            TextTrimming="CharacterEllipsis"/>
                                                 <TextBlock Text="{Binding ResumeText}"
-                                                           FontFamily="Segoe UI" FontSize="15" Foreground="#CCE040FB"
+                                                           FontFamily="Segoe UI" FontSize="19" Foreground="#CCE040FB"
                                                            Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}"
                                                            Margin="0,2,0,0"/>
                                                 <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
                                                     <TextBlock Text="{Binding RatingText}"
-                                                               FontFamily="Segoe UI Symbol" FontSize="15" Foreground="#FFE040FB"
+                                                               FontFamily="Segoe UI Symbol" FontSize="19" Foreground="#FFE040FB"
                                                                Visibility="{Binding RatingText, Converter={StaticResource NullToVisibilityConverter}}"/>
                                                     <TextBlock Text="{Binding PlayCountText}"
-                                                               FontFamily="Segoe UI" FontSize="15" Foreground="#66FFFFFF"
+                                                               FontFamily="Segoe UI" FontSize="19" Foreground="#66FFFFFF"
                                                                Visibility="{Binding PlayCountText, Converter={StaticResource NullToVisibilityConverter}}"
                                                                Margin="6,0,0,0"/>
                                                 </StackPanel>
@@ -598,7 +598,7 @@
                                                 <Grid>
                                                     <Image Source="{Binding Thumbnail}"
                                                            Stretch="UniformToFill"/>
-                                                    <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="16"
+                                                    <TextBlock Text="&#x1F4F7;" FontFamily="Segoe UI Symbol" FontSize="22"
                                                                Foreground="#AA76FF00" HorizontalAlignment="Center"
                                                                VerticalAlignment="Center"/>
                                                     <Border Background="#DDE040FB" Padding="5,1"
@@ -606,7 +606,7 @@
                                                             Margin="0,0,4,0"
                                                             Visibility="{Binding ResumeText, Converter={StaticResource NullToVisibilityConverter}}">
                                                         <TextBlock Text="{Binding ResumeText}" FontFamily="Segoe UI"
-                                                                   FontSize="15" Foreground="#FF0A0A0F"/>
+                                                                   FontSize="19" Foreground="#FF0A0A0F"/>
                                                     </Border>
                                                     <ProgressBar Height="3"
                                                                  Background="#66FFFFFF" Foreground="#FF76FF00"
@@ -617,7 +617,7 @@
                                                 </Grid>
                                             </Border>
                                             <TextBlock Grid.Row="1" Text="{Binding FileName}"
-                                                       FontFamily="Segoe UI" FontSize="15" Foreground="#CCFFFFFF"
+                                                       FontFamily="Segoe UI" FontSize="19" Foreground="#CCFFFFFF"
                                                        TextTrimming="CharacterEllipsis" Margin="6,4,6,4"/>
                                         </Grid>
                                     </Border>
@@ -665,11 +665,11 @@
                                            FontSize="28" Foreground="#FFFFFFFF"
                                            HorizontalAlignment="Left" VerticalAlignment="Top"/>
                                 <TextBlock Grid.Row="1" Text="{Binding Title}"
-                                           FontFamily="Segoe UI Light" FontSize="34"
+                                           FontFamily="Segoe UI Light" FontSize="38"
                                            Foreground="#FFFFFFFF"
                                            HorizontalAlignment="Left" VerticalAlignment="Bottom"/>
                                 <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
-                                           FontFamily="Segoe UI" FontSize="15"
+                                           FontFamily="Segoe UI" FontSize="19"
                                            Foreground="#B3FFFFFF" Margin="0,6,0,0"
                                            HorizontalAlignment="Left"/>
                             </Grid>
@@ -693,14 +693,14 @@
                         BorderThickness="2" BorderBrush="#FFE040FB"
                         HorizontalAlignment="Center" Margin="0,0,0,32">
                     <Grid Background="#10E040FB">
-                        <TextBlock Text="&#x2B07;" FontFamily="Segoe UI Symbol" FontSize="48"
+                        <TextBlock Text="&#x2B07;" FontFamily="Segoe UI Symbol" FontSize="52"
                                    Foreground="#FFE040FB" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Grid>
                 </Border>
-                <TextBlock Text="拖放播放" FontFamily="Segoe UI Light" FontSize="36"
+                <TextBlock Text="拖放播放" FontFamily="Segoe UI Light" FontSize="40"
                            Foreground="#FFFFFFFF" HorizontalAlignment="Center" CharacterSpacing="80"/>
                 <TextBlock Text="释放以开始播放"
-                           FontFamily="Segoe UI" FontSize="16" Foreground="#66FFFFFF"
+                           FontFamily="Segoe UI" FontSize="22" Foreground="#66FFFFFF"
                            HorizontalAlignment="Center" Margin="0,16,0,0"/>
             </StackPanel>
         </Border>
