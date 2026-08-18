@@ -115,8 +115,12 @@ namespace HyperMedia
             {
                 _player = new MediaElementBackend(VideoPlayer);
             }
+            #if USE_LIBVLC
             Debug.WriteLine("[HyperMedia] PlaybackBackend: " +
                 (_player is VlcBackend ? "VlcBackend (libVLCX)" : "MediaElementBackend (system)"));
+#else
+            Debug.WriteLine("[HyperMedia] PlaybackBackend: MediaElementBackend (system)");
+#endif
             VolumeSlider.Value = SettingsPage.GetDefaultVolume();
 
             _player.MediaOpened += VideoPlayer_MediaOpened;

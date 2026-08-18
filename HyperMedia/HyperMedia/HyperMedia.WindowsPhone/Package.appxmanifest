@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest" xmlns:m3="http://schemas.microsoft.com/appx/2014/manifest" xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest">
-  <Identity Name="ba7c3540-aa73-44fc-b507-60606ad22d52" Publisher="CN=Alan" Version="0.0.0.7" />
-  <mp:PhoneIdentity PhoneProductId="ba7c3540-aa73-44fc-b507-60606ad22d52" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
+  <Identity Name="YoungZhouCorp.HyperMedia" Publisher="CN=Alan" Version="1.0.0.4" />
+  <mp:PhoneIdentity PhoneProductId="871a0441-b598-4c60-9bf4-251a5d6f1d87" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>HyperMedia.WindowsPhone</DisplayName>
     <PublisherDisplayName>Alan</PublisherDisplayName>

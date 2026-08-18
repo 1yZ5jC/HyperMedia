@@ -65,7 +65,7 @@
                     <StackPanel>
                         <TextBlock Text="播放引擎" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="切换后需重新打开文件生效"
+                        <TextBlock Text="手机版已禁用 libVLC，使用系统引擎"
                                    FontFamily="Segoe UI" FontSize="19" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
@@ -73,8 +73,8 @@
                               HorizontalAlignment="Left" Margin="0,10,0,0" Width="180"
                               SelectionChanged="EngineCombo_SelectionChanged"
                               VerticalAlignment="Center">
-                        <ComboBoxItem Content="VLC (libVLC)" Tag="vlc"/>
-                        <ComboBoxItem Content="系统 (MediaElement)" Tag="media"/>
+                        <ComboBoxItem Content="VLC (libVLC)" Tag="vlc" IsEnabled="False"/>
+                        <ComboBoxItem Content="系统 (MediaElement)" Tag="media" IsSelected="True"/>
                     </ComboBox>
                 </StackPanel>
 
@@ -236,11 +236,11 @@
                     <StackPanel>
                         <TextBlock Text="去隔行模式" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="处理隔行扫描视频（DVD、旧录像等）"
+                        <TextBlock Text="需 libVLC 引擎，手机版已禁用"
                                    FontFamily="Segoe UI" FontSize="19" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
-                    <ComboBox x:Name="DeinterlaceCombo"
+                    <ComboBox x:Name="DeinterlaceCombo" IsEnabled="False"
                               HorizontalAlignment="Left" Margin="0,10,0,0" Width="120"
                               VerticalAlignment="Center"
                               SelectionChanged="DeinterlaceCombo_SelectionChanged">
@@ -256,11 +256,11 @@
                     <StackPanel>
                         <TextBlock Text="响度标准化" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#FFFFFFFF"/>
-                        <TextBlock Text="自动平衡不同媒体的音量差异（压缩器）"
+                        <TextBlock Text="需 libVLC 引擎，手机版已禁用"
                                    FontFamily="Segoe UI" FontSize="19" Foreground="#55FFFFFF"
                                    Margin="0,4,0,0"/>
                     </StackPanel>
-                    <ToggleSwitch x:Name="LoudnessToggle"
+                    <ToggleSwitch x:Name="LoudnessToggle" IsEnabled="False"
                                   HorizontalAlignment="Left" Margin="0,10,0,0"
                                   VerticalAlignment="Center"
                                   Toggled="LoudnessToggle_Toggled"/>
@@ -399,7 +399,7 @@
                         </StackPanel>
                         <TextBlock Text="版本 1.0.0" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#55FFFFFF"/>
-                        <TextBlock Text="基于 libVLC 驱动" FontFamily="Segoe UI" FontSize="19"
+                        <TextBlock Text="基于系统媒体引擎 (MediaElement)" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#55FFFFFF" Margin="0,4,0,0"/>
                         <TextBlock Text="采用 GPL v2 许可证" FontFamily="Segoe UI" FontSize="19"
                                    Foreground="#55FFFFFF" Margin="0,4,0,0"/>
