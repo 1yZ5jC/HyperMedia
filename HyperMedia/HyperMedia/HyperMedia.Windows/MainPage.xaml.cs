@@ -2588,10 +2588,14 @@ namespace HyperMedia
 
                     _albumThemeColor = await ExtractThemeColorAsync(thumb);
                     Debug.WriteLine("[HyperMedia] Album art loaded from thumbnail");
+                    await LiveTileService.UpdateNowPlayingAsync(
+                        _musicTitle, _musicArtist, _musicAlbum, thumb, _isPlaying);
                 }
                 else
                 {
                     Debug.WriteLine("[HyperMedia] No album art thumbnail available");
+                    await LiveTileService.UpdateNowPlayingAsync(
+                        _musicTitle, _musicArtist, _musicAlbum, null, _isPlaying);
                 }
             }
             catch (Exception ex)
@@ -4477,6 +4481,7 @@ namespace HyperMedia
                     _lyricTimer.Start();
                 if (_spectrumEngine != null) _spectrumEngine.SetPlaying(true);
                 SyncSmtcState();
+                LiveTileService.UpdateBadge(true);
                 return;
             }
 
@@ -4518,6 +4523,7 @@ namespace HyperMedia
             UpdatePlayPauseIcon(true);
             ResetAutoHide();
             if (_spectrumEngine != null) _spectrumEngine.SetPlaying(true);
+            LiveTileService.UpdateBadge(true);
         }
 
         private void PausePlayback()
@@ -4534,6 +4540,7 @@ namespace HyperMedia
                 ShowControls();
                 if (_spectrumEngine != null) _spectrumEngine.SetPlaying(false);
                 SyncSmtcState();
+                LiveTileService.UpdateBadge(false);
                 return;
             }
 
@@ -4553,6 +4560,7 @@ namespace HyperMedia
             UpdatePlayPauseIcon(false);
             ShowControls();
             if (_spectrumEngine != null) _spectrumEngine.SetPlaying(false);
+            LiveTileService.UpdateBadge(false);
         }
 
         private void TogglePlayPause()
@@ -4573,6 +4581,7 @@ namespace HyperMedia
             _isSeeking = false;
             _pendingResumePos = 0;
             _pausedVolume = -1;
+            LiveTileService.Clear();
 
             StopSmtcSync();
 

@@ -126,6 +126,7 @@
     <Compile Include="ShazamRecognizer.cs" />
     <Compile Include="SpectrumEngine.cs" />
     <Compile Include="VideoThumbnailService.cs" />
+    <Compile Include="LiveTileService.cs" />
     <Compile Include="SettingsPage.xaml.cs">
       <DependentUpon>SettingsPage.xaml</DependentUpon>
     </Compile>
