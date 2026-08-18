@@ -101,6 +101,10 @@ namespace HyperMedia
             Add("Play", "播放", "Play");
             Add("DeletePlaylist", "删除歌单", "Delete Playlist");
             Add("PinToStart", "固定到开始屏幕", "Pin to Start");
+            Add("PinAlbum", "固定此专辑到开始屏幕", "Pin this album to Start");
+            Add("NoAlbumMeta", "此文件没有专辑信息，无法固定专辑", "No album metadata on this file");
+            Add("AlbumPinned", "专辑已固定到开始屏幕: ", "Album pinned to Start: ");
+            Add("AlbumUnavailable", "专辑文件不可用（可能已被移动）", "Album files unavailable (may have moved)");
             Add("OpenNetworkMedia", "打开网络媒体", "Open Network Media");
             Add("RecentOpened", "最近打开", "Recent");
             // Settings

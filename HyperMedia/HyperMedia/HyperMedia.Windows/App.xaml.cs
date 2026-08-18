@@ -64,8 +64,11 @@ namespace HyperMedia
 
             if (rootFrame.Content == null)
             {
-                // Secondary tile activation: playlist:<name> goes straight to playback
-                if (e.Arguments != null && e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase))
+                // Secondary tile activation: playlist:<name> or album:<key> goes
+                // straight to playback
+                if (e.Arguments != null &&
+                    (e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase) ||
+                     e.Arguments.StartsWith("album:", StringComparison.OrdinalIgnoreCase)))
                 {
                     if (!rootFrame.Navigate(typeof(MainPage), e.Arguments))
                         throw new Exception("Failed to create playback page");
@@ -76,7 +79,9 @@ namespace HyperMedia
                         throw new Exception("Failed to create initial page");
                 }
             }
-            else if (e.Arguments != null && e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase))
+            else if (e.Arguments != null &&
+                (e.Arguments.StartsWith("playlist:", StringComparison.OrdinalIgnoreCase) ||
+                 e.Arguments.StartsWith("album:", StringComparison.OrdinalIgnoreCase)))
             {
                 // App already running — jump to playback
                 rootFrame.Navigate(typeof(MainPage), e.Arguments);

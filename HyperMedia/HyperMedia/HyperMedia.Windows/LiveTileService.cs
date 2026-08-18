@@ -17,6 +17,48 @@ namespace HyperMedia
         private const string CoverFolderName = "LiveTile";
         private const string CoverFileName = "cover.jpg";
         private const string CoverUri = "ms-appdata:///local/LiveTile/cover.jpg";
+        private const int PhotoRollCount = 5;
+        private const string PhotoIndexKey = "LiveTilePhotoIdx";
+
+        // Photo carousel tile: the five most recently opened photos, rotating on
+        // the start screen (wide PeekImageCollection + square PeekImage). Overrides
+        // the now-playing tile while photos are being browsed.
+        public static async Task UpdatePhotoTileAsync(StorageFile photoFile)
+        {
+            try
+            {
+                if (photoFile == null) return;
+                var thumb = await photoFile.GetThumbnailAsync(
+                    Windows.Storage.FileProperties.ThumbnailMode.PicturesView, 360);
+                if (thumb == null) return;
+
+                int idx = 0;
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(PhotoIndexKey))
+                    int.TryParse(settings.Values[PhotoIndexKey] as string, out idx);
+                idx = (idx + 1) % PhotoRollCount;
+                settings.Values[PhotoIndexKey] = idx.ToString();
+
+                var folder = await ApplicationData.Current.LocalFolder.CreateFolderAsync(
+                    CoverFolderName, CreationCollisionOption.OpenIfExists);
+                string photoName = "photo_" + idx + ".jpg";
+                var photoFile2 = await folder.CreateFileAsync(
+                    photoName, CreationCollisionOption.ReplaceExisting);
+                using (var fs = await photoFile2.OpenAsync(FileAccessMode.ReadWrite))
+                using (var outStream = fs.AsStreamForWrite())
+                using (var inStream = thumb.AsStreamForRead())
+                {
+                    inStream.Seek(0, System.IO.SeekOrigin.Begin);
+                    await inStream.CopyToAsync(outStream);
+                }
+
+                UpdatePhotoCollectionTile(folder);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] LiveTile photo update failed: {0}", ex.Message);
+            }
+        }
 
         public static async Task UpdateNowPlayingAsync(
             string title, string artist, string album,
@@ -56,6 +98,49 @@ namespace HyperMedia
             {
                 Debug.WriteLine("[HyperMedia] LiveTile update failed: {0}", ex.Message);
             }
+        }
+
+        private static async Task UpdatePhotoCollectionTile(StorageFolder folder)
+        {
+            // Collect the existing photo_<n>.jpg files (0..4) in fixed order.
+            var uris = new System.Collections.Generic.List<string>();
+            for (int i = 0; i < PhotoRollCount; i++)
+            {
+                var probe = await folder.TryGetItemAsync("photo_" + i + ".jpg");
+                if (probe != null)
+                    uris.Add("ms-appdata:///local/LiveTile/photo_" + i + ".jpg");
+            }
+            if (uris.Count == 0) return;
+
+            var tileDoc = TileUpdateManager.GetTemplateContent(
+                TileTemplateType.TileWide310x150PeekImageCollection05);
+            var visual = tileDoc.SelectSingleNode("/tile/visual");
+            if (visual == null) return;
+
+            // 8.1 has no plain-image square templates; use the image+text variant.
+            var square = TileUpdateManager.GetTemplateContent(
+                TileTemplateType.TileSquare150x150PeekImageAndText01);
+            var squareBinding = square.SelectSingleNode("/tile/visual/binding");
+            if (squareBinding != null)
+                visual.AppendChild(tileDoc.ImportNode(squareBinding, true));
+
+            var texts = tileDoc.SelectNodes("/tile/visual/binding[2]/text");
+            if (texts.Length >= 1)
+            {
+                texts[0].InnerText = "HyperMedia";
+            }
+
+            var images = tileDoc.GetElementsByTagName("image");
+            int set = Math.Min((int)images.Length, uris.Count);
+            for (int i = 0; i < set; i++)
+            {
+                var srcAttr = images[i].Attributes.GetNamedItem("src");
+                if (srcAttr != null) srcAttr.NodeValue = uris[i];
+            }
+
+            TileUpdateManager.CreateTileUpdaterForApplication().Update(
+                new TileNotification(tileDoc));
+            Debug.WriteLine("[HyperMedia] LiveTile photo collection: {0} images", set);
         }
 
         public static void UpdateBadge(bool isPlaying)

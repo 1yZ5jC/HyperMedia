@@ -15,6 +15,8 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{76F1466A-8B6D-4E39-A767-685A06062A39};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <SynthesizeLinkMetadata>true</SynthesizeLinkMetadata>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
+    <AppxBundlePlatforms>x86|arm</AppxBundlePlatforms>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>ARM</PlatformTarget>
@@ -38,7 +40,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM'">
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>bin\ARM\Debug\</OutputPath>
-<DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP;USE_LIBVLC</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;NETFX_CORE;WINDOWS_PHONE_APP;USE_LIBVLC</DefineConstants>
     <NoWarn>;2008</NoWarn>
     <DebugType>full</DebugType>
     <PlatformTarget>ARM</PlatformTarget>
@@ -221,8 +223,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <Target Name="StripVclibsDependency"
-          AfterTargets="AfterGenerateAppxManifest;_GenerateAppxPackageRecipe;_GenerateAppxPackage">
+  <Target Name="StripVclibsDependency" AfterTargets="AfterGenerateAppxManifest;_GenerateAppxPackageRecipe;_GenerateAppxPackage">
     <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\StripVclibsDependency.ps1&quot;" />
   </Target>
 </Project>

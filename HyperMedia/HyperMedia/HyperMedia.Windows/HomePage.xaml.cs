@@ -550,6 +550,87 @@ namespace HyperMedia
             }
         }
 
+        private async System.Threading.Tasks.Task PinAlbumAsync(StorageFile file)
+        {
+            try
+            {
+                var props = await file.Properties.GetMusicPropertiesAsync();
+                string album = props.Album;
+                if (string.IsNullOrEmpty(album))
+                {
+                    ShowOverlay(L("NoAlbumMeta"));
+                    return;
+                }
+
+                // Collect all tracks in the parent folder that share the album tag.
+                var matches = new List<StorageFile>();
+                try
+                {
+                    var folder = await file.GetParentAsync();
+                    if (folder != null)
+                    {
+                        var all = await folder.GetFilesAsync();
+                        foreach (var f in all)
+                        {
+                            string ext = f.FileType.ToLowerInvariant();
+                            if (MUSIC_FILTER.IndexOf(ext, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                            try
+                            {
+                                var p = await f.Properties.GetMusicPropertiesAsync();
+                                if (string.Equals(p.Album, album, StringComparison.OrdinalIgnoreCase))
+                                    matches.Add(f);
+                            }
+                            catch { }
+                        }
+                    }
+                }
+                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Album scan failed: {0}", ex.Message); }
+                if (matches.Count == 0) matches.Add(file);
+
+                string key = Uri.EscapeDataString(album);
+                string snapshotKey = "PinnedAlbum_" + key;
+                var settings = ApplicationData.Current.LocalSettings;
+
+                // Release tokens from a previous pin of the same album.
+                if (settings.Values.ContainsKey(snapshotKey))
+                {
+                    var oldTokens = (settings.Values[snapshotKey] as string ?? "").Split('|');
+                    foreach (var t in oldTokens)
+                    {
+                        if (!string.IsNullOrEmpty(t))
+                        {
+                            try { StorageApplicationPermissions.FutureAccessList.Remove(t); } catch { }
+                        }
+                    }
+                }
+
+                var tokens = new System.Text.StringBuilder();
+                foreach (var m in matches)
+                {
+                    string token = StorageApplicationPermissions.FutureAccessList.Add(m);
+                    if (tokens.Length > 0) tokens.Append('|');
+                    tokens.Append(token);
+                }
+                settings.Values[snapshotKey] = tokens.ToString();
+
+                var tile = new Windows.UI.StartScreen.SecondaryTile();
+                tile.TileId = "HyperMediaAlbum_" + key;
+                tile.DisplayName = album;
+                tile.Arguments = "album:" + key;
+                tile.VisualElements.Square150x150Logo = new Uri("ms-appx:///Assets/Logo.png");
+                tile.VisualElements.Wide310x150Logo = new Uri("ms-appx:///Assets/Wide310x150Logo.png");
+                tile.VisualElements.ShowNameOnSquare150x150Logo = true;
+                tile.VisualElements.ForegroundText = Windows.UI.StartScreen.ForegroundText.Light;
+                bool created = await tile.RequestCreateAsync();
+                if (created)
+                    ShowOverlay(L("AlbumPinned") + album);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[HyperMedia] PinAlbumAsync failed: {0}", ex.Message);
+            }
+        }
+
         private async void RecentItem_RightTapped(object sender, RightTappedRoutedEventArgs e)
         {
             var border = sender as Border;
@@ -584,6 +665,15 @@ namespace HyperMedia
                         }
                     }
                     catch (Exception ex) { Debug.WriteLine("[HyperMedia] History delete failed: {0}", ex.Message); }
+                }));
+                menu.Commands.Add(new Windows.UI.Popups.UICommand(L("PinAlbum"), async (cmd) =>
+                {
+                    try
+                    {
+                        var storageFile = await StorageFile.GetFileFromPathAsync(filePath);
+                        await PinAlbumAsync(storageFile);
+                    }
+                    catch (Exception ex) { Debug.WriteLine("[HyperMedia] Pin album failed: {0}", ex.Message); }
                 }));
                 await menu.ShowForSelectionAsync(
                     new Rect(e.GetPosition(null), new Size(1, 1)),
@@ -754,6 +844,28 @@ namespace HyperMedia
                                     Frame.Navigate(typeof(MainPage));
                                 }
                                 catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library open failed: {0}", ex.Message); }
+                            };
+                            item.RightTapped += async (s, ev) =>
+                            {
+                                try
+                                {
+                                    var storageFile = await StorageFile.GetFileFromPathAsync(path);
+                                    var menu = new Windows.UI.Popups.PopupMenu();
+                                    menu.Commands.Add(new Windows.UI.Popups.UICommand(L("Play"), (cmd) =>
+                                    {
+                                        popup.IsOpen = false;
+                                        StorageApplicationPermissions.FutureAccessList.AddOrReplace("PlaybackFile", storageFile);
+                                        Frame.Navigate(typeof(MainPage));
+                                    }));
+                                    menu.Commands.Add(new Windows.UI.Popups.UICommand(L("PinAlbum"), async (cmd) =>
+                                    {
+                                        await PinAlbumAsync(storageFile);
+                                    }));
+                                    await menu.ShowForSelectionAsync(
+                                        new Rect(ev.GetPosition(null), new Size(1, 1)),
+                                        Windows.UI.Popups.Placement.Above);
+                                }
+                                catch (Exception ex) { Debug.WriteLine("[HyperMedia] Library context menu failed: {0}", ex.Message); }
                             };
                             filesList.Items.Add(item);
                             count++;
@@ -1532,6 +1644,7 @@ namespace HyperMedia
                                 tile.DisplayName = name;
                                 tile.Arguments = "playlist:" + name;
                                 tile.VisualElements.Square150x150Logo = new Uri("ms-appx:///Assets/Logo.png");
+                                tile.VisualElements.Wide310x150Logo = new Uri("ms-appx:///Assets/Wide310x150Logo.png");
                                 tile.VisualElements.ShowNameOnSquare150x150Logo = true;
                                 tile.VisualElements.ForegroundText = Windows.UI.StartScreen.ForegroundText.Light;
                                 bool created = await tile.RequestCreateAsync();

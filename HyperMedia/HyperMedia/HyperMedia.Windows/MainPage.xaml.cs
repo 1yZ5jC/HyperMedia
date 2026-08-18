@@ -595,6 +595,39 @@ namespace HyperMedia
                         }
                     }
                 }
+                else if (protocolTarget.StartsWith("album:", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Secondary tile: album:<key> — resolve the pinned album snapshot
+                    string albumKey = protocolTarget.Substring("album:".Length).Trim();
+                    string snapshotKey = "PinnedAlbum_" + albumKey;
+                    var settings = ApplicationData.Current.LocalSettings;
+                    string serialized = settings.Values.ContainsKey(snapshotKey)
+                        ? settings.Values[snapshotKey] as string : null;
+                    if (!string.IsNullOrEmpty(serialized))
+                    {
+                        var loaded = new List<StorageFile>();
+                        foreach (var token in serialized.Split('|'))
+                        {
+                            if (string.IsNullOrEmpty(token)) continue;
+                            try
+                            {
+                                var f = await StorageApplicationPermissions.FutureAccessList.GetFileAsync(token);
+                                if (f != null) loaded.Add(f);
+                            }
+                            catch (Exception ex) { LogUnhandled(ex); }
+                        }
+                        if (loaded.Count > 0)
+                        {
+                            _playlist = loaded;
+                            _playlistIndex = 0;
+                            RestoreStateAfterSettings();
+                            OpenFile(_playlist[0]);
+                            return;
+                        }
+                        ShowOverlay(L("AlbumUnavailable"));
+                        HideOverlayDelayed();
+                    }
+                }
                 else if (protocolTarget.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
                     protocolTarget.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
                     protocolTarget.StartsWith("rtsp://", StringComparison.OrdinalIgnoreCase) ||
@@ -5287,6 +5320,8 @@ namespace HyperMedia
                 _photoNaturalW = bmp.PixelWidth;
                 _photoNaturalH = bmp.PixelHeight;
                 PhotoImage.Source = bmp;
+
+                var _ = LiveTileService.UpdatePhotoTileAsync(file);
 
                 FileNameText.Text = file.Name;
                 PhotoFileName.Text = file.Name;
