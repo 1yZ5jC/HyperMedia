@@ -211,6 +211,36 @@
                 </ComboBox>
             </Grid>
 
+            <StackPanel Margin="0,0,0,14">
+                <TextBlock Text="歌词时间偏移" FontFamily="Segoe UI Semibold" FontSize="13"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
+                <Grid Margin="0,2,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="LyricOffsetSlider" Grid.Column="0"
+                            Minimum="-3000" Maximum="3000" StepFrequency="50" Height="36"
+                            ValueChanged="LyricOffsetSlider_ValueChanged"/>
+                    <TextBlock x:Name="LyricOffsetText" Grid.Column="1" Text="0ms"
+                               FontFamily="Segoe UI" FontSize="12"
+                               Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                               VerticalAlignment="Center" Width="56" Margin="8,0,0,0"/>
+                </Grid>
+            </StackPanel>
+
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="自动校准歌词同步" FontFamily="Segoe UI Semibold" FontSize="13"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <ToggleSwitch x:Name="AutoSyncToggle" Grid.Column="1"
+                              MinWidth="100" Toggled="AutoSyncToggle_Toggled"/>
+            </Grid>
+
             <!-- Video -->
             <TextBlock Text="视频" FontFamily="Segoe UI" FontSize="11"
                        Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"
@@ -310,6 +340,36 @@
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="跟随系统主题色" FontFamily="Segoe UI Semibold" FontSize="13"
+                           Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
+                           VerticalAlignment="Center" TextWrapping="Wrap"/>
+                <ToggleSwitch x:Name="FollowSystemAccentToggle" Grid.Column="1"
+                              MinWidth="100" Toggled="FollowSystemAccent_Toggled"/>
+            </Grid>
+
+            <TextBlock Text="主题色" FontFamily="Segoe UI Semibold" FontSize="13" Margin="0,4,0,8"
+                       Foreground="{ThemeResource ApplicationForegroundThemeBrush}"/>
+            <StackPanel x:Name="AccentSwatches" Orientation="Horizontal" Margin="0,0,0,10"/>
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Hex:" VerticalAlignment="Center" FontFamily="Segoe UI" FontSize="12"
+                           Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}" Margin="0,0,8,0"/>
+                <TextBox x:Name="AccentHexInput" Grid.Column="1" FontFamily="Consolas" FontSize="12"
+                         MaxLength="7" Width="90" VerticalAlignment="Center"
+                         TextChanged="AccentHexInput_TextChanged"/>
+                <Border x:Name="AccentPreview" Grid.Column="2" Width="28" Height="28"
+                        Margin="8,0,0,0" BorderBrush="#33FFFFFF" BorderThickness="1"/>
+            </Grid>
+
+            <Grid Margin="0,0,0,14">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
                 <TextBlock Grid.Column="0" Text="语言" FontFamily="Segoe UI Semibold" FontSize="13"
                            Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
                            VerticalAlignment="Center" TextWrapping="Wrap"/>
@@ -361,7 +421,7 @@
             <StackPanel Margin="0,0,8,0">
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                     <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="11"
-                               Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                               Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="11"
                                Foreground="{ThemeResource ApplicationForegroundThemeBrush}"
                                VerticalAlignment="Center" CharacterSpacing="80"/>
@@ -369,9 +429,9 @@
                 <TextBlock Text="版本 1.0.0 · 基于 libVLC 驱动 · GPL v2" FontFamily="Segoe UI" FontSize="11"
                            Foreground="{ThemeResource ApplicationSecondaryForegroundThemeBrush}"/>
                 <TextBlock x:Name="PerfLevelText" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#FFE040FB" Margin="0,6,0,0"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,6,0,0"/>
                 <TextBlock x:Name="HardDecodeText" FontFamily="Segoe UI" FontSize="11"
-                           Foreground="#FFE040FB" Margin="0,4,0,0"/>
+                           Foreground="{StaticResource AccentBrush}" Margin="0,4,0,0"/>
             </StackPanel>
 
         </StackPanel>

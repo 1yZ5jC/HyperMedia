@@ -172,7 +172,7 @@
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="32,24,0,0">
                         <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="12"
-                                   Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                   Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                         <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="11"
                                    Foreground="#66FFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
                     </StackPanel>
@@ -393,10 +393,8 @@
                         Margin="64,0,56,0" Width="420" Height="420"
                         CornerRadius="0"
                         HorizontalAlignment="Left" VerticalAlignment="Center"
-                        BorderThickness="3,0,0,0">
-                    <Border.BorderBrush>
-                        <SolidColorBrush Color="#FFE040FB"/>
-                    </Border.BorderBrush>
+                        BorderThickness="3,0,0,0"
+                        BorderBrush="{StaticResource AccentBrush}">
                     <Border.Background>
                         <SolidColorBrush Color="#FF1A1A2E"/>
                     </Border.Background>
@@ -410,7 +408,7 @@
                                VerticalAlignment="Center"/>
                         <TextBlock x:Name="AlbumArtPlaceholder" Grid.Row="0"
                                    Text="&#x266B;" FontFamily="Segoe UI Symbol" FontSize="104"
-                                   Foreground="#33E040FB" HorizontalAlignment="Center"
+                                   Foreground="{StaticResource AccentSemiBrush}" HorizontalAlignment="Center"
                                    VerticalAlignment="Center"/>
                         <TextBlock x:Name="AlbumArtMetaText" Grid.Row="1"
                                    Text="" FontFamily="Segoe UI" FontSize="13"
@@ -424,16 +422,10 @@
                 <Grid Grid.Column="1" Margin="0,28,56,28" VerticalAlignment="Stretch">
                     <Border x:Name="LyricsBorder"
                             CornerRadius="0"
-                            VerticalAlignment="Stretch">
-                        <Border.Background>
-                            <SolidColorBrush Color="#10FFFFFF"/>
-                        </Border.Background>
-                        <Border.BorderBrush>
-                            <SolidColorBrush Color="#22E040FB"/>
-                        </Border.BorderBrush>
-                        <Border.BorderThickness>
-                            <Thickness>1,0,0,0</Thickness>
-                        </Border.BorderThickness>
+                            VerticalAlignment="Stretch"
+                            Background="#10FFFFFF"
+                            BorderBrush="{StaticResource AccentDimBrush}"
+                            BorderThickness="1,0,0,0">
                         <Grid Margin="28,24">
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto"/>
@@ -453,7 +445,7 @@
                                                Foreground="#44FFFFFF" VerticalAlignment="Center" Margin="0,0,8,0"/>
                                     <Button x:Name="LyricSrcAutoBtn" Click="LyricSourceButton_Click"
                                             Tag="auto" FontSize="12" Padding="12,7" Margin="0,0,4,0"
-                                            Background="#33E040FB" Foreground="#FFFFFFFF" BorderThickness="0">
+                                            Background="{StaticResource AccentSemiBrush}" Foreground="#FFFFFFFF" BorderThickness="0">
                                         <TextBlock Text="自动" FontSize="12" Foreground="#FFFFFFFF"/>
                                     </Button>
                                     <Button x:Name="LyricSrcNeteaseBtn" Click="LyricSourceButton_Click"
@@ -711,7 +703,7 @@
                                     <ToolTip Content="另存为"/>
                                 </ToolTipService.ToolTip>
                                 <TextBlock Text="另存为" FontFamily="Segoe UI Semibold"
-                                           FontSize="12" Foreground="#FFE040FB"/>
+                                           FontSize="12" Foreground="{StaticResource AccentBrush}"/>
                             </Button>
                         </StackPanel>
                     </Border>
@@ -747,11 +739,11 @@
                         <Rectangle x:Name="CropShadeLeft" Fill="#99000000"/>
                         <Rectangle x:Name="CropShadeRight" Fill="#99000000"/>
                         <Rectangle x:Name="CropBox" Fill="#00FFFFFF"
-                                   Stroke="#FFE040FB" StrokeThickness="2"/>
-                        <Rectangle x:Name="CropHandleTL" Width="12" Height="12" Fill="#FFE040FB"/>
-                        <Rectangle x:Name="CropHandleTR" Width="12" Height="12" Fill="#FFE040FB"/>
-                        <Rectangle x:Name="CropHandleBL" Width="12" Height="12" Fill="#FFE040FB"/>
-                        <Rectangle x:Name="CropHandleBR" Width="12" Height="12" Fill="#FFE040FB"/>
+                                    Stroke="{StaticResource AccentBrush}" StrokeThickness="2"/>
+                         <Rectangle x:Name="CropHandleTL" Width="12" Height="12" Fill="{StaticResource AccentBrush}"/>
+                         <Rectangle x:Name="CropHandleTR" Width="12" Height="12" Fill="{StaticResource AccentBrush}"/>
+                         <Rectangle x:Name="CropHandleBL" Width="12" Height="12" Fill="{StaticResource AccentBrush}"/>
+                         <Rectangle x:Name="CropHandleBR" Width="12" Height="12" Fill="{StaticResource AccentBrush}"/>
                     </Canvas>
 
                     <!-- Photo Bottom Bar -->
@@ -803,13 +795,11 @@
             <Border x:Name="OverlayNotification"
                     VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
                     Visibility="Collapsed" Margin="32,0,32,130"
-                    BorderThickness="3,0,0,0">
+                    BorderThickness="3,0,0,0"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Border.Background>
                     <SolidColorBrush Color="#E01A1A2E"/>
                 </Border.Background>
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#FFE040FB"/>
-                </Border.BorderBrush>
                 <Grid Margin="16,12,16,12">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
@@ -819,7 +809,7 @@
                     </Grid.ColumnDefinitions>
                     <TextBlock x:Name="OverlayIcon" Grid.Column="0"
                                Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="16"
-                               Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,12,0"/>
+                               Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,12,0"/>
                     <TextBlock x:Name="OverlayText" Grid.Column="1"
                                Text="" FontFamily="Segoe UI" FontSize="13"
                                Foreground="#FFFFFFFF" VerticalAlignment="Center"
@@ -849,14 +839,14 @@
                     Margin="0,80,32,0" Background="#40E040FB" Padding="12,6">
                 <TextBlock x:Name="AbRepeatText" Text="A-B"
                            FontFamily="Segoe UI Semibold" FontSize="12"
-                           Foreground="#FFE040FB" CharacterSpacing="40"/>
+                           Foreground="{StaticResource AccentBrush}" CharacterSpacing="40"/>
             </Border>
 
             <!-- EQUALIZER OVERLAY -->
             <Border x:Name="EqualizerOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Width="380" Background="#FF0D0D16" BorderThickness="1,0,0,0" Margin="0,0,0,0">
-                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                    Width="380" Background="#FF0D0D16" BorderThickness="1,0,0,0" Margin="0,0,0,0"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid Margin="20,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -864,7 +854,7 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="均衡器" FontFamily="Segoe UI" FontSize="14" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,12"/>
+                    <TextBlock Text="均衡器" FontFamily="Segoe UI" FontSize="14" Foreground="{StaticResource AccentBrush}" CharacterSpacing="60" Margin="0,0,0,12"/>
                     <ComboBox x:Name="EqPresetCombo" Grid.Row="1" Margin="0,0,0,12" SelectionChanged="EqPresetCombo_SelectionChanged"/>
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
                         <StackPanel x:Name="EqBandsPanel"/>
@@ -886,8 +876,8 @@
             <!-- LYRIC PICKER OVERLAY -->
             <Border x:Name="LyricPickerOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Width="440" Background="#FF0D0D16" BorderThickness="1,0,0,0">
-                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                    Width="440" Background="#FF0D0D16" BorderThickness="1,0,0,0"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid Margin="20,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -896,7 +886,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <TextBlock x:Name="LyricPickTitle" Text="选择歌词" FontFamily="Segoe UI" FontSize="14"
-                               Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,6"/>
+                               Foreground="{StaticResource AccentBrush}" CharacterSpacing="60" Margin="0,0,0,6"/>
                     <TextBlock x:Name="LyricPickSubtitle" Text="" Grid.Row="1" FontFamily="Segoe UI" FontSize="12"
                                Foreground="#88FFFFFF" TextWrapping="Wrap" Margin="0,0,0,12"/>
                     <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="420">
@@ -917,15 +907,15 @@
             <!-- VIDEO FILTER OVERLAY -->
             <Border x:Name="VideoFilterOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Right" VerticalAlignment="Center"
-                    Width="360" Background="#FF0D0D16" BorderThickness="1,0,0,0">
-                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                    Width="360" Background="#FF0D0D16" BorderThickness="1,0,0,0"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid Margin="20,16">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="视频滤镜" FontFamily="Segoe UI" FontSize="14" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,12"/>
+                    <TextBlock Text="视频滤镜" FontFamily="Segoe UI" FontSize="14" Foreground="{StaticResource AccentBrush}" CharacterSpacing="60" Margin="0,0,0,12"/>
                     <StackPanel Grid.Row="1">
                         <TextBlock Text="亮度" Foreground="#AAFFFFFF" FontSize="12" Margin="0,0,0,4"/>
                         <Slider x:Name="BrightnessSlider" Minimum="0" Maximum="2" Value="1" StepFrequency="0.05" ValueChanged="BrightnessSlider_ValueChanged"/>
@@ -952,10 +942,10 @@
             <!-- STATS OSD -->
             <Border x:Name="StatsOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Left" VerticalAlignment="Top"
-                    Margin="32,80,0,0" Background="#CC0D0D16" Padding="16,12" BorderThickness="1,0,0,0">
-                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                    Margin="32,80,0,0" Background="#CC0D0D16" Padding="16,12" BorderThickness="1,0,0,0"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <StackPanel>
-                    <TextBlock Text="播放统计" FontFamily="Segoe UI" FontSize="12" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,8"/>
+                    <TextBlock Text="播放统计" FontFamily="Segoe UI" FontSize="12" Foreground="{StaticResource AccentBrush}" CharacterSpacing="60" Margin="0,0,0,8"/>
                     <TextBlock x:Name="StatsText" Text="" FontFamily="Consolas" FontSize="11" Foreground="#AAFFFFFF" TextWrapping="Wrap"/>
                 </StackPanel>
             </Border>
@@ -997,15 +987,15 @@
             <!-- KEYBOARD SHORTCUTS OVERLAY -->
             <Border x:Name="ShortcutsOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
-                    MinWidth="500" Background="#FF0D0D16" BorderThickness="1,0,0,0" Padding="28,24">
-                <Border.BorderBrush><SolidColorBrush Color="#FFE040FB"/></Border.BorderBrush>
+                    MinWidth="500" Background="#FF0D0D16" BorderThickness="1,0,0,0" Padding="28,24"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="键盘快捷键" FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB" CharacterSpacing="60" Margin="0,0,0,16"/>
+                    <TextBlock Text="键盘快捷键" FontFamily="Segoe UI" FontSize="15" Foreground="{StaticResource AccentBrush}" CharacterSpacing="60" Margin="0,0,0,16"/>
                     <ScrollViewer Grid.Row="1" MaxHeight="480" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Text="播放控制" Foreground="#44FFFFFF" FontSize="11" CharacterSpacing="60" Margin="0,0,0,8"/>
@@ -1048,10 +1038,8 @@
             <Border x:Name="MediaInfoOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     MinWidth="480" MaxWidth="600" Background="#FF0D0D16"
-                    BorderThickness="1,0,0,0" Margin="0,0,0,60">
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#FFE040FB"/>
-                </Border.BorderBrush>
+                    BorderThickness="1,0,0,0" Margin="0,0,0,60"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid Margin="28,24">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1060,7 +1048,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="媒体信息"
-                               FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB"
+                               FontFamily="Segoe UI" FontSize="15" Foreground="{StaticResource AccentBrush}"
                                CharacterSpacing="60" Margin="0,0,0,16"/>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
@@ -1116,10 +1104,8 @@
             <Border x:Name="PhotoInfoOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Center" VerticalAlignment="Center"
                     MinWidth="440" MaxWidth="580" Background="#FF0D0D16"
-                    BorderThickness="1,0,0,0" Margin="0,0,0,60">
-                <Border.BorderBrush>
-                    <SolidColorBrush Color="#FFE040FB"/>
-                </Border.BorderBrush>
+                    BorderThickness="1,0,0,0" Margin="0,0,0,60"
+                    BorderBrush="{StaticResource AccentBrush}">
                 <Grid Margin="28,24">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -1128,7 +1114,7 @@
                     </Grid.RowDefinitions>
 
                     <TextBlock Grid.Row="0" Text="图片信息"
-                               FontFamily="Segoe UI" FontSize="15" Foreground="#FFE040FB"
+                               FontFamily="Segoe UI" FontSize="15" Foreground="{StaticResource AccentBrush}"
                                CharacterSpacing="60" Margin="0,0,0,16"/>
 
                     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
@@ -1238,7 +1224,7 @@
                                 <ToolTip Content="媒体评分"/>
                             </ToolTipService.ToolTip>
                             <TextBlock Text="&#x2606;" FontFamily="Segoe UI Symbol" FontSize="14"
-                                       Foreground="#FFE040FB"/>
+                                       Foreground="{StaticResource AccentBrush}"/>
                         </Button>
 
                         <Button x:Name="BookmarkBtn" Click="BookmarkBtn_Click"
@@ -1457,10 +1443,8 @@
         <Border x:Name="PlaylistSidebar" Grid.Column="1"
                 Width="360" Visibility="Collapsed"
                 Background="#FF030307"
-                BorderThickness="1,0,0,0">
-            <Border.BorderBrush>
-                <SolidColorBrush Color="#22E040FB"/>
-            </Border.BorderBrush>
+                BorderThickness="1,0,0,0"
+                BorderBrush="{StaticResource AccentDimBrush}">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -1475,7 +1459,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="播放列表" FontFamily="Segoe UI" FontSize="14"
-                               Foreground="#FFE040FB" CharacterSpacing="60"
+                               Foreground="{StaticResource AccentBrush}" CharacterSpacing="60"
                                VerticalAlignment="Center"/>
                     <StackPanel Grid.Column="1" Orientation="Horizontal">
                         <Button Click="PlaylistSaveLibrary_Click"
@@ -1549,7 +1533,7 @@
                                                TextAlignment="Right" Margin="0,0,12,0"
                                                Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=Invert}"/>
                                     <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="12"
-                                               Foreground="#FFE040FB" TextAlignment="Right" Margin="0,0,12,0"
+                                               Foreground="{StaticResource AccentBrush}" TextAlignment="Right" Margin="0,0,12,0"
                                                Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                 </Grid>
 

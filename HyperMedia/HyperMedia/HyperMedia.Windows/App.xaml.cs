@@ -47,6 +47,7 @@ namespace HyperMedia
 #endif
 
             RegisterSettingsCharm();
+            AccentHelper.Load();
 
             Frame rootFrame = Window.Current.Content as Frame;
 
@@ -159,7 +160,7 @@ namespace HyperMedia
                     Text = "\u25B6",
                     FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI Symbol"),
                     FontSize = 18,
-                    Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    Foreground = AccentHelper.AccentBrush,
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Windows.UI.Xaml.Thickness(0, 0, 10, 0)
                 };

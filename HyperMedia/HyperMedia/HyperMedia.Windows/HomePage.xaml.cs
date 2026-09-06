@@ -144,7 +144,7 @@ namespace HyperMedia
                 if (HomeTitle1 != null)
                     HomeTitle1.Foreground = light ? fgBrush : whiteBrush;
                 if (HomeTitle2 != null)
-                    HomeTitle2.Foreground = light ? new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)) : new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                    HomeTitle2.Foreground = light ? AccentHelper.AccentBrush : AccentHelper.AccentBrush;
                 if (HomeDesc != null)
                     HomeDesc.Foreground = light ? fgSoft : whiteBrush;
                 if (VideosTitle != null)
@@ -771,7 +771,7 @@ namespace HyperMedia
             title.Text = L("Library");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 16;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Foreground = AccentHelper.AccentBrush;
             title.Margin = new Thickness(0, 0, 0, 8);
             panel.Children.Add(title);
 
@@ -948,7 +948,7 @@ namespace HyperMedia
             title.Text = L("OpenNetworkMedia");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 14;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Foreground = AccentHelper.AccentBrush;
             title.Margin = new Thickness(0, 0, 0, 16);
             panel.Children.Add(title);
 
@@ -1161,7 +1161,7 @@ namespace HyperMedia
             var panel = new Border
             {
                 Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x0D, 0x0D, 0x16)),
-                BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                BorderBrush = AccentHelper.AccentBrush,
                 BorderThickness = new Thickness(1, 0, 0, 0),
                 Padding = new Thickness(28, 24, 28, 24),
                 Child = content
@@ -1172,7 +1172,7 @@ namespace HyperMedia
                 Text = L("IdentifyTitle"),
                 FontFamily = new FontFamily("Segoe UI"),
                 FontSize = 20,
-                Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                Foreground = AccentHelper.AccentBrush,
                 Margin = new Thickness(0, 0, 0, 16)
             });
 
@@ -1211,7 +1211,7 @@ namespace HyperMedia
                 var playBtn = new Button
                 {
                     Content = L("IdentifyPlay"),
-                    Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    Background = AccentHelper.AccentBrush,
                     Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x0A, 0x0F)),
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(20, 10, 20, 10),
@@ -1232,7 +1232,7 @@ namespace HyperMedia
                 var editBtn = new Button
                 {
                     Content = L("MetaEdit"),
-                    Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0x22, 0xE0, 0x40, 0xFB)),
+                    Background = AccentHelper.BrushWithAlpha(0x22),
                     Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)),
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(20, 10, 20, 10),
@@ -1264,7 +1264,7 @@ namespace HyperMedia
                 var panel = new Border
                 {
                     Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x0D, 0x0D, 0x16)),
-                    BorderBrush = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    BorderBrush = AccentHelper.AccentBrush,
                     BorderThickness = new Thickness(1, 0, 0, 0),
                     Padding = new Thickness(28, 24, 28, 24),
                     Child = root
@@ -1275,7 +1275,7 @@ namespace HyperMedia
                     Text = L("MetaEditTitle"),
                     FontFamily = new FontFamily("Segoe UI"),
                     FontSize = 20,
-                    Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    Foreground = AccentHelper.AccentBrush,
                     Margin = new Thickness(0, 0, 0, 8)
                 });
                 root.Children.Add(new TextBlock
@@ -1314,7 +1314,7 @@ namespace HyperMedia
                 var saveBtn = new Button
                 {
                     Content = L("MetaSave"),
-                    Background = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                    Background = AccentHelper.AccentBrush,
                     Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0x0A, 0x0A, 0x0F)),
                     BorderThickness = new Thickness(0),
                     Padding = new Thickness(20, 10, 20, 10),
@@ -1549,7 +1549,7 @@ namespace HyperMedia
             title.Text = L("MyPlaylists");
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 16;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Foreground = AccentHelper.AccentBrush;
             title.Margin = new Thickness(0, 0, 0, 4);
             panel.Children.Add(title);
 
@@ -1894,7 +1894,7 @@ namespace HyperMedia
                 Glyph = "\uD83C\uDFAC",
                 Title = L("Videos"),
                 Subtitle = vids > 0 ? L("RecentPlayed") + " " + vids + (en ? " items" : " 项") : L("OpenFile"),
-                TileBrush = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB)),
+                TileBrush = AccentHelper.BrushWithAlpha(0xCC),
                 Action = "category:1"
             });
             items.Add(new OverviewItem

@@ -30,6 +30,8 @@ namespace HyperMedia
         private const string KEY_LIGHT_THEME = "Settings_LightTheme";
         private const string KEY_LANGUAGE = "Settings_Language";
         private const string KEY_LYRIC_SOURCE = "Settings_LyricSource";
+        private const string KEY_LYRIC_OFFSET = "Settings_LyricOffset";
+        private const string KEY_AUTO_SYNC = "Settings_LyricAutoSync";
 
         public SettingsPage()
         {
@@ -164,6 +166,21 @@ namespace HyperMedia
                     SelectComboBoxItem(LyricSourceCombo, source);
             }
 
+            // Accent color
+            _isLoadingAccent = true;
+            FollowSystemAccentToggle.IsOn = AccentHelper.GetFollowSystem();
+            InitAccentSwatches();
+            var cur = AccentHelper.CurrentAccent;
+            AccentHexInput.Text = string.Format("#{0:X2}{1:X2}{2:X2}", cur.R, cur.G, cur.B);
+            AccentPreview.Background = AccentHelper.AccentBrush;
+            _isLoadingAccent = false;
+
+            // Lyric offset
+            if (settings.Values.ContainsKey(KEY_LYRIC_OFFSET))
+                LyricOffsetSlider.Value = (double)settings.Values[KEY_LYRIC_OFFSET];
+            if (settings.Values.ContainsKey(KEY_AUTO_SYNC))
+                AutoSyncToggle.IsOn = (bool)settings.Values[KEY_AUTO_SYNC];
+
             // Restore language selection (without triggering reload loop)
             _isLoading = true;
             if (settings.Values.ContainsKey(KEY_LANGUAGE))
@@ -188,6 +205,8 @@ namespace HyperMedia
             AutoHideDelaySlider.ValueChanged += AutoHideDelaySlider_ValueChanged;
             SubtitleSizeCombo.SelectionChanged += SubtitleSizeCombo_SelectionChanged;
             SubtitleColorCombo.SelectionChanged += SubtitleColorCombo_SelectionChanged;
+            LyricOffsetSlider.ValueChanged += LyricOffsetSlider_ValueChanged;
+            AutoSyncToggle.Toggled += AutoSyncToggle_Toggled;
             _isLoading = false;
         }
         private void SaveSetting(string key, object value)
@@ -671,6 +690,155 @@ namespace HyperMedia
             }
             catch (Exception ex) { Debug.WriteLine("[HyperMedia] Caught: " + ex.Message); }
             return "auto";
+        }
+
+        public static double GetLyricOffset()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_LYRIC_OFFSET))
+                    return (double)settings.Values[KEY_LYRIC_OFFSET];
+            }
+            catch { }
+            return 0;
+        }
+
+        public static bool GetAutoSync()
+        {
+            try
+            {
+                var settings = ApplicationData.Current.LocalSettings;
+                if (settings.Values.ContainsKey(KEY_AUTO_SYNC))
+                    return (bool)settings.Values[KEY_AUTO_SYNC];
+            }
+            catch { }
+            return false;
+        }
+
+        // --- Accent color ---
+        private bool _isLoadingAccent;
+        private static readonly Color[] AccentPalette = new Color[]
+        {
+            Color.FromArgb(255, 224, 64, 251),
+            Color.FromArgb(255, 0, 120, 215),
+            Color.FromArgb(255, 0, 153, 188),
+            Color.FromArgb(255, 16, 137, 62),
+            Color.FromArgb(255, 218, 59, 1),
+            Color.FromArgb(255, 191, 0, 119),
+            Color.FromArgb(255, 0, 99, 177),
+            Color.FromArgb(255, 107, 105, 214),
+            Color.FromArgb(255, 0, 188, 212),
+            Color.FromArgb(255, 76, 175, 80),
+            Color.FromArgb(255, 255, 152, 0),
+            Color.FromArgb(255, 244, 67, 54),
+        };
+
+        private void InitAccentSwatches()
+        {
+            if (AccentSwatches == null) return;
+            AccentSwatches.Children.Clear();
+            var current = AccentHelper.CurrentAccent;
+            for (int i = 0; i < AccentPalette.Length; i++)
+            {
+                var c = AccentPalette[i];
+                var swatch = new Border
+                {
+                    Width = 32, Height = 32,
+                    Margin = new Thickness(0, 0, 6, 6),
+                    Background = new SolidColorBrush(c),
+                    BorderBrush = new SolidColorBrush(Color.FromArgb(0x33, 255, 255, 255)),
+                    BorderThickness = new Thickness(1),
+                    Tag = c
+                };
+                if (c.R == current.R && c.G == current.G && c.B == current.B)
+                {
+                    swatch.BorderBrush = new SolidColorBrush(Color.FromArgb(0xFF, 255, 255, 255));
+                    swatch.BorderThickness = new Thickness(2);
+                }
+                swatch.Tapped += AccentSwatch_Tapped;
+                AccentSwatches.Children.Add(swatch);
+            }
+        }
+
+        private void AccentSwatch_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            if (_isLoadingAccent) return;
+            var border = sender as Border;
+            if (border == null || border.Tag == null) return;
+            var color = (Color)border.Tag;
+            _isLoadingAccent = true;
+            AccentHelper.SetAccent(color);
+            AccentHelper.Load();
+            AccentHexInput.Text = string.Format("#{0:X2}{1:X2}{2:X2}", color.R, color.G, color.B);
+            AccentPreview.Background = AccentHelper.AccentBrush;
+            InitAccentSwatches();
+            _isLoadingAccent = false;
+            ApplyAccentToMainPage();
+        }
+
+        private void AccentHexInput_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_isLoadingAccent) return;
+            string hex = AccentHexInput.Text.TrimStart('#');
+            if (hex.Length != 6) return;
+            byte r, g, b;
+            if (!byte.TryParse(hex.Substring(0, 2), System.Globalization.NumberStyles.HexNumber, null, out r) ||
+                !byte.TryParse(hex.Substring(2, 2), System.Globalization.NumberStyles.HexNumber, null, out g) ||
+                !byte.TryParse(hex.Substring(4, 2), System.Globalization.NumberStyles.HexNumber, null, out b))
+                return;
+            var color = Color.FromArgb(255, r, g, b);
+            _isLoadingAccent = true;
+            AccentHelper.SetAccent(color);
+            AccentHelper.Load();
+            AccentPreview.Background = AccentHelper.AccentBrush;
+            InitAccentSwatches();
+            _isLoadingAccent = false;
+            ApplyAccentToMainPage();
+        }
+
+        private void FollowSystemAccent_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            AccentHelper.SetFollowSystem(FollowSystemAccentToggle.IsOn);
+            AccentHelper.Load();
+            _isLoadingAccent = true;
+            var cur = AccentHelper.CurrentAccent;
+            AccentHexInput.Text = string.Format("#{0:X2}{1:X2}{2:X2}", cur.R, cur.G, cur.B);
+            AccentPreview.Background = AccentHelper.AccentBrush;
+            InitAccentSwatches();
+            _isLoadingAccent = false;
+            ApplyAccentToMainPage();
+        }
+
+        private void ApplyAccentToMainPage()
+        {
+            try
+            {
+                var frame = Window.Current.Content as Frame;
+                var mainPage = frame?.Content as MainPage;
+                if (mainPage != null)
+                {
+                    mainPage.ApplyAccentColor();
+                    mainPage.ForceAccentRefresh();
+                }
+            }
+            catch { }
+        }
+
+        // --- Lyric offset ---
+        private void LyricOffsetSlider_ValueChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (_isLoading) return;
+            SaveSetting(KEY_LYRIC_OFFSET, LyricOffsetSlider.Value);
+            if (LyricOffsetText != null)
+                LyricOffsetText.Text = ((int)LyricOffsetSlider.Value) + "ms";
+        }
+
+        private void AutoSyncToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+            SaveSetting(KEY_AUTO_SYNC, AutoSyncToggle.IsOn);
         }
     }
 }

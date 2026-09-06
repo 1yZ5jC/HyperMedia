@@ -18,5 +18,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)VlcBackend.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RecentItem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Visualizers.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AccentHelper.cs" />
   </ItemGroup>
 </Project>

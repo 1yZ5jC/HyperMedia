@@ -211,6 +211,7 @@ namespace HyperMedia
         public MainPage()
         {
             this.InitializeComponent();
+            AccentHelper.Load();
 
             // The player must survive navigation to Settings and back. In Windows 8.1
             // a Disabled cache destroys the page instance on navigate-away, which would
@@ -1238,7 +1239,7 @@ namespace HyperMedia
             title.Text = "打开网址";
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 14;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Foreground = AccentHelper.AccentBrush;
             title.Margin = new Thickness(0, 0, 0, 16);
             panel.Children.Add(title);
 
@@ -1591,7 +1592,7 @@ namespace HyperMedia
             title.Text = "保存为歌单";
             title.FontFamily = new Windows.UI.Xaml.Media.FontFamily("Segoe UI");
             title.FontSize = 14;
-            title.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            title.Foreground = AccentHelper.AccentBrush;
             title.Margin = new Thickness(0, 0, 0, 12);
             panel.Children.Add(title);
 
@@ -2490,7 +2491,7 @@ namespace HyperMedia
         {
             try
             {
-                var active = new SolidColorBrush(Color.FromArgb(0x33, 0xE0, 0x40, 0xFB));
+                var active = AccentHelper.BrushWithAlpha(0x33);
                 var activeFg = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
                 var inactive = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
                 var inactiveFg = new SolidColorBrush(Color.FromArgb(0x88, 0xFF, 0xFF, 0xFF));
@@ -2933,7 +2934,7 @@ namespace HyperMedia
                         Text = "[" + srcLabel + "]",
                         FontFamily = new FontFamily("Segoe UI Semibold"),
                         FontSize = 12,
-                        Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB)),
+                        Foreground = AccentHelper.BrushWithAlpha(0xCC),
                         VerticalAlignment = VerticalAlignment.Center,
                         Margin = new Thickness(0, 0, 10, 0)
                     };
@@ -2958,7 +2959,7 @@ namespace HyperMedia
                         Text = marks,
                         FontFamily = new FontFamily("Segoe UI"),
                         FontSize = 11,
-                        Foreground = new SolidColorBrush(Color.FromArgb(0x88, 0xE0, 0x40, 0xFB)),
+                        Foreground = AccentHelper.BrushWithAlpha(0x88),
                         Margin = new Thickness(0, 2, 0, 0)
                     };
 
@@ -3530,7 +3531,7 @@ namespace HyperMedia
                 {
                     Width = 3,
                     Height = 30,
-                    Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB)),
+                    Background = AccentHelper.BrushWithAlpha(0x00),
                     VerticalAlignment = VerticalAlignment.Center,
                     Margin = new Thickness(0, 0, 12, 0)
                 };
@@ -3568,7 +3569,7 @@ namespace HyperMedia
                         Text = line.Text,
                         FontFamily = new FontFamily("Segoe UI"),
                         FontSize = 20,
-                        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
+                        Foreground = AccentHelper.AccentBrush,
                         TextWrapping = TextWrapping.NoWrap,
                         VerticalAlignment = VerticalAlignment.Center,
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold
@@ -3652,6 +3653,41 @@ namespace HyperMedia
             UpdateLyricPickButton();
         }
 
+        public void ApplyAccentColor()
+        {
+            var accent = AccentHelper.CurrentAccent;
+            _albumThemeColor = accent;
+
+            foreach (var lyricLine in _lyricLines)
+            {
+                if (lyricLine.Words != null && lyricLine.Words.Count > 0 && lyricLine.HighlightTb != null)
+                {
+                    bool isActive = _lyricLines.IndexOf(lyricLine) == _currentLyricIndex;
+                    lyricLine.HighlightTb.Foreground = new SolidColorBrush(accent);
+                    if (isActive)
+                    {
+                        var accentBar = (lyricLine.Container.Child as StackPanel)?.Children[0] as Border;
+                        if (accentBar != null)
+                            accentBar.Background = new SolidColorBrush(accent);
+                        lyricLine.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, accent.R, accent.G, accent.B));
+                        lyricLine.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, accent.R, accent.G, accent.B));
+                    }
+                }
+            }
+        }
+
+        public void ForceAccentRefresh()
+        {
+            try
+            {
+                AccentHelper.Load();
+                var frame = Frame;
+                if (frame != null)
+                    frame.Navigate(typeof(MainPage));
+            }
+            catch { }
+        }
+
         private List<LyricLine> ParseLrc(string text)
         {
             var result = new List<LyricLine>();
@@ -3722,6 +3758,9 @@ namespace HyperMedia
             catch { }
             if (posMs < 0) return;
 
+            // Apply global lyric offset from settings
+            posMs += SettingsPage.GetLyricOffset();
+
             int idx = -1;
             for (int i = _lyricLines.Count - 1; i >= 0; i--)
             {
@@ -3744,11 +3783,12 @@ namespace HyperMedia
                     bool isWordLine = line.Words != null && line.Words.Count > 0;
                     if (i == idx)
                     {
+                        var accent = AccentHelper.CurrentAccent;
                         if (isWordLine)
                         {
                             line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x77, 0xFF, 0xFF, 0xFF));
                             if (line.HighlightTb != null)
-                                line.HighlightTb.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                                line.HighlightTb.Foreground = new SolidColorBrush(accent);
                         }
                         else
                         {
@@ -3756,12 +3796,12 @@ namespace HyperMedia
                         }
                         line.UiElement.FontSize = isWordLine ? 20 : 19;
                         line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
-                        line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
+                        line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, accent.R, accent.G, accent.B));
                         line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
-                        var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
-                        if (accent != null)
-                            accent.Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
-                        line.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, 0xE0, 0x40, 0xFB));
+                        var accentBar = (line.Container.Child as StackPanel)?.Children[0] as Border;
+                        if (accentBar != null)
+                            accentBar.Background = new SolidColorBrush(accent);
+                        line.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, accent.R, accent.G, accent.B));
                     }
                     else
                     {
@@ -3781,7 +3821,7 @@ namespace HyperMedia
                         line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
                         var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
                         if (accent != null)
-                            accent.Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB));
+                            accent.Background = AccentHelper.BrushWithAlpha(0x00);
                         line.Container.Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E));
 
                         if (line.WordClip != null)
@@ -5270,13 +5310,11 @@ namespace HyperMedia
                     break;
                 case 1:
                     RepeatIcon.Text = "\U0001F501";
-                    RepeatIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                        Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                    RepeatIcon.Foreground = AccentHelper.AccentBrush;
                     break;
                 case 2:
                     RepeatIcon.Text = "\U0001F502";
-                    RepeatIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                        Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                    RepeatIcon.Foreground = AccentHelper.AccentBrush;
                     break;
             }
         }
@@ -5284,8 +5322,7 @@ namespace HyperMedia
         private void UpdateShuffleIcon()
         {
             if (_shuffleOn)
-                ShuffleIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                    Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                ShuffleIcon.Foreground = AccentHelper.AccentBrush;
             else
                 ShuffleIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
                     Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
@@ -5962,7 +5999,7 @@ namespace HyperMedia
         {
             if (PhotoFilterIcon == null) return;
             PhotoFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(active
-                ? Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)
+                ? AccentHelper.CurrentAccent
                 : Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
         }
 
@@ -6188,8 +6225,7 @@ namespace HyperMedia
 
             _isSlideshow = true;
             PhotoSlideshowIcon.Text = "\u23F8";
-            PhotoSlideshowIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            PhotoSlideshowIcon.Foreground = AccentHelper.AccentBrush;
 
             if (_slideshowTimer == null)
             {
@@ -6662,7 +6698,7 @@ namespace HyperMedia
         {
             if (PhotoEditFilterIcon == null) return;
             PhotoEditFilterIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(active
-                ? Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)
+                ? AccentHelper.CurrentAccent
                 : Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
         }
 
@@ -6762,8 +6798,7 @@ namespace HyperMedia
             _photoCropDragMode = 0;
             PhotoCropCanvas.Visibility = Visibility.Visible;
             PhotoEditCropIcon.Text = L("EditCropDone");
-            PhotoEditCropIcon.Foreground = new Windows.UI.Xaml.Media.SolidColorBrush(
-                Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+            PhotoEditCropIcon.Foreground = AccentHelper.AccentBrush;
             _photoPrevManipulationMode = PhotoScrollViewer.ManipulationMode;
             PhotoScrollViewer.ManipulationMode = ManipulationModes.None;
             if (_photoIsFit) FitPhotoView();
@@ -8129,7 +8164,7 @@ namespace HyperMedia
                 int rating = !string.IsNullOrEmpty(_originalFileName) ? PlayHistory.GetRating(_originalFileName) : 0;
                 icon.Text = rating > 0 ? "\u2605" : "\u2606";
                 icon.Foreground = rating > 0
-                    ? new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB))
+                    ? AccentHelper.AccentBrush
                     : new Windows.UI.Xaml.Media.SolidColorBrush(Windows.UI.Color.FromArgb(0x66, 0xFF, 0xFF, 0xFF));
             }
             catch (Exception ex) { LogUnhandled(ex); }
