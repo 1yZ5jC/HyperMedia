@@ -3524,13 +3524,6 @@ namespace HyperMedia
                 {
                     Debug.WriteLine("[HyperMedia] WordLine: t={0:F0}ms text='{1}' words={2}",
                         line.TimeMs, line.Text, line.Words.Count);
-                    for (int wi = 0; wi < Math.Min(line.Words.Count, 5); wi++)
-                    {
-                        var w = line.Words[wi];
-                        Debug.WriteLine("[HyperMedia]   W[{0}] '{1}' {2:F0}-{3:F0}ms", wi, w.Ch, w.StartMs, w.EndMs);
-                    }
-                    if (line.Words.Count > 5)
-                        Debug.WriteLine("[HyperMedia]   ... and {0} more words", line.Words.Count - 5);
                 }
 
                 var accentBar = new Border
@@ -3564,8 +3557,8 @@ namespace HyperMedia
                     {
                         Text = line.Text,
                         FontFamily = new FontFamily("Segoe UI"),
-                        FontSize = 19,
-                        Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                        FontSize = 20,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0x55, 0xFF, 0xFF, 0xFF)),
                         TextWrapping = TextWrapping.NoWrap,
                         VerticalAlignment = VerticalAlignment.Center
                     };
@@ -3574,8 +3567,8 @@ namespace HyperMedia
                     {
                         Text = line.Text,
                         FontFamily = new FontFamily("Segoe UI"),
-                        FontSize = 19,
-                        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)),
+                        FontSize = 20,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB)),
                         TextWrapping = TextWrapping.NoWrap,
                         VerticalAlignment = VerticalAlignment.Center,
                         FontWeight = Windows.UI.Text.FontWeights.SemiBold
@@ -3748,10 +3741,20 @@ namespace HyperMedia
                 for (int i = 0; i < _lyricLines.Count; i++)
                 {
                     var line = _lyricLines[i];
+                    bool isWordLine = line.Words != null && line.Words.Count > 0;
                     if (i == idx)
                     {
-                        line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
-                        line.UiElement.FontSize = line.Words != null ? 19 : 19;
+                        if (isWordLine)
+                        {
+                            line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x77, 0xFF, 0xFF, 0xFF));
+                            if (line.HighlightTb != null)
+                                line.HighlightTb.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                        }
+                        else
+                        {
+                            line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+                        }
+                        line.UiElement.FontSize = isWordLine ? 20 : 19;
                         line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
                         line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
                         line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
@@ -3762,8 +3765,17 @@ namespace HyperMedia
                     }
                     else
                     {
-                        line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
-                        line.UiElement.FontSize = 17;
+                        if (isWordLine)
+                        {
+                            line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                            if (line.HighlightTb != null)
+                                line.HighlightTb.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                        }
+                        else
+                        {
+                            line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                        }
+                        line.UiElement.FontSize = isWordLine ? 20 : 17;
                         line.UiElement.FontWeight = Windows.UI.Text.FontWeights.Normal;
                         line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
                         line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
@@ -3843,17 +3855,6 @@ namespace HyperMedia
 
             double newClip = Math.Ceiling(clipWidth);
             line.WordClip.Rect = new Rect(0, 0, newClip, tb.DesiredSize.Height + 2);
-
-            // Debug: log first word-level line's clip updates (throttled)
-            if (words.Count > 0 && words.Count <= 15)
-            {
-                Debug.WriteLine("[HyperMedia] WordClip: pos={0:F0}ms clipW={1:F1}/{2:F0} words={3} word[{4}]='{5}' {6:F0}-{7:F0}ms",
-                    posMs, newClip, totalWidth, words.Count,
-                    words.FindIndex(w2 => posMs >= w2.StartMs && posMs < w2.EndMs),
-                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.Ch ?? "",
-                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.StartMs ?? 0,
-                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.EndMs ?? 0);
-            }
         }
 
         private async System.Threading.Tasks.Task<System.Tuple<string, byte[]>> ExtractEmbeddedLyricsAsync()

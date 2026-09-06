@@ -478,7 +478,8 @@
                             </Grid>
                             <ScrollViewer x:Name="LyricsScrollViewer" Grid.Row="1"
                                           VerticalScrollBarVisibility="Auto"
-                                          HorizontalScrollBarVisibility="Disabled">
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Padding="0,0,0,140">
                                 <StackPanel x:Name="LyricsLines">
                                     <TextBlock x:Name="LyricsPlaceholder"
                                                Text="暂无歌词"
