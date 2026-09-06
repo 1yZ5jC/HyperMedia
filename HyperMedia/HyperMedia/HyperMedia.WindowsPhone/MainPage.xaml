@@ -138,10 +138,10 @@
                     <Grid Grid.Column="1" VerticalAlignment="Center" Margin="8,0,8,0">
                         <ProgressBar x:Name="PositionProgress" Minimum="0" Maximum="100" Value="0"
                                      Height="4" VerticalAlignment="Center"
-                                     Background="#55FFFFFF" Foreground="#FFE040FB"/>
+                                     Background="#55FFFFFF" Foreground="{StaticResource AccentBrush}"/>
                         <Slider x:Name="PositionSlider" Minimum="0" Maximum="100" Value="0"
                                 VerticalAlignment="Center"
-                                Foreground="#FFE040FB" Background="#55FFFFFF"
+                                Foreground="{StaticResource AccentBrush}" Background="#55FFFFFF"
                                 ValueChanged="PositionSlider_ValueChanged"/>
                     </Grid>
                     <TextBlock x:Name="DurationText" Grid.Column="2" Text="00:00" Foreground="#AAFFFFFF"

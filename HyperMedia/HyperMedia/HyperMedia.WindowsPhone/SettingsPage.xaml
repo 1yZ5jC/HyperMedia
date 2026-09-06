@@ -392,8 +392,8 @@
                 <Border Background="#08FFFFFF" Padding="20,16">
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                            <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="19"
-                                       Foreground="#FFE040FB" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                             <TextBlock Text="&#x25B6;" FontFamily="Segoe UI Symbol" FontSize="19"
+                                        Foreground="{StaticResource AccentBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                             <TextBlock Text="HYPERMEDIA" FontFamily="Segoe UI" FontSize="19"
                                        Foreground="#FFFFFFFF" VerticalAlignment="Center" CharacterSpacing="80"/>
                         </StackPanel>

@@ -12,6 +12,15 @@
             <local:BoolToBrushConverter x:Key="BoolToBrushConverter"/>
             <local:BoolToFontWeightConverter x:Key="BoolToFontWeightConverter"/>
 
+            <!-- Dynamic accent color resources (updated by AccentHelper) -->
+            <SolidColorBrush x:Key="AccentBrush" Color="#FFE040FB"/>
+            <SolidColorBrush x:Key="AccentDimBrush" Color="#22E040FB"/>
+            <SolidColorBrush x:Key="AccentSubtleBrush" Color="#44E040FB"/>
+            <SolidColorBrush x:Key="AccentSemiBrush" Color="#33E040FB"/>
+            <SolidColorBrush x:Key="AccentHoverBrush" Color="#15E040FB"/>
+            <SolidColorBrush x:Key="AccentTagBrush" Color="#20E040FB"/>
+            <SolidColorBrush x:Key="AccentVeryDimBrush" Color="#18E040FB"/>
+
             <!-- Zune Navigation Style -->
             <Style x:Key="ZuneNavStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
@@ -60,7 +69,7 @@
 
             <!-- Zune Open Style -->
             <Style x:Key="ZuneOpenStyle" TargetType="Button">
-                <Setter Property="Background" Value="#FFE040FB"/>
+                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
                 <Setter Property="Foreground" Value="#FF0A0A0F"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="24,12"/>
@@ -99,7 +108,7 @@
 
             <!-- Zune Action Button (outlined) -->
             <Style x:Key="ZuneActionStyle" TargetType="Button">
-                <Setter Property="Background" Value="#FFE040FB"/>
+                <Setter Property="Background" Value="{StaticResource AccentBrush}"/>
                 <Setter Property="Foreground" Value="#FF0A0A0F"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="32,14"/>

@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Package xmlns="http://schemas.microsoft.com/appx/2010/manifest" xmlns:m2="http://schemas.microsoft.com/appx/2013/manifest">
-  <Identity Name="YoungZhouCorp.HyperMedia" Publisher="CN=Alan" Version="1.0.0.4" />
+  <Identity Name="YoungZhouCorp.HyperMedia" Publisher="CN=Alan" Version="1.0.0.5" />
   <Properties>
     <DisplayName>HyperMedia.Windows</DisplayName>
     <PublisherDisplayName>Alan</PublisherDisplayName>

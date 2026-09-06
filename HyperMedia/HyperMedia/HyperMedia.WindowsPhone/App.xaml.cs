@@ -66,6 +66,8 @@ namespace HyperMedia
 
             HardwareButtons.BackPressed += OnBackPressed;
 
+            AccentHelper.Load();
+
             Frame rootFrame = Window.Current.Content as Frame;
 
             if (rootFrame == null)

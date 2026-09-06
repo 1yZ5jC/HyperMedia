@@ -29,8 +29,10 @@ namespace HyperMedia
         private static readonly double[] SPEEDS = { 0.5, 0.75, 1.0, 1.25, 1.5, 2.0 };
         private static readonly string[] AUDIO_EXTS =
             { ".mp3", ".wav", ".flac", ".aac", ".m4a", ".ogg", ".oga", ".wma", ".opus", ".amr" };
-        private static readonly Color VIS_THEME =
-            Color.FromArgb(255, 224, 64, 251); // Zune purple, matches desktop
+        private static Color VIS_THEME
+        {
+            get { return AccentHelper.CurrentAccent; }
+        }
 
         private List<StorageFile> _playlist = new List<StorageFile>();
         private string _networkUrl;
