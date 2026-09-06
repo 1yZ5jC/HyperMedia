@@ -438,7 +438,7 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock x:Name="LyricsTitle" Grid.Column="0"
                                            Text="歌词" FontFamily="Segoe UI" FontSize="18"
-                                           Foreground="#44E040FB" CharacterSpacing="80"
+                                           Foreground="{StaticResource AccentSubtleBrush}" CharacterSpacing="80"
                                            VerticalAlignment="Center"/>
                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                     <TextBlock Text="来源:" FontFamily="Segoe UI" FontSize="12"
@@ -954,7 +954,7 @@
             <Border x:Name="MiniPlayerOverlay" Visibility="Collapsed"
                     HorizontalAlignment="Right" VerticalAlignment="Bottom"
                     Margin="0,0,24,24" Background="#D9080910"
-                    BorderThickness="1" BorderBrush="#44E040FB">
+                    BorderThickness="1" BorderBrush="{StaticResource AccentSubtleBrush}">
                 <StackPanel Orientation="Horizontal" Margin="12,8">
                     <Image x:Name="MiniPlayerArt" Width="40" Height="40" Stretch="Uniform"
                            Margin="0,0,10,0" VerticalAlignment="Center"/>
