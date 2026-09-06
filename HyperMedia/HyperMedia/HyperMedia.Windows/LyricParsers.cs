@@ -34,6 +34,7 @@ namespace HyperMedia
 
         private static readonly Regex RgxKrcLine = new Regex(@"\[\s*\d+\s*,\s*\d+\s*\]");
         private static readonly Regex RgxWordTag = new Regex(@"<\s*\d+:\d+(?:\.\d+)?\s*[,:]\s*\d+:\d+(?:\.\d+)?\s*>");
+        private static readonly Regex RgxSingleWordTag = new Regex(@"<\s*\d+:\d+(?:\.\d+)?\s*>");
 
         public static LyricFormat DetectFormat(string text, byte[] raw = null)
         {
@@ -41,8 +42,11 @@ namespace HyperMedia
                 return LyricFormat.Krc;
             if (string.IsNullOrEmpty(text)) return LyricFormat.Unknown;
             string t = text.TrimStart('\uFEFF');
+            // Check for word-level tags FIRST — any format (LRC, QRC, mixed) that
+            // contains <start,end> or <start> word tags should use QRC parsing.
+            if (RgxWordTag.IsMatch(t) || RgxSingleWordTag.IsMatch(t))
+                return LyricFormat.Qrc;
             if (RgxKrcLine.IsMatch(t)) return LyricFormat.Krc;
-            if (RgxWordTag.IsMatch(t)) return LyricFormat.Qrc;
             return LyricFormat.Lrc;
         }
 
@@ -216,6 +220,7 @@ namespace HyperMedia
                 var sb = new StringBuilder();
                 int p = 0;
                 double lineStart = lineMs;
+                bool firstWordTag = true;
                 while (p < content.Length)
                 {
                     int lt = content.IndexOf('<', p);
@@ -235,11 +240,24 @@ namespace HyperMedia
                     double wStart, wEnd;
                     if (TryParseWordTag(tag, out wStart, out wEnd))
                     {
-                        if (sb.Length > 0)
+                        if (firstWordTag)
                         {
-                            words.Add(new WordSeg { StartMs = wStart + offset, EndMs = wEnd + offset, Ch = sb.ToString() });
+                            // First <start> tag marks the word-level start for this line.
+                            // Text before it is line-level leading text — discard, not a word.
+                            firstWordTag = false;
                             sb.Clear();
-                            if (words.Count == 1) lineStart = wStart + offset;
+                            lineStart = wStart + offset;
+                        }
+                        else if (sb.Length > 0)
+                        {
+                            // Subsequent tag: text before it is a complete word.
+                            words.Add(new WordSeg
+                            {
+                                StartMs = wStart + offset,
+                                EndMs = wEnd > 0 ? wEnd + offset : -1,
+                                Ch = sb.ToString()
+                            });
+                            sb.Clear();
                         }
                     }
                     else
@@ -247,6 +265,17 @@ namespace HyperMedia
                         sb.Append(content.Substring(lt, gt - lt + 1));
                     }
                     p = gt + 1;
+                }
+
+                // Second pass: fill in missing EndMs from next word's StartMs
+                for (int i = 0; i < words.Count; i++)
+                {
+                    if (words[i].EndMs < 0)
+                    {
+                        words[i].EndMs = (i + 1 < words.Count)
+                            ? words[i + 1].StartMs
+                            : lineMs + 3000;
+                    }
                 }
 
                 string textPart = sb.ToString();
@@ -276,13 +305,26 @@ namespace HyperMedia
             start = -1;
             end = -1;
             int sep = tag.IndexOf(',');
-            if (sep < 0) sep = tag.IndexOf(':');
-            if (sep < 0) return false;
-            double s = ParseLrcTimestamp(tag.Substring(0, sep).Trim());
-            double e = ParseLrcTimestamp(tag.Substring(sep + 1).Trim());
-            if (s < 0 || e < 0 || e < s) return false;
-            start = s;
-            end = e;
+            if (sep < 0)
+            {
+                int dotPos = tag.IndexOf('.');
+                if (dotPos >= 0) sep = tag.IndexOf(':', dotPos);
+            }
+            if (sep >= 0)
+            {
+                // Dual-timestamp: <start,end> or <start:end>
+                double s = ParseLrcTimestamp(tag.Substring(0, sep).Trim());
+                double e = ParseLrcTimestamp(tag.Substring(sep + 1).Trim());
+                if (s < 0 || e < 0 || e < s) return false;
+                start = s;
+                end = e;
+                return true;
+            }
+            // Single-timestamp: <start>
+            double st = ParseLrcTimestamp(tag.Trim());
+            if (st < 0) return false;
+            start = st;
+            end = -1;
             return true;
         }
 

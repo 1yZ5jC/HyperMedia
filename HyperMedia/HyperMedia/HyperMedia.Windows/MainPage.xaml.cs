@@ -200,6 +200,10 @@ namespace HyperMedia
             public Border Container;
             public TextBlock UiElement;
             public TextBlock TimeIndicator;
+            // Word-level (karaoke) support
+            public List<WordSeg> Words;
+            public TextBlock HighlightTb;
+            public RectangleGeometry WordClip;
         }
 
         private IPlayerBackend _engine;
@@ -2689,11 +2693,11 @@ namespace HyperMedia
                     _currentOriginalFile.Name, _musicArtist, _musicTitle);
 
                 // 1. Try embedded lyrics from audio container (m4a, mp4, etc.)
-                string embedded = await ExtractEmbeddedLyrics();
-                if (!string.IsNullOrEmpty(embedded))
+                var embeddedResult = await ExtractEmbeddedLyricsAsync();
+                if (embeddedResult != null)
                 {
-                    Debug.WriteLine("[HyperMedia] Embedded lyrics extracted ({0} chars)", embedded.Length);
-                    DisplayLyrics(embedded);
+                    Debug.WriteLine("[HyperMedia] Embedded lyrics extracted ({0} chars)", embeddedResult.Item1.Length);
+                    DisplayLyrics(embeddedResult.Item1, embeddedResult.Item2);
                     return;
                 }
 
@@ -3484,16 +3488,19 @@ namespace HyperMedia
             }
         }
 
-        private void DisplayLyrics(string rawText)
+        private void DisplayLyrics(string rawText, byte[] rawBytes = null)
         {
             Debug.WriteLine("[HyperMedia] DisplayLyrics: input {0} chars", rawText != null ? rawText.Length : 0);
             _lyricLines.Clear();
             LyricsLines.Children.Clear();
             _currentLyricIndex = -1;
 
-            var parsed = ParseLrc(rawText);
-            Debug.WriteLine("[HyperMedia] DisplayLyrics: parsed {0} timestamped lines", parsed.Count);
-            if (parsed.Count == 0)
+            // Detect format and parse with word-level support
+            LyricFormat fmt = LyricParsers.DetectFormat(rawText, rawBytes);
+            var parsedModels = LyricParsers.Parse(rawText, fmt);
+            Debug.WriteLine("[HyperMedia] DisplayLyrics: format={0}, parsed {1} lines", fmt, parsedModels.Count);
+
+            if (parsedModels.Count == 0)
             {
                 Debug.WriteLine("[HyperMedia] DisplayLyrics: no timestamps -> plain text display");
                 var tb = new TextBlock
@@ -3509,17 +3516,22 @@ namespace HyperMedia
                 return;
             }
 
-            foreach (var line in parsed)
+            foreach (var line in parsedModels)
             {
-                var tb = new TextBlock
+                bool hasWords = line.Words != null && line.Words.Count > 0;
+
+                if (hasWords)
                 {
-                    Text = line.Text,
-                    FontFamily = new FontFamily("Segoe UI"),
-                    FontSize = 17,
-                    Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
-                    TextWrapping = TextWrapping.Wrap,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
+                    Debug.WriteLine("[HyperMedia] WordLine: t={0:F0}ms text='{1}' words={2}",
+                        line.TimeMs, line.Text, line.Words.Count);
+                    for (int wi = 0; wi < Math.Min(line.Words.Count, 5); wi++)
+                    {
+                        var w = line.Words[wi];
+                        Debug.WriteLine("[HyperMedia]   W[{0}] '{1}' {2:F0}-{3:F0}ms", wi, w.Ch, w.StartMs, w.EndMs);
+                    }
+                    if (line.Words.Count > 5)
+                        Debug.WriteLine("[HyperMedia]   ... and {0} more words", line.Words.Count - 5);
+                }
 
                 var accentBar = new Border
                 {
@@ -3541,6 +3553,55 @@ namespace HyperMedia
                     MinWidth = 40
                 };
 
+                TextBlock dimTb;
+                TextBlock highlightTb = null;
+                RectangleGeometry wordClip = null;
+
+                if (hasWords)
+                {
+                    // Dual-layer: bottom dim + top highlight clipped by RectangleGeometry
+                    dimTb = new TextBlock
+                    {
+                        Text = line.Text,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 19,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                        TextWrapping = TextWrapping.NoWrap,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+
+                    highlightTb = new TextBlock
+                    {
+                        Text = line.Text,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 19,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF)),
+                        TextWrapping = TextWrapping.NoWrap,
+                        VerticalAlignment = VerticalAlignment.Center,
+                        FontWeight = Windows.UI.Text.FontWeights.SemiBold
+                    };
+
+                    wordClip = new RectangleGeometry();
+                    highlightTb.Clip = wordClip;
+                }
+                else
+                {
+                    dimTb = new TextBlock
+                    {
+                        Text = line.Text,
+                        FontFamily = new FontFamily("Segoe UI"),
+                        FontSize = 17,
+                        Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF)),
+                        TextWrapping = TextWrapping.Wrap,
+                        VerticalAlignment = VerticalAlignment.Center
+                    };
+                }
+
+                var textHost = new Grid();
+                textHost.Children.Add(dimTb);
+                if (highlightTb != null)
+                    textHost.Children.Add(highlightTb);
+
                 var row = new StackPanel
                 {
                     Orientation = Windows.UI.Xaml.Controls.Orientation.Horizontal,
@@ -3548,7 +3609,7 @@ namespace HyperMedia
                 };
                 row.Children.Add(accentBar);
                 row.Children.Add(timeTb);
-                row.Children.Add(tb);
+                row.Children.Add(textHost);
 
                 var container = new Border
                 {
@@ -3565,8 +3626,11 @@ namespace HyperMedia
                     TimeMs = line.TimeMs,
                     Text = line.Text,
                     Container = container,
-                    UiElement = tb,
-                    TimeIndicator = timeTb
+                    UiElement = dimTb,
+                    TimeIndicator = timeTb,
+                    Words = line.Words,
+                    HighlightTb = highlightTb,
+                    WordClip = wordClip
                 };
                 _lyricLines.Add(lyricLine);
             }
@@ -3675,57 +3739,124 @@ namespace HyperMedia
                 }
             }
 
-            if (idx == _currentLyricIndex) return;
-            _currentLyricIndex = idx;
-            Debug.WriteLine("[HyperMedia] LyricSync: pos={0:F0}ms idx={1}/{2}", posMs, idx, _lyricLines.Count);
-
-            for (int i = 0; i < _lyricLines.Count; i++)
+            // Update line styles only when line changes
+            if (idx != _currentLyricIndex)
             {
-                var line = _lyricLines[i];
-                if (i == idx)
+                _currentLyricIndex = idx;
+                Debug.WriteLine("[HyperMedia] LyricSync: pos={0:F0}ms idx={1}/{2}", posMs, idx, _lyricLines.Count);
+
+                for (int i = 0; i < _lyricLines.Count; i++)
                 {
-                    line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
-                    line.UiElement.FontSize = 19;
-                    line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
-                    line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
-                    line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
-                    // Pink accent bar
-                    var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
-                    if (accent != null)
-                        accent.Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
-                    line.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, 0xE0, 0x40, 0xFB));
+                    var line = _lyricLines[i];
+                    if (i == idx)
+                    {
+                        line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF));
+                        line.UiElement.FontSize = line.Words != null ? 19 : 19;
+                        line.UiElement.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
+                        line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0xCC, 0xE0, 0x40, 0xFB));
+                        line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.SemiBold;
+                        var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
+                        if (accent != null)
+                            accent.Background = new SolidColorBrush(Color.FromArgb(0xFF, 0xE0, 0x40, 0xFB));
+                        line.Container.Background = new SolidColorBrush(Color.FromArgb(0x20, 0xE0, 0x40, 0xFB));
+                    }
+                    else
+                    {
+                        line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
+                        line.UiElement.FontSize = 17;
+                        line.UiElement.FontWeight = Windows.UI.Text.FontWeights.Normal;
+                        line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
+                        line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
+                        var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
+                        if (accent != null)
+                            accent.Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB));
+                        line.Container.Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E));
+
+                        if (line.WordClip != null)
+                            line.WordClip.Rect = new Rect(0, 0, 0, 0);
+                    }
                 }
-                else
+
+                if (idx >= 0 && idx < _lyricLines.Count)
                 {
-                    line.UiElement.Foreground = new SolidColorBrush(Color.FromArgb(0x44, 0xFF, 0xFF, 0xFF));
-                    line.UiElement.FontSize = 17;
-                    line.UiElement.FontWeight = Windows.UI.Text.FontWeights.Normal;
-                    line.TimeIndicator.Foreground = new SolidColorBrush(Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF));
-                    line.TimeIndicator.FontWeight = Windows.UI.Text.FontWeights.Normal;
-                    var accent = (line.Container.Child as StackPanel)?.Children[0] as Border;
-                    if (accent != null)
-                        accent.Background = new SolidColorBrush(Color.FromArgb(0x00, 0xE0, 0x40, 0xFB));
-                    line.Container.Background = new SolidColorBrush(Color.FromArgb(0x00, 0x1A, 0x1A, 0x2E));
+                    try
+                    {
+                        var el = _lyricLines[idx].Container as FrameworkElement;
+                        if (el != null)
+                        {
+                            var transform = el.TransformToVisual(LyricsScrollViewer);
+                            var point = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
+                            LyricsScrollViewer.ChangeView(null, LyricsScrollViewer.VerticalOffset + point.Y - 80, null);
+                        }
+                    }
+                    catch (Exception ex) { LogUnhandled(ex); }
                 }
             }
 
+            // Word-level clip update — runs EVERY tick, not just on line change
             if (idx >= 0 && idx < _lyricLines.Count)
             {
-                try
+                var currentLine = _lyricLines[idx];
+                if (currentLine.Words != null && currentLine.Words.Count > 0 && currentLine.WordClip != null)
                 {
-                    var el = _lyricLines[idx].Container as FrameworkElement;
-                    if (el != null)
-                    {
-                        var transform = el.TransformToVisual(LyricsScrollViewer);
-                        var point = transform.TransformPoint(new Windows.Foundation.Point(0, 0));
-                        LyricsScrollViewer.ChangeView(null, LyricsScrollViewer.VerticalOffset + point.Y - 80, null);
-                    }
+                    UpdateWordClip(currentLine, posMs);
                 }
-                catch (Exception ex) { LogUnhandled(ex); }
             }
         }
 
-        private async System.Threading.Tasks.Task<string> ExtractEmbeddedLyrics()
+        private void UpdateWordClip(LyricLine line, double posMs)
+        {
+            var words = line.Words;
+            var tb = line.HighlightTb;
+            if (tb == null || words == null || words.Count == 0) return;
+
+            // Measure the TextBlock to get actual rendered width
+            tb.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+            double totalWidth = tb.DesiredSize.Width;
+            if (totalWidth < 1) return;
+
+            int charCount = line.Text.Length;
+            if (charCount == 0) return;
+
+            double avgCharWidth = totalWidth / charCount;
+
+            // Find which word is currently being sung
+            double clipWidth = 0;
+            for (int w = 0; w < words.Count; w++)
+            {
+                if (posMs < words[w].StartMs)
+                {
+                    break;
+                }
+                if (posMs >= words[w].EndMs)
+                {
+                    clipWidth += words[w].Ch.Length * avgCharWidth;
+                }
+                else
+                {
+                    double wordDur = words[w].EndMs - words[w].StartMs;
+                    double progress = wordDur > 0 ? (posMs - words[w].StartMs) / wordDur : 1.0;
+                    clipWidth += words[w].Ch.Length * avgCharWidth * Math.Min(1.0, progress);
+                    break;
+                }
+            }
+
+            double newClip = Math.Ceiling(clipWidth);
+            line.WordClip.Rect = new Rect(0, 0, newClip, tb.DesiredSize.Height + 2);
+
+            // Debug: log first word-level line's clip updates (throttled)
+            if (words.Count > 0 && words.Count <= 15)
+            {
+                Debug.WriteLine("[HyperMedia] WordClip: pos={0:F0}ms clipW={1:F1}/{2:F0} words={3} word[{4}]='{5}' {6:F0}-{7:F0}ms",
+                    posMs, newClip, totalWidth, words.Count,
+                    words.FindIndex(w2 => posMs >= w2.StartMs && posMs < w2.EndMs),
+                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.Ch ?? "",
+                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.StartMs ?? 0,
+                    words.Find(w2 => posMs >= w2.StartMs && posMs < w2.EndMs)?.EndMs ?? 0);
+            }
+        }
+
+        private async System.Threading.Tasks.Task<System.Tuple<string, byte[]>> ExtractEmbeddedLyricsAsync()
         {
             try
             {
@@ -3735,7 +3866,10 @@ namespace HyperMedia
                 var fileBytes = await ReadFileBytesAsync(file);
                 if (fileBytes == null || fileBytes.Length < 8) return null;
 
-                return ParseMp4Lyrics(fileBytes);
+                byte[] raw;
+                string text = ParseMp4Lyrics(fileBytes, out raw);
+                if (string.IsNullOrEmpty(text)) return null;
+                return System.Tuple.Create(text, raw);
             }
             catch (Exception ex)
             {
@@ -3789,13 +3923,16 @@ namespace HyperMedia
             }
         }
 
-        private string ParseMp4Lyrics(byte[] data)
+        private string ParseMp4Lyrics(byte[] data, out byte[] rawLyricBytes)
         {
+            rawLyricBytes = null;
             try
             {
                 int pos = 0;
                 Debug.WriteLine("[HyperMedia] MP4 parse: searching for moov→udta→meta→ilst in {0} bytes", data.Length);
-                string result = FindAtomRecursive(data, ref pos, data.Length, new[] { "moov", "udta", "meta", "ilst" }, 0);
+                byte[] raw;
+                string result = FindAtomRecursive(data, ref pos, data.Length, new[] { "moov", "udta", "meta", "ilst" }, 0, out raw);
+                rawLyricBytes = raw;
                 if (string.IsNullOrEmpty(result))
                     Debug.WriteLine("[HyperMedia] MP4 parse: no lyrics found in ilst");
                 return result;
@@ -3807,8 +3944,9 @@ namespace HyperMedia
             }
         }
 
-        private string FindAtomRecursive(byte[] data, ref int pos, int end, string[] path, int depth)
+        private string FindAtomRecursive(byte[] data, ref int pos, int end, string[] path, int depth, out byte[] rawPayload)
         {
+            rawPayload = null;
             if (depth >= path.Length) return null;
             string targetType = path[depth];
 
@@ -3833,18 +3971,27 @@ namespace HyperMedia
                     if (depth == path.Length - 1)
                     {
                         Debug.WriteLine("[HyperMedia] Found {0} at {1}, size={2}", atomType, pos, atomSize);
-                        string result = SearchLyricsInIlst(data, contentStart, contentEnd);
-                        if (!string.IsNullOrEmpty(result)) return result;
+                        byte[] raw;
+                        string result = SearchLyricsInIlst(data, contentStart, contentEnd, out raw);
+                        if (!string.IsNullOrEmpty(result))
+                        {
+                            rawPayload = raw;
+                            return result;
+                        }
                     }
                     else
                     {
                         Debug.WriteLine("[HyperMedia] Found {0} at {1}, size={2}, recursing...", atomType, pos, atomSize);
                         int childPos = contentStart;
-                        // 'meta' atom has 4-byte version/flags header before children
                         if (atomType == "meta")
                             childPos += 4;
-                        string result = FindAtomRecursive(data, ref childPos, contentEnd, path, depth + 1);
-                        if (!string.IsNullOrEmpty(result)) return result;
+                        byte[] raw;
+                        string result = FindAtomRecursive(data, ref childPos, contentEnd, path, depth + 1, out raw);
+                        if (!string.IsNullOrEmpty(result))
+                        {
+                            rawPayload = raw;
+                            return result;
+                        }
                     }
                 }
 
@@ -3853,8 +4000,9 @@ namespace HyperMedia
             return null;
         }
 
-        private string SearchLyricsInIlst(byte[] data, int start, int end)
+        private string SearchLyricsInIlst(byte[] data, int start, int end, out byte[] rawPayload)
         {
+            rawPayload = null;
             Debug.WriteLine("[HyperMedia] ilst contents: scanning {0} to {1}", start, end);
             int pos = start;
             while (pos + 8 <= end)
@@ -3875,15 +4023,25 @@ namespace HyperMedia
                 if (data[pos + 4] == 0xA9 && data[pos + 5] == 0x6C && data[pos + 6] == 0x79 && data[pos + 7] == 0x72)
                 {
                     Debug.WriteLine("[HyperMedia] >>> Found ©lyr atom!");
-                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize);
-                    if (!string.IsNullOrEmpty(result)) return result;
+                    byte[] raw;
+                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize, out raw);
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        rawPayload = raw;
+                        return result;
+                    }
                 }
 
                 if (data[pos + 4] == 0x6C && data[pos + 5] == 0x79 && data[pos + 6] == 0x72 && data[pos + 7] == 0x63)
                 {
                     Debug.WriteLine("[HyperMedia] >>> Found lyrc atom!");
-                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize);
-                    if (!string.IsNullOrEmpty(result)) return result;
+                    byte[] raw;
+                    string result = ExtractDataAtomText(data, pos + 8, pos + atomSize, out raw);
+                    if (!string.IsNullOrEmpty(result))
+                    {
+                        rawPayload = raw;
+                        return result;
+                    }
                 }
 
                 pos += atomSize;
@@ -3891,8 +4049,9 @@ namespace HyperMedia
             return null;
         }
 
-        private string ExtractDataAtomText(byte[] data, int contentStart, int atomEnd)
+        private string ExtractDataAtomText(byte[] data, int contentStart, int atomEnd, out byte[] rawPayload)
         {
+            rawPayload = null;
             // Content of ©lyr is typically a 'data' sub-atom:
             // [4B size]['data'][4B type_flag][4B locale][text...]
             int pos = contentStart;
@@ -3913,13 +4072,28 @@ namespace HyperMedia
                     int typeFlag = ReadInt32BigEndian(data, payloadStart);
                     Debug.WriteLine("[HyperMedia] data atom: type_flag={0}", typeFlag);
 
-                    // type_flag 1 = UTF-8 text, 0 = binary
                     int textStart = payloadStart + 8; // skip type_flag(4) + locale(4)
                     if (textStart >= pos + subSize) break;
                     int textLen = pos + subSize - textStart;
                     if (textLen > 0)
                     {
-                        string text = Encoding.UTF8.GetString(data, textStart, textLen).TrimEnd('\0');
+                        // Store raw bytes for KRC detection
+                        rawPayload = new byte[textLen];
+                        Array.Copy(data, textStart, rawPayload, 0, textLen);
+
+                        // type_flag 0 = binary (may be KRC encrypted)
+                        if (typeFlag == 0)
+                        {
+                            string krcText;
+                            if (LyricParsers.TryDecryptKrc(rawPayload, out krcText) && !string.IsNullOrEmpty(krcText))
+                            {
+                                Debug.WriteLine("[HyperMedia] KRC decrypted from binary atom: {0} chars", krcText.Length);
+                                return krcText;
+                            }
+                        }
+
+                        // type_flag 1 = UTF-8 text, or binary that wasn't KRC
+                        string text = Encoding.UTF8.GetString(rawPayload, 0, rawPayload.Length).TrimEnd('\0');
                         if (!string.IsNullOrEmpty(text))
                         {
                             Debug.WriteLine("[HyperMedia] Extracted lyrics: {0} chars", text.Length);
